@@ -1,0 +1,6 @@
+packages:
+  - 'backend'
+  - 'frontend'
+allowBuilds:
+  '@parcel/watcher': true
+  sqlite3: true
