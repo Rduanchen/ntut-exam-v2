@@ -38,8 +38,8 @@ importers:
         specifier: ^4.7.5
         version: 4.8.3
       special-rule-engine:
-        specifier: link:../special-rule-engine
-        version: link:../special-rule-engine
+        specifier: git+https://github.com/Rduanchen/special-rule-engine.git#main
+        version: https://codeload.github.com/Rduanchen/special-rule-engine/tar.gz/4efce0e466f452b242b0c8832748bdbaf00b7301
       sqlite3:
         specifier: ^5.1.7
         version: 5.1.7
@@ -1935,6 +1935,10 @@ packages:
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
+
+  special-rule-engine@https://codeload.github.com/Rduanchen/special-rule-engine/tar.gz/4efce0e466f452b242b0c8832748bdbaf00b7301:
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/Rduanchen/special-rule-engine/tar.gz/4efce0e466f452b242b0c8832748bdbaf00b7301}
+    version: 0.1.0
 
   sqlite3@5.1.7:
     resolution: {integrity: sha512-GGIyOiFaG+TUra3JIfkI/zGP8yZYLPQ0pl1bH+ODjiX57sPhrLU5sQJn1y9bDKZUFYkX1crlrPfSYt0BKKdkog==}
@@ -4234,6 +4238,8 @@ snapshots:
     optional: true
 
   source-map-js@1.2.1: {}
+
+  special-rule-engine@https://codeload.github.com/Rduanchen/special-rule-engine/tar.gz/4efce0e466f452b242b0c8832748bdbaf00b7301: {}
 
   sqlite3@5.1.7:
     dependencies:

@@ -19,7 +19,7 @@
     "sequelize": "^6.37.3",
     "sequelize-typescript": "^2.1.6",
     "socket.io": "^4.7.5",
-    "special-rule-engine": "link:../special-rule-engine",
+    "special-rule-engine": "git+https://github.com/Rduanchen/special-rule-engine.git#main",
     "sqlite3": "^5.1.7",
     "winston": "^3.19.0",
     "zod": "^3.23.8"
