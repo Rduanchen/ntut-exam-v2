@@ -2,5 +2,9 @@ node_modules
 dist/
 .env
 database.sqlite
+database.sqlite-*
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
 .DS_Store
 *.log
