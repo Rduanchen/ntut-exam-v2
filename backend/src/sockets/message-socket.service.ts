@@ -67,6 +67,7 @@ export class MessageSocketService {
           device.socketId = socket.id;
           device.isOnline = true;
           await device.save();
+          logger.info(`Successfully mapped socket ${socket.id} to device ${device_uuid}. DB socketId is now: ${device.socketId}`);
         } catch (error: any) {
           logger.error(`Socket register error: ${error.message}`);
         }
