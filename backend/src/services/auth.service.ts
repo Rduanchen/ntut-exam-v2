@@ -28,6 +28,8 @@ export class AuthService {
       throw new HttpError(401, `Authentication failed: Student ID "${testId}" not found`);
     }
 
+    const cleanClientIp = clientIp.replace(/^::ffff:/, "");
+
     if (user.deviceUuid) {
       if (user.deviceUuid !== deviceUuid) {
         throw new HttpError(403, "This account is already logged in on another device, please contact the TA");
@@ -35,12 +37,12 @@ export class AuthService {
     } else {
       if (!user.ipAddress) {
         user.deviceUuid = deviceUuid;
-        await user.save();
+        user.ipAddress = cleanClientIp;
       } else {
         const deviceRecord = await DeviceKeyMap.findOne({ where: { deviceUuid } });
         const deviceIp = deviceRecord?.ipAddress || "";
 
-        const clientIpClean = clientIp.replace(/^::ffff:/, "");
+        const clientIpClean = cleanClientIp;
         const presetIpClean = user.ipAddress.replace(/^::ffff:/, "");
         const deviceIpClean = deviceIp.replace(/^::ffff:/, "");
 
@@ -48,9 +50,11 @@ export class AuthService {
           throw new HttpError(403, "Your device ip is not match with the preset ip, please contact the TA");
         }
         user.deviceUuid = deviceUuid;
-        await user.save();
       }
     }
+
+    user.loginTime = new Date();
+    await user.save();
 
     const tokenPayload = { testId, deviceUuid };
     return CryptoService.generateSessionToken(tokenPayload, aesKey);
