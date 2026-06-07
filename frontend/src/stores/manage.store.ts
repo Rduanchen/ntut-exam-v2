@@ -13,7 +13,7 @@ export const useManageStore = defineStore('manage', () => {
     loading.value = true;
     error.value = null;
     try {
-      const res = await axios.get(`${BACKEND_URL}/api/admin/exam-state`);
+      const res = await axios.get(`${BACKEND_URL}/admin/exam-state`);
       examState.value = res.data.state || res.data;
     } catch (err: any) {
       error.value = err.response?.data?.error || err.response?.data?.message || err.message;
@@ -26,7 +26,7 @@ export const useManageStore = defineStore('manage', () => {
     loading.value = true;
     error.value = null;
     try {
-      const res = await axios.post(`${BACKEND_URL}/api/admin/exam-state`, { state });
+      const res = await axios.post(`${BACKEND_URL}/admin/exam-state`, { state });
       examState.value = res.data.state || state;
     } catch (err: any) {
       error.value = err.response?.data?.error || err.response?.data?.message || err.message;
@@ -39,7 +39,7 @@ export const useManageStore = defineStore('manage', () => {
     loading.value = true;
     error.value = null;
     try {
-      await axios.post(`${BACKEND_URL}/api/admin/messages`, { message });
+      await axios.post(`${BACKEND_URL}/admin/messages`, { message });
     } catch (err: any) {
       error.value = err.response?.data?.error || err.response?.data?.message || err.message;
     } finally {
