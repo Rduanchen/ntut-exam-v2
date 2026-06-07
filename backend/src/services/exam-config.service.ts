@@ -1,4 +1,5 @@
 import { SystemSettingsService } from "./system-settings.service";
+import { ExamConfigParserService } from "./exam-config-parser.service";
 import { verifyExamConfig, ExamConfig } from "../schemas/config.schema";
 import { HttpError } from "../utils/http-error";
 
@@ -39,14 +40,7 @@ export class ExamConfigService {
     for (const newSection of verifiedNewConfig.sections) {
       for (const newPuzzle of newSection.puzzles) {
         // Search for the matching puzzle ID in the old configuration baseline
-        let targetPuzzle: any = null;
-        for (const oldSection of mergedConfig.sections) {
-          const found = oldSection.puzzles.find((p: any) => p.id === newPuzzle.id);
-          if (found) {
-            targetPuzzle = found;
-            break;
-          }
-        }
+        const targetPuzzle = await ExamConfigParserService.getPuzzleById(newPuzzle.id, mergedConfig);
 
         if (targetPuzzle) {
           // 3. 找到後，只允許將 timeLimit、memoryLimit、score 的值從 newPayload 覆蓋過去。

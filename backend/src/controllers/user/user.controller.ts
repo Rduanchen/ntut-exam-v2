@@ -58,15 +58,15 @@ export class UserController {
   }
 
   /**
-   * POST /user/exam/testcase
-   * Securely retrieve encrypted testcase content.
+   * POST /user/exam/config
+   * Securely retrieve encrypted exam config.
    */
-  static async getTestCase(req: Request, res: Response, next: NextFunction) {
+  static async getConfig(req: Request, res: Response, next: NextFunction) {
     try {
       const payload = req.body;
       const decryptedBody = req.userSession?.decryptedBody;
-      const encryptedTestCase = await ExamService.getSecureTestCase(payload, decryptedBody);
-      res.status(200).json(encryptedTestCase);
+      const encryptedConfig = await ExamService.getSecureConfig(payload, decryptedBody);
+      res.status(200).json(encryptedConfig);
     } catch (error) {
       next(error);
     }

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { CodeStorageService } from '../../services/code-storage.service';
+import { ExamConfigParserService } from '../../services/exam-config-parser.service';
 import logger from '../../utils/logger.util';
 
 export class UserSubmissionController {
@@ -18,6 +19,12 @@ export class UserSubmissionController {
 
       if (!questionId || !language || !codeContent) {
         res.status(400).json({ error: 'Bad Request: Missing required fields' });
+        return;
+      }
+
+      const isValidQuestion = await ExamConfigParserService.questionExists(questionId);
+      if (!isValidQuestion) {
+        res.status(400).json({ error: `Bad Request: Invalid questionId '${questionId}'` });
         return;
       }
 
