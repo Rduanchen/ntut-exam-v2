@@ -112,36 +112,48 @@ export class MessageSocketService {
     type: string;
     message: string;
   }): void {
-    const instance = MessageSocketService.getInstance();
-    instance.emitEvent("exam-message", {
-      success: true,
-      data: messageData,
-    });
+    try {
+      const instance = MessageSocketService.getInstance();
+      instance.emitEvent("exam-message", {
+        success: true,
+        data: messageData,
+      });
+    } catch (err: any) {
+      logger.warn(`Failed to send message via socket: ${err.message}`);
+    }
   }
 
   public static sendConfigUpdateNotification(messageId: number): void {
-    const instance = MessageSocketService.getInstance();
-    instance.emitEvent("exam-message", {
-      success: true,
-      data: {
-        id: messageId,
-        type: "config_update",
-        message: "Exam configuration has been updated",
-      },
-    });
+    try {
+      const instance = MessageSocketService.getInstance();
+      instance.emitEvent("exam-message", {
+        success: true,
+        data: {
+          id: messageId,
+          type: "config_update",
+          message: "Exam configuration has been updated",
+        },
+      });
+    } catch (err: any) {
+      logger.warn(`Failed to send config update notification via socket: ${err.message}`);
+    }
   }
 
   public static sendStatusUpdateNotification(messageId: number, state: string): void {
-    const instance = MessageSocketService.getInstance();
-    instance.emitEvent("exam-message", {
-      success: true,
-      data: {
-        id: messageId,
-        type: "EXAM",
-        message: state,
-        namespace: "STATUS"
-      },
-    });
+    try {
+      const instance = MessageSocketService.getInstance();
+      instance.emitEvent("exam-message", {
+        success: true,
+        data: {
+          id: messageId,
+          type: "EXAM",
+          message: state,
+          namespace: "STATUS"
+        },
+      });
+    } catch (err: any) {
+      logger.warn(`Failed to send status update notification via socket: ${err.message}`);
+    }
   }
 }
 

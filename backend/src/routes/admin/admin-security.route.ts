@@ -4,6 +4,12 @@ import { requirePermission } from "../../middlewares/admin.middleware";
 
 const adminSecurityRouter = Router();
 
+// Get all devices connection status
+adminSecurityRouter.get(
+  "/device",
+  AdminSecurityController.getDevices
+);
+
 // Delete device keys (requires RESET_DEVICE permission)
 adminSecurityRouter.delete(
   "/device/:deviceUuid",

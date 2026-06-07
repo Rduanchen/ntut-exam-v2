@@ -166,6 +166,26 @@ describe("Cryptography & Device Binding Integration", () => {
 
   describe("End-to-End Cryptographic API Scenarios", () => {
     it("should complete full key exchange, login binding, and secure retrieval of testcases", async () => {
+      // Seed exam config
+      await SystemSettings.create({
+        name: "exam_config",
+        value: JSON.stringify({
+          sections: [
+            {
+              id: "S1",
+              title: "Section 1",
+              puzzles: [
+                {
+                  id: "Q1",
+                  title: "Two Sum",
+                  subtasks: []
+                }
+              ]
+            }
+          ]
+        })
+      });
+
       // 1. Get RSA Public Key
       const keyRes = await fetch(`${serverUrl}/user/auth/rsa-public-key`);
       const keyData = (await keyRes.json()) as { publicKey: string };
@@ -245,34 +265,33 @@ describe("Cryptography & Device Binding Integration", () => {
       });
       expect(badLoginRes.status).toBe(403); // blocked because student is already bound
 
-      // 4. Secure retrieval of testcase (Phase 3)
+      // 4. Secure retrieval of exam config
       const nonce = crypto.randomBytes(16).toString("hex");
       const timestamp = Date.now();
-      const testcasePayloadPlain = JSON.stringify({
+      const configPayloadPlain = JSON.stringify({
         session_token: loginData.session_token,
         timestamp,
         nonce,
-        question_id: "Q1",
       });
 
-      const encryptedTestcasePayload = CryptoService.encryptAESGCM(testcasePayloadPlain, clientAesKey);
-      const testcaseRes = await fetch(`${serverUrl}/user/exam/testcase`, {
+      const encryptedConfigPayload = CryptoService.encryptAESGCM(configPayloadPlain, clientAesKey);
+      const configRes = await fetch(`${serverUrl}/user/exam/config`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...encryptedTestcasePayload,
+          ...encryptedConfigPayload,
           device_uuid: deviceUuid,
         }),
       });
 
-      expect(testcaseRes.status).toBe(200);
-      const secureTestCase = (await testcaseRes.json()) as any;
-      expect(secureTestCase.ciphertext).toBeDefined();
+      expect(configRes.status).toBe(200);
+      const secureConfig = (await configRes.json()) as any;
+      expect(secureConfig.ciphertext).toBeDefined();
 
-      // Decrypt testcase response
-      const testcaseDecryptedText = CryptoService.decryptAESGCM(secureTestCase, clientAesKey);
-      const testcaseData = JSON.parse(testcaseDecryptedText);
-      expect(testcaseData.subtasks).toBeDefined();
+      // Decrypt config response
+      const configDecryptedText = CryptoService.decryptAESGCM(secureConfig, clientAesKey);
+      const configData = JSON.parse(configDecryptedText);
+      expect(configData.sections).toBeDefined();
     });
 
     it("should respect preset IP binding rules", async () => {
@@ -350,6 +369,30 @@ describe("Cryptography & Device Binding Integration", () => {
 
       const dbDevice = await DeviceKeyMap.findOne({ where: { deviceUuid } });
       expect(dbDevice).toBeNull();
+    });
+
+    it("should allow getting all devices connection status", async () => {
+      // Seed a user first
+      await User.create({
+        testId: "112590003",
+        name: "Charlie",
+        ipAddress: "127.0.0.1",
+      });
+
+      const adminSecret = "admin-secret";
+      const res = await fetch(`${serverUrl}/admin/device`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${adminSecret}` },
+      });
+      expect(res.status).toBe(200);
+      const data = (await res.json()) as any[];
+      expect(data).toBeInstanceOf(Array);
+      expect(data.length).toBeGreaterThan(0);
+      expect(data[0]).toHaveProperty("id");
+      expect(data[0]).toHaveProperty("name");
+      expect(data[0]).toHaveProperty("ipAddress");
+      expect(data[0]).toHaveProperty("deviceUuid");
+      expect(data[0]).toHaveProperty("isOnline");
     });
 
     it("should block admin operations with incorrect token", async () => {

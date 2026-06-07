@@ -81,13 +81,13 @@ export class InitService {
       }
 
       await transaction.commit();
-      
-      // Update exam state
-      await ExamStateService.changeState(ExamState.NOT_STARTED);
     } catch (error: any) {
       await transaction.rollback();
       throw error;
     }
+
+    // Update exam state
+    await ExamStateService.changeState(ExamState.NOT_STARTED);
   }
 
   /**
@@ -110,12 +110,12 @@ export class InitService {
       await DeviceKeyMap.destroy({ where: {}, transaction });
 
       await transaction.commit();
-      
-      // Update exam state
-      await ExamStateService.changeState(ExamState.UNINITIALIZED);
     } catch (error: any) {
       await transaction.rollback();
       throw error;
     }
+
+    // Update exam state
+    await ExamStateService.changeState(ExamState.UNINITIALIZED);
   }
 }

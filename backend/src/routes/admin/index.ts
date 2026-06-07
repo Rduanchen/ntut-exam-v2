@@ -9,6 +9,7 @@ import adminSubmissionRouter from "./admin-submission.route";
 import adminJudgerRouter from "./admin-judger.route";
 import adminMessageRouter from "./admin-message.route";
 import adminExamStateRouter from "./admin-exam-state.route";
+import adminScoreRouter from "./admin-score.route";
 
 const adminRouter = Router();
 
@@ -27,5 +28,6 @@ adminRouter.use("/submissions", adminSubmissionRouter);
 adminRouter.use("/judger", adminJudgerRouter);
 adminRouter.use("/messages", adminMessageRouter);
 adminRouter.use("/exam-state", adminExamStateRouter);
+adminRouter.use("/scores", adminScoreRouter);
 
 export default adminRouter;
