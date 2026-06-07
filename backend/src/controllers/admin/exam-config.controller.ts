@@ -13,6 +13,11 @@ export class ExamConfigController {
    */
   static async createOrOverwriteConfig(req: Request, res: Response, next: NextFunction) {
     try {
+      const initStatus = await InitService.checkInitStatus();
+      if (initStatus.isInitialized) {
+        throw new HttpError(403, "Forbidden: Cannot overwrite config after database initialization");
+      }
+
       const config = await ExamConfigService.validateAndSave(req.body);
       res.status(200).json(config);
     } catch (error) {
