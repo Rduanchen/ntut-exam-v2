@@ -5,8 +5,8 @@ import { AntiCheatService } from '../../services/anti-cheat.service';
 export class UserLogController {
   public static async logClientAction(req: Request, res: Response): Promise<void> {
     try {
-      const testId = (req as any).user?.testId;
-      const { actionType, details } = req.body;
+      const testId = (req as any).userSession?.testId;
+      const { actionType, details } = (req as any).userSession?.decryptedBody || {};
       const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || null;
 
       if (!testId) {
