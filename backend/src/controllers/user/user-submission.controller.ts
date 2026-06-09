@@ -10,7 +10,7 @@ export class UserSubmissionController {
       // Get testId and decrypted body from userSession populated by decryptAndVerifyDeviceSession middleware
       const testId = (req as any).userSession?.testId || (req as any).user?.testId;
       const body = (req as any).userSession?.decryptedBody || req.body;
-      
+
       const { questionId, language, codeContent } = body || {};
 
       if (!testId) {
@@ -30,7 +30,7 @@ export class UserSubmissionController {
       }
 
       await CodeStorageService.upsertSubmission(testId, { questionId, language, codeContent });
-      
+
       res.status(200).json({ success: true, message: 'Submission saved successfully' });
     } catch (error: any) {
       logger.error(`User submitCode error: ${error.message}`);
@@ -42,8 +42,8 @@ export class UserSubmissionController {
     try {
       const testId = (req as any).userSession?.testId || (req as any).user?.testId;
       const body = (req as any).userSession?.decryptedBody || req.body;
-      
-      const { score } = body || {};
+
+      const { score, puzzleResults, subtaskAmount, passedSubtaskAmount, puzzleAmount, passedPuzzleAmount } = body || {};
 
       if (!testId) {
         res.status(401).json({ error: 'Unauthorized: Missing testId' });
@@ -56,17 +56,43 @@ export class UserSubmissionController {
       }
 
       const scoreBoard = await ScoreBoard.findOne({ where: { testId } });
+      const updateData = {
+        score,
+        lastSubmitTime: new Date(),
+        ...(puzzleResults !== undefined && { puzzleResults }),
+        ...(subtaskAmount !== undefined && { subtaskAmount }),
+        ...(passedSubtaskAmount !== undefined && { passedSubtaskAmount }),
+        ...(puzzleAmount !== undefined && { puzzleAmount }),
+        ...(passedPuzzleAmount !== undefined && { passedPuzzleAmount })
+      };
+
       if (scoreBoard) {
-        scoreBoard.score = score;
-        scoreBoard.lastSubmitTime = new Date();
-        await scoreBoard.save();
+        await scoreBoard.update(updateData);
       } else {
-        await ScoreBoard.create({ testId, score, lastSubmitTime: new Date() });
+        await ScoreBoard.create({ testId, ...updateData });
       }
 
       res.status(200).json({ success: true, message: 'Score saved successfully' });
     } catch (error: any) {
       logger.error(`User submitScore error: ${error.message}`);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  }
+
+  public static async getMySubmissions(req: Request, res: Response): Promise<void> {
+    try {
+      const testId = (req as any).userSession?.testId || (req as any).user?.testId;
+
+      if (!testId) {
+        res.status(401).json({ error: 'Unauthorized: Missing testId' });
+        return;
+      }
+
+      const submissions = await CodeStorageService.getSubmissions(testId);
+      
+      res.status(200).json(submissions);
+    } catch (error: any) {
+      logger.error(`User getMySubmissions error: ${error.message}`);
       res.status(500).json({ error: 'Internal Server Error' });
     }
   }

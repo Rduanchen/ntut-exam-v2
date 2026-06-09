@@ -7,5 +7,6 @@ const router = Router();
 
 router.post('/code', decryptAndVerifyDeviceSession, createActionLog('SUBMIT_CODE'), UserSubmissionController.submitCode);
 router.post('/score', decryptAndVerifyDeviceSession, createActionLog('SUBMIT_SCORE'), UserSubmissionController.submitScore);
+router.get('/codes', decryptAndVerifyDeviceSession, UserSubmissionController.getMySubmissions);
 
 export default router;

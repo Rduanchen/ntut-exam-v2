@@ -90,6 +90,13 @@ export class ExamConfigController {
         throw new HttpError(400, "Bad Request: Missing or incorrect confirmation string 'RESET'");
       }
       await InitService.wipeAllData();
+
+      const { LoginRequest } = require("../../models/login-request.model");
+      const { UnblockedDevice } = require("../../models/unblocked-device.model");
+      
+      await LoginRequest.destroy({ where: {}, truncate: true, cascade: true });
+      await UnblockedDevice.destroy({ where: {}, truncate: true, cascade: true });
+
       res.status(200).json({ message: "Database reset to factory settings successfully" });
     } catch (error) {
       next(error);
