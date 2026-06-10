@@ -5,6 +5,7 @@ import { SystemSettingsService } from "./system-settings.service";
 import { LoginRequest } from "../models/login-request.model";
 import { UnblockedDevice } from "../models/unblocked-device.model";
 import { User } from "../models/user.model";
+import { SocketService } from "../sockets/socket.service";
 
 export class DeviceService {
   /**
@@ -39,6 +40,7 @@ export class DeviceService {
           type: "SECONDARY",
           status: "PENDING"
         });
+        SocketService.triggerDataUpdateEvent('connection');
         throw new HttpError(403, "Secondary binding blocked. A request has been sent to the TA.");
       } else {
         // Unblocked: Consume the pass and allow binding
@@ -47,6 +49,8 @@ export class DeviceService {
         existing.ipAddress = ipAddress;
         existing.isOnline = true;
         await existing.save();
+        SocketService.triggerDataUpdateEvent('connection');
+        SocketService.triggerDataUpdateEvent('student');
       }
     } else {
       // First-Time Binding
@@ -61,6 +65,7 @@ export class DeviceService {
           type: "FIRST_TIME",
           status: "PENDING"
         });
+        SocketService.triggerDataUpdateEvent('connection');
         throw new HttpError(403, "Registration is closed. A request has been sent to the TA.");
       }
       
@@ -75,6 +80,8 @@ export class DeviceService {
         clientAesKey: clientAesKeyBuffer.toString("hex"),
         isOnline: true
       });
+      SocketService.triggerDataUpdateEvent('connection');
+      SocketService.triggerDataUpdateEvent('student');
     }
   }
 
@@ -99,5 +106,7 @@ export class DeviceService {
       throw new HttpError(404, `Not Found: Device with UUID "${deviceUuid}" does not exist`);
     }
     await DeviceKeyMap.destroy({ where: { deviceUuid } });
+    SocketService.triggerDataUpdateEvent('connection');
+    SocketService.triggerDataUpdateEvent('student');
   }
 }

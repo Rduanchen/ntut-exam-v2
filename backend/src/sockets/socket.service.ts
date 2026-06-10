@@ -73,6 +73,18 @@ export class SocketService {
       logger.error(`Error triggering alert event: ${err.message}`);
     }
   }
+  /**
+   * Notify the frontend to re-fetch specific data.
+   * @param dataType The type of data that was updated (e.g., 'log', 'connection', 'student')
+   */
+  static triggerDataUpdateEvent(dataType: string): void {
+    logger.info(`[SocketService] Triggering data update event for type: ${dataType}`);
+    try {
+      const instance = SocketService.getInstance();
+      instance.emitEvent("data-update", { type: dataType });
+    } catch (err: any) {
+      logger.error(`Error triggering data update event: ${err.message}`);
+    }
+  }
 }
-
 export default SocketService;

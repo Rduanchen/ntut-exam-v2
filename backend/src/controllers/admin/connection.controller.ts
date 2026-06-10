@@ -5,6 +5,7 @@ import { LoginRequest } from "../../models/login-request.model";
 import { UnblockedDevice } from "../../models/unblocked-device.model";
 import { SystemSettingsService } from "../../services/system-settings.service";
 import { HttpError } from "../../utils/http-error";
+import { SocketService } from "../../sockets/socket.service";
 
 export class ConnectionController {
   /**
@@ -125,6 +126,9 @@ export class ConnectionController {
         targetValue: request.deviceUuid,
       });
 
+      SocketService.triggerDataUpdateEvent("connection");
+      SocketService.triggerDataUpdateEvent("student");
+
       res.status(200).json({ message: "Request approved and device unblocked" });
     } catch (error) {
       next(error);
@@ -145,6 +149,8 @@ export class ConnectionController {
 
       request.status = "REJECTED";
       await request.save();
+
+      SocketService.triggerDataUpdateEvent("connection");
 
       res.status(200).json({ message: "Request rejected" });
     } catch (error) {
@@ -182,6 +188,9 @@ export class ConnectionController {
         targetType,
         targetValue,
       });
+
+      SocketService.triggerDataUpdateEvent("connection");
+      SocketService.triggerDataUpdateEvent("student");
 
       res.status(200).json({ message: "Successfully added to unblocked list" });
     } catch (error) {

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import axios from 'axios';
+import { socket } from '../plugins/socket';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 
@@ -8,6 +9,13 @@ export const useStudentStore = defineStore('student', () => {
   const students = ref<any[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
+
+  // Setup socket listener for real-time updates
+  socket.on('data-update', (payload: any) => {
+    if (payload && payload.type === 'student') {
+      fetchStudents();
+    }
+  });
 
   async function fetchStudents() {
     loading.value = true;

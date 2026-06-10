@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import axios from 'axios';
+import { socket } from '../plugins/socket';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 
@@ -10,6 +11,14 @@ export const useConnectionStore = defineStore('connection', () => {
   const allowRegistration = ref<boolean>(true);
   const loading = ref(false);
   const error = ref<string | null>(null);
+
+  // Setup socket listener for real-time updates
+  socket.on('data-update', (payload: any) => {
+    if (payload && payload.type === 'connection') {
+      fetchDevices();
+      fetchLoginRequests();
+    }
+  });
 
   const getHeaders = () => {
     const token = localStorage.getItem('adminToken');

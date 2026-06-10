@@ -1,5 +1,6 @@
 import { UserActionLog } from '../models/user-action-log.model';
 import logger from '../utils/logger.util';
+import { SocketService } from '../sockets/socket.service';
 
 export class UserActionLogService {
   public static async createLog(testId: string, ipAddress: string | null, actionType: string, details?: any): Promise<void> {
@@ -10,6 +11,7 @@ export class UserActionLogService {
         actionType,
         details: details ? JSON.stringify(details) : null
       });
+      SocketService.triggerDataUpdateEvent('log');
     } catch (error: any) {
       // Non-blocking log failure
       logger.error(`Failed to create action log for ${testId}: ${error.message}`);

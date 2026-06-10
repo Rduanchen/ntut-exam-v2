@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import axios from 'axios';
+import { socket } from '../plugins/socket';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 
@@ -9,6 +10,13 @@ export const useLogStore = defineStore('log', () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
   const totalItems = ref(0);
+
+  // Setup socket listener for real-time updates
+  socket.on('data-update', (payload: any) => {
+    if (payload && payload.type === 'log') {
+      fetchLogs();
+    }
+  });
 
   async function fetchLogs(page = 1, limit = 50, level?: string, search?: string) {
     loading.value = true;
