@@ -45,7 +45,7 @@ const submitForm = async () => {
 
   // Validate uniqueness and scores
   for (const section of localForm.value.sections || []) {
-    if (!section.id.trim()) {
+    if (!section.id?.trim()) {
       alert(`Section "${section.title}" has an empty ID.`);
       return;
     }
@@ -57,7 +57,7 @@ const submitForm = async () => {
 
     let sumPuzzles = 0;
     for (const puzzle of section.puzzles || []) {
-      if (!puzzle.id.trim()) {
+      if (!puzzle.id?.trim()) {
         alert(`Puzzle "${puzzle.title}" has an empty ID.`);
         return;
       }

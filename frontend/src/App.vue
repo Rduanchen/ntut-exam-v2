@@ -9,7 +9,7 @@ const navItems = [
   { title: 'Score', icon: 'mdi-format-list-numbered', to: '/score' },
   { title: 'Student', icon: 'mdi-account-group', to: '/student' },
   { title: 'Anti-Cheat', icon: 'mdi-shield-alert', to: '/anticheat' },
-  { title: 'Logs', icon: 'mdi-text-box-search', to: '/logs' },
+  { title: 'Logs', icon: 'mdi-text-box-search', to: '/log' },
   { title: 'Connection', icon: 'mdi-desktop-classic', to: '/connection' },
   { title: 'Device', icon: 'mdi-monitor-dashboard', to: '/device' },
 ];
