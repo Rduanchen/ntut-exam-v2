@@ -11,6 +11,7 @@ import adminMessageRouter from "./admin-message.route";
 import adminExamStateRouter from "./admin-exam-state.route";
 import adminScoreRouter from "./admin-score.route";
 import adminConnectionRouter from "./connection.route";
+import adminSystemInfoRouter from "./admin-system-info.route";
 
 const adminRouter = Router();
 
@@ -31,5 +32,6 @@ adminRouter.use("/messages", adminMessageRouter);
 adminRouter.use("/exam-state", adminExamStateRouter);
 adminRouter.use("/scores", adminScoreRouter);
 adminRouter.use("/connection", adminConnectionRouter);
+adminRouter.use("/system-info", adminSystemInfoRouter);
 
 export default adminRouter;

@@ -96,6 +96,27 @@ async function startServer() {
     await initDatabase();
     server.listen(port, () => {
       logger.info(`Server is running on http://localhost:${port}`);
+
+      // Print prominent warning if LOAD_TEST_MODE is enabled
+      const loadTestMode = process.env.LOAD_TEST_MODE;
+      if (loadTestMode && loadTestMode !== 'false') {
+        const border = '='.repeat(70);
+        console.warn(`\n\x1b[41m\x1b[37m${border}\x1b[0m`);
+        console.warn(`\x1b[41m\x1b[37m  ⚠️  WARNING: LOAD_TEST_MODE = "${loadTestMode}"${' '.repeat(Math.max(0, 44 - loadTestMode.length))}\x1b[0m`);
+        console.warn(`\x1b[41m\x1b[37m${border}\x1b[0m`);
+        if (loadTestMode === 'pure') {
+          console.warn(`\x1b[33m  → 加密驗證已完全繞過，任何帳號皆可登入\x1b[0m`);
+          console.warn(`\x1b[33m  → IP 可透過 Header 偽造\x1b[0m`);
+        } else if (loadTestMode === 'simulation') {
+          console.warn(`\x1b[33m  → 不存在的帳號將被自動建立並允許登入\x1b[0m`);
+          console.warn(`\x1b[33m  → IP 可透過 Header 偽造\x1b[0m`);
+        } else if (loadTestMode === 'true') {
+          console.warn(`\x1b[33m  → IP 可透過 Header 偽造\x1b[0m`);
+        }
+        console.warn(`\x1b[33m  → 請勿在正式考試中使用此模式！\x1b[0m`);
+        console.warn(`\x1b[33m  → 如需關閉請移除 backend/.env 中的 LOAD_TEST_MODE\x1b[0m`);
+        console.warn(`\x1b[41m\x1b[37m${border}\x1b[0m\n`);
+      }
     });
   } catch (error: any) {
     logger.error(`Failed to start the server: ${error.message}`);
