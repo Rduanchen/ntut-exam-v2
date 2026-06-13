@@ -18,6 +18,12 @@ export class DeviceKeyMap extends Model {
   @Column({ field: "is_online", type: DataType.BOOLEAN, defaultValue: false })
   declare isOnline: boolean;
 
+  @Column({ type: DataType.ENUM("UNBOUND", "AWAITING_LOGIN", "ONLINE"), defaultValue: "UNBOUND" })
+  declare status: string;
+
+  @Column({ field: "test_id", type: DataType.STRING, allowNull: true })
+  declare testId: string | null;
+
   @Column({ field: "created_at", type: DataType.DATE, defaultValue: DataType.NOW })
   declare createdAt: Date;
 

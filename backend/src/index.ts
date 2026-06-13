@@ -65,7 +65,7 @@ app.use(
         stack: err.stack,
       });
     }
-    res.status(status).json({ error: message });
+    res.status(status).json({ error: message, code: err.code });
   },
 );
 
@@ -94,8 +94,9 @@ MessageSocketService.initialize(io.of("/user"));
 async function startServer() {
   try {
     await initDatabase();
-    server.listen(port, () => {
-      logger.info(`Server is running on http://localhost:${port}`);
+    // 綁定到 0.0.0.0 以強制使用 IPv4，避免出現 ::ffff: 前綴
+    server.listen(typeof port === 'string' ? parseInt(port) : port, '0.0.0.0', () => {
+      logger.info(`Server is running on http://localhost:${port} (IPv4)`);
 
       // Print prominent warning if LOAD_TEST_MODE is enabled
       const loadTestMode = process.env.LOAD_TEST_MODE;

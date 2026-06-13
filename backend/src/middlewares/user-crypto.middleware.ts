@@ -67,7 +67,7 @@ export async function decryptAndVerifyDeviceSession(req: Request, res: Response,
     if (error instanceof HttpError) {
       next(error);
     } else {
-      next(new HttpError(401, `Cryptographic session verification failed: ${error.message}`));
+      next(new HttpError(401, `Cryptographic session verification failed: ${error.message}`, "CRYPTO_VERIFICATION_FAILED"));
     }
   }
 }

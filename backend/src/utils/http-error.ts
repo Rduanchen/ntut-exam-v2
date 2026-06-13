@@ -1,9 +1,10 @@
 export class HttpError extends Error {
   statusCode: number;
-
-  constructor(statusCode: number, message: string) {
+  code?: string;
+  constructor(statusCode: number, message: string, code?: string) {
     super(message);
     this.statusCode = statusCode;
+    this.code = code;
     this.name = "HttpError";
     Object.setPrototypeOf(this, HttpError.prototype);
   }

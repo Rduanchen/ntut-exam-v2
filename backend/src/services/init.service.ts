@@ -88,6 +88,9 @@ export class InitService {
 
     // Update exam state
     await ExamStateService.changeState(ExamState.NOT_STARTED);
+
+    // Ensure device registration is allowed by default
+    await SystemSettingsService.setAllowDeviceRegistration(true);
   }
 
   /**

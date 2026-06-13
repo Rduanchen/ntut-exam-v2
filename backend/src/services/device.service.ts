@@ -6,6 +6,7 @@ import { LoginRequest } from "../models/login-request.model";
 import { UnblockedDevice } from "../models/unblocked-device.model";
 import { User } from "../models/user.model";
 import { SocketService } from "../sockets/socket.service";
+import { BindingService } from "./binding.service";
 
 export class DeviceService {
   /**
@@ -34,15 +35,20 @@ export class DeviceService {
     if (existing) {
       // Secondary Binding: This device is already registered, and client is sending a new AES key.
       if (!unblocked && !isSimulationMode) {
-        // Block it and log request
-        await LoginRequest.create({
-          ipAddress,
-          deviceUuid,
-          testId: existing.user ? existing.user.testId : null,
-          type: "SECONDARY",
-          status: "PENDING"
+        // Block it and log request if not already pending
+        const existingReq = await LoginRequest.findOne({
+          where: { ipAddress, deviceUuid, status: "PENDING" }
         });
-        SocketService.triggerDataUpdateEvent('connection');
+        if (!existingReq) {
+          await LoginRequest.create({
+            ipAddress,
+            deviceUuid,
+            testId: existing.user ? existing.user.testId : null,
+            type: "SECONDARY",
+            status: "PENDING"
+          });
+          SocketService.triggerDataUpdateEvent('connection');
+        }
         throw new HttpError(403, "Secondary binding blocked. A request has been sent to the TA.");
       } else {
         // Unblocked or Simulation Mode: Consume the pass and allow binding
@@ -50,6 +56,11 @@ export class DeviceService {
         existing.clientAesKey = clientAesKeyBuffer.toString("hex");
         existing.ipAddress = ipAddress;
         existing.isOnline = true;
+        if (existing.testId) {
+          existing.status = "AWAITING_LOGIN";
+        } else {
+          existing.status = "UNBOUND";
+        }
         await existing.save();
         SocketService.triggerDataUpdateEvent('connection');
         SocketService.triggerDataUpdateEvent('student');
@@ -59,15 +70,20 @@ export class DeviceService {
       const allowRegistration = await SystemSettingsService.getAllowDeviceRegistration();
       if (!allowRegistration && !unblocked && !isSimulationMode) {
         // Try to guess testId by IP if possible
-        const userByIp = await User.findOne({ where: { ipAddress } });
-        await LoginRequest.create({
-          ipAddress,
-          deviceUuid,
-          testId: userByIp ? userByIp.testId : null,
-          type: "FIRST_TIME",
-          status: "PENDING"
+        const existingReq = await LoginRequest.findOne({
+          where: { ipAddress, deviceUuid, status: "PENDING" }
         });
-        SocketService.triggerDataUpdateEvent('connection');
+        if (!existingReq) {
+          const userByIp = await User.findOne({ where: { ipAddress } });
+          await LoginRequest.create({
+            ipAddress,
+            deviceUuid,
+            testId: userByIp ? userByIp.testId : null,
+            type: "FIRST_TIME",
+            status: "PENDING"
+          });
+          SocketService.triggerDataUpdateEvent('connection');
+        }
         throw new HttpError(403, "Registration is closed. A request has been sent to the TA.");
       }
       
@@ -80,7 +96,8 @@ export class DeviceService {
         deviceUuid,
         ipAddress,
         clientAesKey: clientAesKeyBuffer.toString("hex"),
-        isOnline: true
+        isOnline: true,
+        status: "UNBOUND"
       });
       SocketService.triggerDataUpdateEvent('connection');
       SocketService.triggerDataUpdateEvent('student');
@@ -107,8 +124,6 @@ export class DeviceService {
     if (!record) {
       throw new HttpError(404, `Not Found: Device with UUID "${deviceUuid}" does not exist`);
     }
-    await DeviceKeyMap.destroy({ where: { deviceUuid } });
-    SocketService.triggerDataUpdateEvent('connection');
-    SocketService.triggerDataUpdateEvent('student');
+    await BindingService.unregisterDevice(deviceUuid);
   }
 }

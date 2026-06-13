@@ -2,9 +2,37 @@
 import { onMounted, ref, computed } from 'vue';
 import { useConnectionStore } from '../../stores/connection.store';
 import DeviceGrid from './components/DeviceGrid.vue';
+import UnbindWarningDialog from './components/UnbindWarningDialog.vue';
 
 const connectionStore = useConnectionStore();
 const itemsPerRow = ref(4);
+
+const dialogAction = ref<'unbind' | 'unregister'>('unbind');
+const selectedDevice = ref<any>(null);
+const showDialog = ref(false);
+
+const handleUnbind = (device: any) => {
+  selectedDevice.value = device;
+  dialogAction.value = 'unbind';
+  showDialog.value = true;
+};
+
+const handleUnregister = (device: any) => {
+  selectedDevice.value = device;
+  dialogAction.value = 'unregister';
+  showDialog.value = true;
+};
+
+const confirmAction = async () => {
+  if (!selectedDevice.value) return;
+  if (dialogAction.value === 'unbind') {
+    await connectionStore.unbindDevice(selectedDevice.value.deviceUuid);
+  } else {
+    await connectionStore.unregisterDevice(selectedDevice.value.deviceUuid);
+  }
+  showDialog.value = false;
+  selectedDevice.value = null;
+};
 
 onMounted(() => {
   connectionStore.fetchDevices();
@@ -16,11 +44,12 @@ function refreshDevices() {
 
 const formattedDevices = computed(() => {
   return connectionStore.devices.map(d => ({
-    id: d.user?.testId || '',
+    id: d.testId || d.user?.testId || '',
     name: d.user?.name || '',
     ipAddress: d.ipAddress,
     deviceUuid: d.deviceUuid,
-    isOnline: d.isOnline
+    isOnline: d.isOnline,
+    status: d.status
   }));
 });
 </script>
@@ -103,6 +132,15 @@ const formattedDevices = computed(() => {
       v-else
       :devices="formattedDevices"
       :items-per-row="itemsPerRow"
+      @unbind="handleUnbind"
+      @unregister="handleUnregister"
+    />
+
+    <UnbindWarningDialog
+      v-model="showDialog"
+      :device="selectedDevice"
+      :action="dialogAction"
+      @confirm="confirmAction"
     />
   </v-container>
 </template>

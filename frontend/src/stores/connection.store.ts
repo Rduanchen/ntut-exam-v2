@@ -92,6 +92,16 @@ export const useConnectionStore = defineStore('connection', () => {
     }
   }
 
+  async function unregisterDevice(uuid: string) {
+    try {
+      await axios.delete(`${BACKEND_URL}/admin/connection/devices/${uuid}`, { headers: getHeaders() });
+      await fetchDevices();
+    } catch (err: any) {
+      error.value = err.response?.data?.error || err.message || 'Failed to unregister device';
+      throw err;
+    }
+  }
+
   async function manualUnblock(targetType: string, targetValue: string, action: string) {
     try {
       await axios.post(`${BACKEND_URL}/admin/connection/unblock`, { targetType, targetValue, action }, { headers: getHeaders() });
@@ -114,6 +124,7 @@ export const useConnectionStore = defineStore('connection', () => {
     approveRequest,
     rejectRequest,
     unbindDevice,
+    unregisterDevice,
     manualUnblock
   };
 });

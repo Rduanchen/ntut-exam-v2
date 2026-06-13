@@ -8,6 +8,7 @@ router.post("/settings", ConnectionController.updateSettings);
 
 router.get("/devices", ConnectionController.getDevices);
 router.post("/devices/:uuid/unbind", ConnectionController.unbindDevice);
+router.delete("/devices/:uuid", ConnectionController.unregisterDevice);
 
 router.get("/requests", ConnectionController.getRequests);
 router.post("/requests/:id/approve", ConnectionController.approveRequest);

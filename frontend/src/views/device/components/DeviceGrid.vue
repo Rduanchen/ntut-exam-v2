@@ -7,7 +7,13 @@ interface DeviceItem {
   ipAddress: string | null;
   deviceUuid: string | null;
   isOnline: boolean;
+  status: 'UNBOUND' | 'AWAITING_LOGIN' | 'ONLINE';
 }
+
+const emit = defineEmits<{
+  (e: 'unbind', device: DeviceItem): void;
+  (e: 'unregister', device: DeviceItem): void;
+}>();
 
 const props = defineProps<{
   devices: DeviceItem[];
@@ -41,6 +47,33 @@ const sortedDevices = computed(() => {
     return ipCompare(ipA, ipB);
   });
 });
+
+const getDeviceCardClass = (device: DeviceItem) => {
+  if (device.status === 'ONLINE') return device.isOnline ? 'device-card-online' : 'device-card-offline';
+  if (device.status === 'AWAITING_LOGIN') return device.isOnline ? 'device-card-awaiting' : 'device-card-offline';
+  return 'device-card-unbound';
+};
+
+const getDeviceIconColor = (device: DeviceItem) => {
+  if (!device.isOnline) return 'grey-lighten-1';
+  if (device.status === 'ONLINE') return 'success';
+  if (device.status === 'AWAITING_LOGIN') return 'info';
+  return 'warning';
+};
+
+const getDeviceDotClass = (device: DeviceItem) => {
+  if (!device.isOnline) return 'status-offline';
+  if (device.status === 'ONLINE') return 'pulsing-green';
+  if (device.status === 'AWAITING_LOGIN') return 'pulsing-blue';
+  return 'pulsing-orange';
+};
+
+const getDeviceStatusText = (device: DeviceItem) => {
+  if (!device.isOnline) return 'Offline';
+  if (device.status === 'ONLINE') return 'Logged In';
+  if (device.status === 'AWAITING_LOGIN') return 'Awaiting Login';
+  return 'Unbound Device';
+};
 </script>
 
 <template>
@@ -56,30 +89,30 @@ const sortedDevices = computed(() => {
       v-for="device in sortedDevices"
       :key="device.id"
       class="device-card d-flex flex-column rounded-xl"
-      :class="device.isOnline ? 'device-card-online' : 'device-card-offline'"
+      :class="getDeviceCardClass(device)"
       elevation="1"
     >
       <v-card-item class="pb-2">
         <template v-slot:prepend>
           <v-icon 
             size="36" 
-            :color="device.isOnline ? 'success' : 'grey-lighten-1'"
+            :color="getDeviceIconColor(device)"
             class="mr-2"
           >
             mdi-monitor
           </v-icon>
         </template>
         <v-card-title class="font-weight-bold text-subtitle-1 d-flex align-center justify-space-between">
-          <span>{{ device.name || 'Unbound Student' }}</span>
+          <span>{{ device.name || 'Unknown Student' }}</span>
           <span class="d-flex align-center">
-            <span :class="['status-dot', device.isOnline ? 'pulsing-green' : 'status-offline']"></span>
+            <span :class="['status-dot', getDeviceDotClass(device)]"></span>
             <span class="text-caption ml-1 font-weight-medium text-grey-darken-1">
-              {{ device.isOnline ? 'Online' : 'Offline' }}
+              {{ getDeviceStatusText(device) }}
             </span>
           </span>
         </v-card-title>
         <v-card-subtitle class="text-caption">
-          ID: {{ device.id }}
+          ID: {{ device.id || 'N/A' }}
         </v-card-subtitle>
       </v-card-item>
 
@@ -103,6 +136,28 @@ const sortedDevices = computed(() => {
           </span>
         </div>
       </v-card-text>
+      
+      <v-divider></v-divider>
+      <v-card-actions class="px-3 py-2 bg-grey-lighten-4">
+        <v-btn 
+          size="small" 
+          color="warning" 
+          variant="outlined" 
+          :disabled="device.status === 'UNBOUND'"
+          @click="emit('unbind', device)"
+        >
+          Unbind User
+        </v-btn>
+        <v-spacer></v-spacer>
+        <v-btn 
+          size="small" 
+          color="error" 
+          variant="flat" 
+          @click="emit('unregister', device)"
+        >
+          Unregister
+        </v-btn>
+      </v-card-actions>
     </v-card>
   </div>
 </template>
@@ -134,6 +189,16 @@ const sortedDevices = computed(() => {
   opacity: 0.85;
 }
 
+.device-card-awaiting {
+  border: 1.5px solid rgba(33, 150, 243, 0.7) !important;
+  background: linear-gradient(to bottom, #ffffff, #e3f2fd);
+}
+
+.device-card-unbound {
+  border: 1.5px solid rgba(255, 152, 0, 0.7) !important;
+  background: linear-gradient(to bottom, #ffffff, #fff3e0);
+}
+
 .text-mono {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
 }
@@ -152,14 +217,26 @@ const sortedDevices = computed(() => {
 .pulsing-green {
   background-color: #4CAF50;
   box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
-  animation: pulse 1.8s infinite;
+  animation: pulse-green 1.8s infinite;
+}
+
+.pulsing-blue {
+  background-color: #2196F3;
+  box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7);
+  animation: pulse-blue 1.8s infinite;
+}
+
+.pulsing-orange {
+  background-color: #FF9800;
+  box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7);
+  animation: pulse-orange 1.8s infinite;
 }
 
 .status-offline {
   background-color: #9E9E9E;
 }
 
-@keyframes pulse {
+@keyframes pulse-green {
   0% {
     transform: scale(0.95);
     box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
@@ -171,6 +248,36 @@ const sortedDevices = computed(() => {
   100% {
     transform: scale(0.95);
     box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
+}
+
+@keyframes pulse-blue {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(33, 150, 243, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0);
+  }
+}
+
+@keyframes pulse-orange {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(255, 152, 0, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 152, 0, 0);
   }
 }
 </style>

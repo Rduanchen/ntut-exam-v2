@@ -20,7 +20,7 @@ export class User extends Model {
 
   @ForeignKey(() => DeviceKeyMap)
   @Column({ field: "device_uuid", type: DataType.STRING, allowNull: true })
-  declare deviceUuid: string;
+  declare deviceUuid: string | null;
 
   @Column({ 
     field: "is_finished", 

@@ -61,14 +61,24 @@ export class ConnectionController {
   static async unbindDevice(req: Request, res: Response, next: NextFunction) {
     try {
       const { uuid } = req.params;
-      const user = await User.findOne({ where: { deviceUuid: uuid } });
-      if (user) {
-        await user.update({
-          deviceUuid: null,
-          ipAddress: null
-        });
-      }
+      const { BindingService } = require("../../services/binding.service");
+      await BindingService.unbindDevice(uuid);
       res.status(200).json({ message: "Device unbound successfully" });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * DELETE /admin/connection/devices/:uuid
+   * Completely unregister a device
+   */
+  static async unregisterDevice(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { uuid } = req.params;
+      const { BindingService } = require("../../services/binding.service");
+      await BindingService.unregisterDevice(uuid);
+      res.status(200).json({ message: "Device unregistered successfully" });
     } catch (error) {
       next(error);
     }
@@ -107,16 +117,11 @@ export class ConnectionController {
       await request.save();
 
       if (action === "UNBIND_USER") {
+        const { BindingService } = require("../../services/binding.service");
         if (request.testId) {
-          // Import AuthService to call resetBinding
-          const { AuthService } = require("../../services/auth.service");
-          await AuthService.resetBinding(request.testId);
+          await BindingService.unbindUser(request.testId);
         } else {
-          // Fallback if testId is missing but we want to unbind
-          const { DeviceService } = require("../../services/device.service");
-          await DeviceService.deleteKey(request.deviceUuid).catch(() => {});
-          const user = await User.findOne({ where: { deviceUuid: request.deviceUuid } });
-          if (user) await user.update({ deviceUuid: null, ipAddress: null });
+          await BindingService.unregisterDevice(request.deviceUuid);
         }
       }
 
@@ -170,16 +175,13 @@ export class ConnectionController {
       }
 
       if (action === "UNBIND_USER") {
+        const { BindingService } = require("../../services/binding.service");
         if (targetType === "UUID") {
-          const { DeviceService } = require("../../services/device.service");
-          await DeviceService.deleteKey(targetValue).catch(() => {});
-          const user = await User.findOne({ where: { deviceUuid: targetValue } });
-          if (user) await user.update({ deviceUuid: null, ipAddress: null });
+          await BindingService.unregisterDevice(targetValue);
         } else if (targetType === "IP") {
           const user = await User.findOne({ where: { ipAddress: targetValue } });
           if (user) {
-            const { AuthService } = require("../../services/auth.service");
-            await AuthService.resetBinding(user.testId);
+            await BindingService.unbindUser(user.testId);
           }
         }
       }

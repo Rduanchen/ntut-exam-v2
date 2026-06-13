@@ -156,6 +156,22 @@ export class MessageSocketService {
       logger.warn(`Failed to send status update notification via socket: ${err.message}`);
     }
   }
+
+  public static sendForceLogout(socketId: string, reason: string): void {
+    try {
+      const instance = MessageSocketService.getInstance();
+      instance.io.to(socketId).emit("exam-message", {
+        success: true,
+        data: {
+          id: Date.now(),
+          type: "force_logout",
+          message: reason,
+        },
+      });
+    } catch (err: any) {
+      logger.warn(`Failed to send force logout via socket: ${err.message}`);
+    }
+  }
 }
 
 export default MessageSocketService;
