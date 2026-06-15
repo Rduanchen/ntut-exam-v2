@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { CodeStorageService } from '../../services/code-storage.service';
 import { ExamConfigParserService } from '../../services/exam-config-parser.service';
 import { ScoreBoard } from '../../models/score-board.model';
+import { SocketService } from '../../sockets/socket.service';
 import logger from '../../utils/logger.util';
 
 export class UserSubmissionController {
@@ -30,6 +31,8 @@ export class UserSubmissionController {
       }
 
       await CodeStorageService.upsertSubmission(testId, { questionId, language, codeContent });
+      
+      SocketService.triggerDataUpdateEvent("score");
 
       res.status(200).json({ success: true, message: 'Submission saved successfully' });
     } catch (error: any) {
@@ -71,6 +74,8 @@ export class UserSubmissionController {
       } else {
         await ScoreBoard.create({ testId, ...updateData });
       }
+
+      SocketService.triggerDataUpdateEvent("score");
 
       res.status(200).json({ success: true, message: 'Score saved successfully' });
     } catch (error: any) {

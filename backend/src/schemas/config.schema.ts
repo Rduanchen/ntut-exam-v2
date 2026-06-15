@@ -63,16 +63,14 @@ const accessUserSchema = z.object({
 export const examConfigSchema = z.object({
     testTitle: z.string(),
     description: z.string(),
-    startPassword: z.string().optional(),
     judgerSettings: z.object({
         timeLimit: z.number(),
         memoryLimit: z.number(),
         compareMode: z.enum(["strict", "loose"]).optional().default("loose"),
     }),
-    environmentVariables: z.record(
-        z.string(),
-        z.union([z.string(), z.number(), z.boolean()])
-    ).optional(),
+    environmentVariables: z.object({
+        startPassword: z.string().min(1, "startPassword is required"),
+    }).catchall(z.union([z.string(), z.number(), z.boolean()])),
 
     accessibleUsers: z.array(accessUserSchema),
     globalSpecialRules: z.array(specialRuleSchema).optional(),

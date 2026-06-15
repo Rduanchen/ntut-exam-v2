@@ -46,13 +46,13 @@ const removeSection = (index: number) => {
               <v-text-field v-model="section.id" label="Section ID" outlined density="compact" :readonly="props.disabled"></v-text-field>
             </v-col>
             <v-col cols="6">
-              <v-text-field v-model="section.title" label="Title" outlined density="compact" :readonly="props.disabled"></v-text-field>
+              <v-text-field v-model="section.title" label="Title" outlined density="compact"></v-text-field>
             </v-col>
             <v-col cols="2">
               <v-text-field v-model.number="section.maxScore" type="number" label="Max Score" outlined density="compact" :readonly="props.disabled"></v-text-field>
             </v-col>
             <v-col cols="12">
-              <v-textarea v-model="section.description" label="Description" outlined rows="2" density="compact" :readonly="props.disabled"></v-textarea>
+              <v-textarea v-model="section.description" label="Description" outlined rows="2" density="compact"></v-textarea>
             </v-col>
           </v-row>
           

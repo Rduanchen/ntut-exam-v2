@@ -12,14 +12,14 @@ export const useScoreStore = defineStore('score', () => {
   const error = ref<string | null>(null);
 
   // Setup socket listener for real-time score updates
-  socket.on('score-update', (payload: any) => {
-    if (payload && payload.result) {
-      const idx = submissions.value.findIndex(s => s.id === payload.result.id);
-      if (idx !== -1) {
-        submissions.value[idx] = payload.result;
-      } else {
-        submissions.value.push(payload.result);
-      }
+  socket.on('score-update', () => {
+    fetchSubmissions();
+    fetchScores(true);
+  });
+
+  socket.on('data-update', (payload: any) => {
+    if (payload && payload.type === 'score') {
+      fetchSubmissions();
       fetchScores(true);
     }
   });

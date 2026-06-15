@@ -57,7 +57,10 @@ export interface ExamConfig {
         memoryLimit: number;
         compareMode?: "strict" | "loose";
     };
-    environmentVariables?: Record<string, string | number | boolean>;
+    environmentVariables: {
+        startPassword: string;
+        [key: string]: string | number | boolean;
+    };
     accessibleUsers: AccessUser[];
     globalSpecialRules?: SpecialRule[];
     sections: Section[];

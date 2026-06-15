@@ -8,6 +8,9 @@ export const DEFAULT_EXAM_CONFIG: ExamConfig = {
     memoryLimit: 256,
     compareMode: "loose",
   },
+  environmentVariables: {
+    startPassword: "ntut",
+  },
   accessibleUsers: [],
   sections: [],
 };

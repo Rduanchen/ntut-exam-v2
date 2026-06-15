@@ -47,7 +47,7 @@ const removePuzzle = (index: number) => {
               <v-text-field v-model="puzzle.id" label="Puzzle ID" outlined density="compact" :readonly="props.disabled"></v-text-field>
             </v-col>
             <v-col cols="5">
-              <v-text-field v-model="puzzle.title" label="Title" outlined density="compact" :readonly="props.disabled"></v-text-field>
+              <v-text-field v-model="puzzle.title" label="Title" outlined density="compact"></v-text-field>
             </v-col>
             <v-col cols="2">
               <v-text-field v-model.number="puzzle.score" type="number" label="Score" outlined density="compact" :readonly="props.disabled"></v-text-field>
@@ -56,10 +56,10 @@ const removePuzzle = (index: number) => {
               <v-text-field v-model="puzzle.language" label="Language" outlined density="compact" :readonly="props.disabled"></v-text-field>
             </v-col>
             <v-col cols="6">
-              <v-text-field v-model.number="puzzle.timeLimit" type="number" label="Time Limit (ms, optional)" outlined density="compact" hide-details :readonly="props.disabled"></v-text-field>
+              <v-text-field v-model.number="puzzle.timeLimit" type="number" label="Time Limit (ms, optional)" outlined density="compact" hide-details></v-text-field>
             </v-col>
             <v-col cols="6">
-              <v-text-field v-model.number="puzzle.memoryLimit" type="number" label="Memory Limit (MB, optional)" outlined density="compact" hide-details :readonly="props.disabled"></v-text-field>
+              <v-text-field v-model.number="puzzle.memoryLimit" type="number" label="Memory Limit (MB, optional)" outlined density="compact" hide-details></v-text-field>
             </v-col>
           </v-row>
 

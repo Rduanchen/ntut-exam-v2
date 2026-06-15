@@ -19,10 +19,19 @@ onMounted(() => {
       config.value.judgerSettings.compareMode = 'loose';
     }
   }
+  if (config.value) {
+    if (!config.value.environmentVariables) {
+      config.value.environmentVariables = { startPassword: '' };
+    } else if (config.value.environmentVariables.startPassword === undefined) {
+      config.value.environmentVariables.startPassword = '';
+    }
+  }
 });
 
 const addEnvVar = () => {
-  if (!config.value.environmentVariables) config.value.environmentVariables = {};
+  if (!config.value.environmentVariables) {
+    config.value.environmentVariables = { startPassword: '' };
+  }
   config.value.environmentVariables[`VAR_${Date.now()}`] = 'value';
 };
 
@@ -73,8 +82,8 @@ const importCsv = () => {
     <v-row>
       <v-col cols="12">
         <h3 class="text-h6 mb-2">Basic Info</h3>
-        <v-text-field v-model="config.testTitle" label="Test Title" outlined :readonly="props.disabled"></v-text-field>
-        <v-textarea v-model="config.description" label="Description" outlined rows="3" :readonly="props.disabled"></v-textarea>
+        <v-text-field v-model="config.testTitle" label="Test Title" outlined></v-text-field>
+        <v-textarea v-model="config.description" label="Description" outlined rows="3"></v-textarea>
       </v-col>
     </v-row>
 
@@ -83,10 +92,10 @@ const importCsv = () => {
         <h3 class="text-h6 mb-2">Judger Settings</h3>
         <v-row v-if="config.judgerSettings">
           <v-col cols="4">
-            <v-text-field v-model.number="config.judgerSettings.timeLimit" label="Time Limit (ms)" type="number" outlined :readonly="props.disabled"></v-text-field>
+            <v-text-field v-model.number="config.judgerSettings.timeLimit" label="Time Limit (ms)" type="number" outlined></v-text-field>
           </v-col>
           <v-col cols="4">
-            <v-text-field v-model.number="config.judgerSettings.memoryLimit" label="Memory Limit (MB)" type="number" outlined :readonly="props.disabled"></v-text-field>
+            <v-text-field v-model.number="config.judgerSettings.memoryLimit" label="Memory Limit (MB)" type="number" outlined></v-text-field>
           </v-col>
           <v-col cols="4">
             <v-select v-model="config.judgerSettings.compareMode" :items="[{title: 'Strict Match (嚴格比對)', value: 'strict'}, {title: 'Whitespace-insensitive (標記忽略比對)', value: 'loose'}]" label="Compare Mode" outlined :readonly="props.disabled"></v-select>
@@ -101,18 +110,31 @@ const importCsv = () => {
           Environment Variables
           <v-btn v-if="!props.disabled" icon="mdi-plus" size="small" color="primary" class="ml-2" @click="addEnvVar"></v-btn>
         </h3>
-        <v-card variant="outlined" class="pa-2" v-if="config.environmentVariables && Object.keys(config.environmentVariables).length">
-          <v-row v-for="(_, key) in config.environmentVariables" :key="key" class="align-center mt-2">
+        <v-card variant="outlined" class="pa-2" v-if="config.environmentVariables">
+          <v-row class="align-center mt-2">
             <v-col cols="5">
-              <v-text-field :model-value="key" @change="updateEnvVarKey(key as string, $event)" label="Key" density="compact" hide-details :readonly="props.disabled"></v-text-field>
+              <v-text-field model-value="startPassword" label="Key" density="compact" hide-details readonly disabled></v-text-field>
             </v-col>
             <v-col cols="6">
-              <v-text-field v-model="config.environmentVariables[key]" label="Value" density="compact" hide-details :readonly="props.disabled"></v-text-field>
+              <v-text-field v-model="config.environmentVariables.startPassword" label="Value (Required Password)" density="compact" hide-details :readonly="props.disabled"></v-text-field>
             </v-col>
             <v-col cols="1">
-              <v-btn v-if="!props.disabled" icon="mdi-delete" size="small" color="error" variant="text" @click="removeEnvVar(key as string)"></v-btn>
+              <v-btn icon="mdi-lock" size="small" color="grey" variant="text" disabled></v-btn>
             </v-col>
           </v-row>
+          <template v-for="(_, key) in config.environmentVariables" :key="key">
+            <v-row v-if="key !== 'startPassword'" class="align-center mt-2">
+              <v-col cols="5">
+                <v-text-field :model-value="key" @change="updateEnvVarKey(key as string, $event)" label="Key" density="compact" hide-details :readonly="props.disabled"></v-text-field>
+              </v-col>
+              <v-col cols="6">
+                <v-text-field v-model="config.environmentVariables[key]" label="Value" density="compact" hide-details :readonly="props.disabled"></v-text-field>
+              </v-col>
+              <v-col cols="1">
+                <v-btn v-if="!props.disabled" icon="mdi-delete" size="small" color="error" variant="text" @click="removeEnvVar(key as string)"></v-btn>
+              </v-col>
+            </v-row>
+          </template>
         </v-card>
       </v-col>
     </v-row>

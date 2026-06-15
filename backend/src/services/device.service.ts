@@ -47,8 +47,15 @@ export class DeviceService {
             type: "SECONDARY",
             status: "PENDING"
           });
-          SocketService.triggerDataUpdateEvent('connection');
         }
+        
+        // Update the status so the frontend shows it is waiting for login instead of being stuck on online
+        existing.status = existing.testId ? "AWAITING_LOGIN" : "UNBOUND";
+        await existing.save();
+
+        SocketService.triggerDataUpdateEvent('connection');
+        SocketService.triggerDataUpdateEvent('student');
+
         throw new HttpError(403, "Secondary binding blocked. A request has been sent to the TA.");
       } else {
         // Unblocked or Simulation Mode: Consume the pass and allow binding

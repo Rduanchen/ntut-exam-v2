@@ -71,7 +71,7 @@ const getDeviceDotClass = (device: DeviceItem) => {
 const getDeviceStatusText = (device: DeviceItem) => {
   if (!device.isOnline) return 'Offline';
   if (device.status === 'ONLINE') return 'Logged In';
-  if (device.status === 'AWAITING_LOGIN') return 'Awaiting Login';
+  if (device.status === 'AWAITING_LOGIN') return 'Waiting for Login';
   return 'Unbound Device';
 };
 </script>
