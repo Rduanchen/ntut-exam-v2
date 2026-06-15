@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ntut-backend
+    command: pnpm --filter backend run start
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+      - PISTON_URL=${PISTON_URL:-http://piston:2000}
+      - ADMIN_SECRET=${ADMIN_SECRET:-admin}
+      - DB_STORAGE=/app/data/database.sqlite
+    volumes:
+      - ntut-data:/app/data
+    depends_on:
+      - piston
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:3000}
+    container_name: ntut-frontend
+    command: npx --yes serve -s frontend/dist -l 5173
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  piston:
+    image: ghcr.io/engineer-man/piston
+    container_name: ntut-piston
+    ports:
+      - "${PISTON_PORT:-2000}:2000"
+    restart: unless-stopped
+
+volumes:
+  ntut-data:
