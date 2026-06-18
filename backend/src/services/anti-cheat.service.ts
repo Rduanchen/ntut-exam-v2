@@ -74,10 +74,12 @@ export class AntiCheatService {
 
       let violation: ViolationLog;
       const time = new Date();
+      let shouldAlert = false;
 
       if (existing) {
         await existing.update({ time, ipAddress });
         violation = existing;
+        shouldAlert = false;
       } else {
         violation = await ViolationLog.create({
           testId,
@@ -87,9 +89,12 @@ export class AntiCheatService {
           time,
           isOk: false
         });
+        shouldAlert = true;
       }
       
-      this.triggerAlert(testId, violation);
+      if (shouldAlert) {
+        this.triggerAlert(testId, violation);
+      }
     } catch (error: any) {
       logger.error(`Failed to record violation for ${testId}: ${error.message}`);
     }
