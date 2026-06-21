@@ -17,5 +17,6 @@
       "special-rule-engine",
       "sqlite3"
     ]
-  }
+  },
+  "version": "0.5.0"
 }
