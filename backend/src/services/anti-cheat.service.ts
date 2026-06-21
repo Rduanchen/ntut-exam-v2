@@ -1,5 +1,6 @@
 import { ViolationLog } from '../models/violation-log.model';
 import { UserActionLog } from '../models/user-action-log.model';
+import { User } from '../models/user.model';
 import SocketService from '../sockets/socket.service';
 import { Op } from 'sequelize';
 import logger from '../utils/logger.util';
@@ -11,6 +12,13 @@ export class AntiCheatService {
    */
   public static async checkUserAction(testId: string, ipAddress: string | null, actionType: string, details?: any): Promise<void> {
     try {
+      if (!ipAddress) {
+        const user = await User.findOne({ where: { testId } });
+        if (user && user.ipAddress) {
+          ipAddress = user.ipAddress;
+        }
+      }
+
       // 1. Dynamic alerts from frontend (e.g. APP_ON_QUIT)
       if (actionType === 'alert' && details && details.type) {
         const message = details.message || `Violation detected: ${details.type}`;

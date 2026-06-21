@@ -52,6 +52,7 @@ export class MessageSocketService {
             if (device.isOnline) {
               await ViolationLog.create({
                 testId: user.testId,
+                ipAddress: device.ipAddress || user.ipAddress || null,
                 type: 'network',
                 message: 'User reconnected',
                 isOk: false,
@@ -86,6 +87,7 @@ export class MessageSocketService {
             if (user) {
               await ViolationLog.create({
                 testId: user.testId,
+                ipAddress: device.ipAddress || user.ipAddress || null,
                 type: 'network',
                 message: 'User disconnected',
                 isOk: false,
