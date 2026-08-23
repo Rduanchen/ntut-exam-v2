@@ -175,6 +175,7 @@ export class JudgerService {
 
         const formattedRes = {
           status: judgeRes.status,
+          message: judgeRes.message,
           userOutput: truncateString(judgeRes.actualOutput || ""),
           expectedOutput: tc.output,
           time: judgeRes.details?.runInfo?.wallTime?.toString() || "0"
@@ -216,6 +217,7 @@ export class JudgerService {
 
         const formattedRes = {
           status: judgeRes.status,
+          message: judgeRes.message,
           userOutput: truncateString(judgeRes.actualOutput || ""),
           expectedOutput: tc.output,
           time: judgeRes.details?.runInfo?.wallTime?.toString() || "0"

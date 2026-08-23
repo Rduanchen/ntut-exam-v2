@@ -8,3 +8,4 @@ database.sqlite-*
 *.sqlite-shm
 .DS_Store
 *.log
+coverage/
