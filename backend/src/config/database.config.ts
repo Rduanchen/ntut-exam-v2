@@ -39,7 +39,10 @@ export const sequelize = new Sequelize({
   ],
   logging: process.env.NODE_ENV === "development" ? console.log : false,
   pool: {
-    max: 5,
+    // An in-memory SQLite database lives inside a single connection: a second
+    // connection would silently open a second, empty database. Pin the pool to
+    // one connection so the invariant is explicit rather than incidental.
+    max: dbStorage === ":memory:" ? 1 : 5,
     min: 0,
     acquire: 30000,
     idle: 10000,

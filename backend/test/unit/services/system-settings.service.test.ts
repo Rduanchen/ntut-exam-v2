@@ -1,26 +1,9 @@
-import { describe, it, expect, beforeEach, beforeAll, afterAll } from "vitest";
-import { Sequelize } from "sequelize-typescript";
-import { SystemSettings } from "../src/models/system-settings.model";
-import { SystemSettingsService, PROTECTED_SETTINGS_KEYS } from "../src/services/system-settings.service";
-import { HttpError } from "../src/utils/http-error";
+import { describe, it, expect, beforeEach } from 'vitest';
+import { SystemSettings } from "../../../src/models/system-settings.model";
+import { SystemSettingsService, PROTECTED_SETTINGS_KEYS } from "../../../src/services/system-settings.service";
+import { HttpError } from "../../../src/utils/http-error";
 
 describe("SystemSettingsService", () => {
-  let testSequelize: Sequelize;
-
-  beforeAll(async () => {
-    // Setup in-memory SQLite database for unit testing
-    testSequelize = new Sequelize({
-      dialect: "sqlite",
-      storage: ":memory:",
-      models: [SystemSettings],
-      logging: false,
-    });
-    await testSequelize.sync();
-  });
-
-  afterAll(async () => {
-    await testSequelize.close();
-  });
 
   beforeEach(async () => {
     // Clear all settings before each test
@@ -152,19 +135,27 @@ describe("SystemSettingsService", () => {
   });
 
   describe("deleteSetting", () => {
-    it("should throw 403 Forbidden if deleting a protected key", async () => {
-      const protectedKey = PROTECTED_SETTINGS_KEYS[0] || "exam_config";
+    it.each(PROTECTED_SETTINGS_KEYS)(
+      "should throw 403 Forbidden when deleting the protected key %s",
+      async (protectedKey) => {
+        await expect(
+          SystemSettingsService.deleteSetting(protectedKey)
+        ).rejects.toThrowError(HttpError);
 
-      await expect(
-        SystemSettingsService.deleteSetting(protectedKey)
-      ).rejects.toThrowError(HttpError);
-
-      try {
-        await SystemSettingsService.deleteSetting(protectedKey);
-      } catch (err: any) {
-        expect(err.statusCode).toBe(403);
-        expect(err.message).toContain("系統核心設定禁止刪除");
+        try {
+          await SystemSettingsService.deleteSetting(protectedKey);
+        } catch (err: any) {
+          expect(err.statusCode).toBe(403);
+          expect(err.message).toContain("系統核心設定禁止刪除");
+        }
       }
+    );
+
+    it("guards every key the service declares protected", () => {
+      // If a key is added to the constant, the it.each above covers it
+      // automatically — this asserts the constant itself has not been emptied.
+      expect(PROTECTED_SETTINGS_KEYS.length).toBeGreaterThan(0);
+      expect(PROTECTED_SETTINGS_KEYS).toContain("exam_config");
     });
 
     it("should throw 404 Not Found if setting key does not exist", async () => {

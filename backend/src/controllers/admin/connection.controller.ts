@@ -5,6 +5,7 @@ import { LoginRequest } from "../../models/login-request.model";
 import { UnblockedDevice } from "../../models/unblocked-device.model";
 import { SystemSettingsService } from "../../services/system-settings.service";
 import { HttpError } from "../../utils/http-error";
+import { BindingService } from "../../services/binding.service";
 import { SocketService } from "../../sockets/socket.service";
 
 export class ConnectionController {
@@ -61,7 +62,6 @@ export class ConnectionController {
   static async unbindDevice(req: Request, res: Response, next: NextFunction) {
     try {
       const { uuid } = req.params;
-      const { BindingService } = require("../../services/binding.service");
       await BindingService.unbindDevice(uuid);
       res.status(200).json({ message: "Device unbound successfully" });
     } catch (error) {
@@ -76,7 +76,6 @@ export class ConnectionController {
   static async unregisterDevice(req: Request, res: Response, next: NextFunction) {
     try {
       const { uuid } = req.params;
-      const { BindingService } = require("../../services/binding.service");
       await BindingService.unregisterDevice(uuid);
       res.status(200).json({ message: "Device unregistered successfully" });
     } catch (error) {
@@ -117,7 +116,6 @@ export class ConnectionController {
       await request.save();
 
       if (action === "UNBIND_USER") {
-        const { BindingService } = require("../../services/binding.service");
         if (request.testId) {
           await BindingService.unbindUser(request.testId);
         } else {
@@ -175,7 +173,6 @@ export class ConnectionController {
       }
 
       if (action === "UNBIND_USER") {
-        const { BindingService } = require("../../services/binding.service");
         if (targetType === "UUID") {
           await BindingService.unregisterDevice(targetValue);
         } else if (targetType === "IP") {

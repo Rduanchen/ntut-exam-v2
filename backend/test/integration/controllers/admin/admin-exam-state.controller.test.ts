@@ -1,0 +1,68 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import request from 'supertest';
+import type express from 'express';
+
+import { createApp } from '../../../../src/app';
+import { adminRequest } from '../../../helpers/admin-request';
+import { ExamState } from '../../../../src/services/exam-state.service';
+import { SystemSettingsService } from '../../../../src/services/system-settings.service';
+import { MessageSocketService } from '../../../../src/sockets/message-socket.service';
+
+describe('AdminExamStateController (integration)', () => {
+  let app: express.Express;
+
+  beforeEach(() => {
+    app = createApp();
+    vi.restoreAllMocks();
+    vi.spyOn(MessageSocketService, 'sendStatusUpdateNotification').mockImplementation(() => {});
+  });
+
+  describe('GET /admin/exam-state', () => {
+    it('reports UNINITIALIZED before any transition', async () => {
+      const res = await adminRequest(app).get('/admin/exam-state');
+
+      expect(res.status).toBe(200);
+      expect(res.body.state).toBe(ExamState.UNINITIALIZED);
+    });
+
+    it('returns 401 without an admin token', async () => {
+      const res = await request(app).get('/admin/exam-state');
+
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('POST /admin/exam-state', () => {
+    it('transitions the exam state', async () => {
+      const res = await adminRequest(app)
+        .post('/admin/exam-state')
+        .send({ state: ExamState.NOT_STARTED });
+
+      expect(res.status).toBe(200);
+
+      const after = await adminRequest(app).get('/admin/exam-state');
+      expect(after.body.state).toBe(ExamState.NOT_STARTED);
+    });
+
+    it('closes device registration when the exam starts', async () => {
+      await SystemSettingsService.setAllowDeviceRegistration(true);
+
+      await adminRequest(app).post('/admin/exam-state').send({ state: ExamState.IN_PROGRESS });
+
+      expect(await SystemSettingsService.getAllowDeviceRegistration()).toBe(false);
+    });
+
+    it('returns 400 for a state outside the enum', async () => {
+      const res = await adminRequest(app).post('/admin/exam-state').send({ state: 'NONSENSE' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('Bad Request');
+    });
+
+    it('returns 400 when state is missing', async () => {
+      const res = await adminRequest(app).post('/admin/exam-state').send({});
+
+      expect(res.status).toBe(400);
+    });
+  });
+});
