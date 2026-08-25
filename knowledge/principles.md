@@ -8,6 +8,9 @@
 2. **即時同步與一致性 (Real-time Sync & Consistency)**
    考試狀態、分數更新與全域廣播，必須透過 Socket 在前後端與所有從屬服務 (master-slave) 之間保持即時同步，確保無延遲的狀態一致性。
 
+3. **客戶端離線韌性 (Offline Resilience / Client Autonomy)**
+   即使系統發生網路中斷，客戶端 (Client) 必須具備獨立運作的能力。確保在斷線期間，核心功能（如作答、瀏覽題目）依然可用，且狀態與程式碼能妥善暫存於本機，待連線恢復時無縫與後端同步。
+
 ## 衍生原則 (Derived Principles)
 
 - **裝置綁定與解鎖需人工介入 (TA-approved Rebinding)**

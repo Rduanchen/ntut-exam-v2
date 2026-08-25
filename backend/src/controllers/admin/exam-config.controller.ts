@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ExamConfigService } from "../../services/exam-config.service";
+import { LoginRequest } from "../../models/login-request.model";
+import { UnblockedDevice } from "../../models/unblocked-device.model";
 import { InitService } from "../../services/init.service";
 import { SystemSettingsService } from "../../services/system-settings.service";
 import { HttpError } from "../../utils/http-error";
@@ -91,9 +93,6 @@ export class ExamConfigController {
       }
       await InitService.wipeAllData();
 
-      const { LoginRequest } = require("../../models/login-request.model");
-      const { UnblockedDevice } = require("../../models/unblocked-device.model");
-      
       await LoginRequest.destroy({ where: {}, truncate: true, cascade: true });
       await UnblockedDevice.destroy({ where: {}, truncate: true, cascade: true });
 

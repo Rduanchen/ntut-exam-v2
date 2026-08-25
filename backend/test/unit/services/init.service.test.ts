@@ -1,80 +1,22 @@
-import { describe, it, expect, beforeEach, beforeAll, afterAll } from "vitest";
-import { Sequelize } from "sequelize-typescript";
-import { User } from "../src/models/user.model";
-import { ScoreBoard } from "../src/models/score-board.model";
-import { DeviceKeyMap } from "../src/models/device-key-map.model";
-import { Submission } from "../src/models/submission.model";
-import { ViolationLog } from "../src/models/violation-log.model";
-import { UserActionLog } from "../src/models/user-action-log.model";
-import { Message } from "../src/models/message.model";
-import { SystemSettings } from "../src/models/system-settings.model";
-import { ExamConfigService } from "../src/services/exam-config.service";
-import { InitService } from "../src/services/init.service";
+import { describe, it, expect, beforeEach } from 'vitest';
+import { User } from "../../../src/models/user.model";
+import { ScoreBoard } from "../../../src/models/score-board.model";
+import { DeviceKeyMap } from "../../../src/models/device-key-map.model";
+import { Submission } from "../../../src/models/submission.model";
+import { ViolationLog } from "../../../src/models/violation-log.model";
+import { UserActionLog } from "../../../src/models/user-action-log.model";
+import { Message } from "../../../src/models/message.model";
+import { SystemSettings } from "../../../src/models/system-settings.model";
+import { LoginRequest } from "../../../src/models/login-request.model";
+import { UnblockedDevice } from "../../../src/models/unblocked-device.model";
+import { ExamConfigService } from "../../../src/services/exam-config.service";
+import { InitService } from "../../../src/services/init.service";
 import { StatusCode } from "piston-judger/dist/judger.js";
+import { buildExamConfig } from "../../fixtures/exam-config.fixture";
 
 describe("InitService", () => {
-  let testSequelize: Sequelize;
 
-  const validConfig = {
-    testTitle: "NTUT Midterm Exam",
-    description: "Midterm exam for NTUT students",
-    judgerSettings: {
-      timeLimit: 5000,
-      memoryLimit: 65536
-    },
-    accessibleUsers: [
-      { id: "109590001", name: "Alice", ip: "192.168.1.10" },
-      { id: "109590002", name: "Bob" }
-    ],
-    sections: [
-      {
-        id: "S1",
-        title: "Section 1",
-        maxScore: 100,
-        puzzles: [
-          {
-            id: "Q1",
-            title: "Two Sum",
-            score: 100,
-            language: "Python",
-            timeLimit: 1000,
-            memoryLimit: 32768,
-            subtasks: [
-              {
-                title: "Subtask 1",
-                score: 50,
-                visible: [{ input: "1 2", output: "3" }],
-                hidden: [{ input: "3 4", output: "7" }]
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  };
-
-  beforeAll(async () => {
-    testSequelize = new Sequelize({
-      dialect: "sqlite",
-      storage: ":memory:",
-      models: [
-        DeviceKeyMap,
-        User,
-        Submission,
-        ScoreBoard,
-        UserActionLog,
-        ViolationLog,
-        Message,
-        SystemSettings
-      ],
-      logging: false,
-    });
-    await testSequelize.sync();
-  });
-
-  afterAll(async () => {
-    await testSequelize.close();
-  });
+  const validConfig = buildExamConfig();
 
   beforeEach(async () => {
     // Wiping tables before each test case
@@ -85,6 +27,8 @@ describe("InitService", () => {
     await Message.destroy({ where: {} });
     await User.destroy({ where: {} });
     await DeviceKeyMap.destroy({ where: {} });
+    await LoginRequest.destroy({ where: {} });
+    await UnblockedDevice.destroy({ where: {} });
     await SystemSettings.destroy({ where: {} });
   });
 
@@ -121,18 +65,19 @@ describe("InitService", () => {
       expect(alice).toBeDefined();
       expect(alice!.testId).toBe("109590001");
       expect(alice!.ipAddress).toBe("192.168.1.10");
-      expect(alice!.deviceUuid).not.toBeNull();
-
-      // Check DeviceKeyMap binding
-      const device = await DeviceKeyMap.findOne({ where: { deviceUuid: alice!.deviceUuid } });
-      expect(device).not.toBeNull();
-      expect(device!.ipAddress).toBe("192.168.1.10");
+      // Device key mapping is decoupled from user initialization: even a user
+      // with a pre-assigned IP starts unbound and only gets a deviceUuid when
+      // the client actually logs in.
+      expect(alice!.deviceUuid).toBeNull();
 
       const bob = users.find(u => u.name === "Bob");
       expect(bob).toBeDefined();
       expect(bob!.testId).toBe("109590002");
       expect(bob!.ipAddress).toBeNull();
-      expect(bob!.deviceUuid).toBeNull(); // IP-less Bob should not have pre-allocated device uuid
+      expect(bob!.deviceUuid).toBeNull();
+
+      // No DeviceKeyMap rows are pre-allocated during initialization.
+      expect(await DeviceKeyMap.count()).toBe(0);
 
       // Step 4: Verify default scoreboards generated
       const scoreboards = await ScoreBoard.findAll();
@@ -144,7 +89,7 @@ describe("InitService", () => {
       
       const puzzleResults: any = aliceScoreboard!.puzzleResults;
       expect(puzzleResults).toHaveProperty("Q1");
-      expect(puzzleResults.Q1.subtasks).toHaveLength(1);
+      expect(puzzleResults.Q1.subtasks).toHaveLength(2);
       expect(puzzleResults.Q1.subtasks[0].visible).toHaveLength(1);
       expect(puzzleResults.Q1.subtasks[0].visible[0].status).toBe(StatusCode.WA);
 

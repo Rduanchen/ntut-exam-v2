@@ -1,73 +1,21 @@
 import "reflect-metadata";
 import dotenv from "dotenv";
-import express from "express";
-import cors from "cors";
-import { initDatabase, sequelize } from "./config/database.config";
+import { initDatabase } from "./config/database.config";
 import logger from "./utils/logger.util";
 
-import userRouter from "./routes/user";
-import adminRouter from "./routes/admin";
+import { createApp } from "./app";
 
 import http from "http";
 import { Server } from "socket.io";
 import SocketService from "./sockets/socket.service";
 import MessageSocketService from "./sockets/message-socket.service";
 
-import PISTON_CONFIG, { checkPistonServer } from "./constants/piston.config";
+import { checkPistonServer } from "./constants/piston.config";
 
 dotenv.config();
 
-const app = express();
+const app = createApp();
 const port = process.env.PORT || 3000;
-
-app.use(cors());
-app.use(express.json({ limit: "5mb" }));
-app.use(express.urlencoded({ extended: true, limit: "5mb" }));
-
-app.use("/user", userRouter);
-app.use("/admin", adminRouter);
-
-app.get("/health", async (req, res) => {
-  try {
-    await sequelize.authenticate();
-    res.status(200).json({
-      status: "UP",
-      database: "UP",
-      loadTestMode: process.env.LOAD_TEST_MODE || "NOT SET",
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error: any) {
-    logger.error(`Health check database error: ${error.message}`);
-    res.status(500).json({
-      status: "DOWN",
-      database: "DOWN",
-      error: error.message || String(error),
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-app.get("/", (req, res) => {
-  res.send("NTUT Exam Host Backend is running.");
-});
-
-app.use(
-  (
-    err: any,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction,
-  ) => {
-    const status = err.statusCode || err.status || 500;
-    const message = err.message || "Internal Server Error";
-    if (status >= 500) {
-      logger.error(`Unhandled Server Error: ${err.message || err}`, {
-        stack: err.stack,
-      });
-    }
-    res.status(status).json({ error: message, code: err.code });
-  },
-);
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
