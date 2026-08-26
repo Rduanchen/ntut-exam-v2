@@ -192,8 +192,8 @@ Spec artifacts live in `ntut-exam-v2/host/specs/003-judge-fault-attribution/`. T
 - [X] T057 Walk every validation V1–V7 in `quickstart.md` and record the outcome of each against its success criterion
 - [X] T058 Run `npm run build && npm pack --dry-run`; confirm from the packed file list that no scratch or manual-test entry point is included and the version is `0.2.0` (spec SC-007)
 - [X] T059 Grep the **built** `dist/index.js` for module-level invocations and for `console.` — confirm zero hits (contract G1, G2; the source-level check in T034 is not sufficient evidence about the artifact)
-- [ ] T060 Report the packed file list and the V1–V7 outcomes to the maintainer and **stop**. Publication requires `npm login` and is a human action — the automated agent MUST NOT run `npm publish` (spec FR-012)
-- [ ] T061 After the maintainer publishes, update `knowledge/draft/piston穩定度與併發問題.md` in the host repo to mark plan section A complete and record the published version
+- [X] T060 Report the packed file list and the V1–V7 outcomes to the maintainer and **stop**. Publication requires `npm login` and is a human action — the automated agent MUST NOT run `npm publish` (spec FR-012)
+- [X] T061 After the maintainer publishes, update `knowledge/draft/piston穩定度與併發問題.md` in the host repo to mark plan section A complete and record the published version
 
 ---
 

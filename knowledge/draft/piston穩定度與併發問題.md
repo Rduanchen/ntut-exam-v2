@@ -60,7 +60,7 @@ return result.compile.code !== 0 || result.compile.status === "RE";
 4. **修上游 `piston-judger`（`~/Documents/my-code/ntut-exam/node-piston`）並發布 npm**，而非在 `src/` 下內化。發布由人類執行。
 
 ## 實作計畫
-**A. `node-piston`（上游，先做，backend 依賴它）**
+**A. `node-piston`（上游）— ✅ 已完成，2026-08-27 發布 `piston-judger@0.2.0`**
 1. 清掉 debug 殘留（`src/index.ts` 有 top-level `test2()` 會在 import 時打 Piston；`client.ts` 有 `console.log` 會印出學生完整執行結果；無用的 `import { VERSION } from "axios"`）。保留 prettier 排版變動。
 2. `judge()` 不再把 compile 的 `TO`/`SIGKILL` 壓成 CE，保留完整 stage 原始資訊讓呼叫端自行分類。
 3. `isMemoryExceeded` 拿掉 `stderr.includes("Killed")` 字串比對（學生自己印 "Killed" 會誤判 MLE），改看 `signal`/`status`。
@@ -68,6 +68,21 @@ return result.compile.code !== 0 || result.compile.status === "RE";
 5. `compile_timeout` 預設不再靜默藏在套件裡。
 6. 補 vitest 涵蓋上述誤判情境。
 7. bump `0.2.0`（breaking）→ build → `npm pack` 供驗證 → **人類 publish**。
+
+> **完成紀錄（feature `003-judge-fault-attribution`，commits `dd6238b` / `0ea8ba0` / `d299eb8`）**
+> 39 tests 綠燈（原 31）。新契約：每個判定都帶 `attribution`（submission / system），新增 `CTLE` 判定碼，
+> `judge()` 接受執行失敗分支不再拋例外，`Result = any` 換成可收窄的 discriminated union。
+>
+> **驗證產物（而非原始碼）額外抓到兩個缺陷**，兩者原始碼層面都看不見：
+> 1. `dist/` 從未清理，tsc 不刪除已移除來源的產物 → `dist/test.js`、`dist/src/example.js`、
+>    `dist/test/fixtures/` 長期被發布（`.npmignore` 排的是 repo 根目錄的 `src`/`test`，不是 `dist` 內）。
+> 2. 清乾淨後才發現套件**根本沒有型別宣告** —— 原本的 `.d.ts` 是舊 config 的陳舊殘留，
+>    現行 tsconfig 從未開 `declaration`。就這樣發布會讓消費端退回 implicit `any`，
+>    等於抹掉這個版本存在的理由。
+>
+> **第三個陷阱**：新增的 `tsconfig.test.json` 第一版回報 0 錯誤 —— `extends` 會**繼承 `exclude`**，
+> 而 build config 排除測試檔。它當時正在「檢查」一批引用已刪除型別的測試卻一片綠。
+> 必須顯式重述 `exclude`。這是 `experience.md` #4 腐化模式的第二次現身。
 
 **B. `host/backend`**
 1. `src/config/judge.config.ts`；順手清掉 `constants/piston.config.ts` 的死碼（`CPU_TIME_LIMIT_MS`/`WALL_TIME_LIMIT_MS`/`MEMORY_LIMIT_KB` 無任何引用）。
@@ -84,8 +99,14 @@ return result.compile.code !== 0 || result.compile.status === "RE";
 Piston container 推薦設定：`privileged: true`、`/piston/jobs` tmpfs、`PISTON_MAX_CONCURRENT_JOBS ≈ 核心數`、資源限制，附上表格數據當調參依據。
 
 ## 狀態
-In-flight Rationale。**診斷已完成並經實測驗證**；設計已定案；實作未開始。
-完成後應反流至 `experience.md`，本檔退場。
+In-flight Rationale。診斷已完成並經實測驗證；設計已定案。
+
+- **A 段（上游套件）✅ 完成** — `piston-judger@0.2.0` 於 2026-08-27 發布。
+- **B/C/D 段（後端遷移、設定頁、README）尚未開始。**
+
+⚠️ **production 的事故尚未關閉。** 後端仍在使用 0.1.1 的舊行為；A 段只是讓上游能正確歸因，
+消費端遷移完成前，學生仍可能被誤判。全部完成後應反流至 `experience.md`（#6 的 Resolved-by
+目前仍留白待補），本檔退場。
 
 ## 關聯
 - 概念：`concepts/失敗歸因的隔離.md`
