@@ -8,6 +8,11 @@ const router = createRouter({
       redirect: '/manage'
     },
     {
+      path: '/judge',
+      name: 'judge-settings',
+      component: () => import('../views/judge/JudgeSettingsView.vue')
+    },
+    {
       path: '/config',
       name: 'config',
       component: () => import('../views/config/ConfigView.vue')

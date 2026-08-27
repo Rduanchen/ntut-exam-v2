@@ -11,6 +11,7 @@ const loadTestMode = ref<string>('disabled');
 const navItems = [
   { title: 'Manage', icon: 'mdi-monitor-dashboard', to: '/manage' },
   { title: 'Config', icon: 'mdi-cog', to: '/config' },
+  { title: 'Judge', icon: 'mdi-gavel', to: '/judge' },
   { title: 'Score', icon: 'mdi-format-list-numbered', to: '/score' },
   { title: 'Student', icon: 'mdi-account-group', to: '/student' },
   { title: 'Anti-Cheat', icon: 'mdi-shield-alert', to: '/anticheat' },
