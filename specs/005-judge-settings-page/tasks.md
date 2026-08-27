@@ -194,13 +194,13 @@ Paths are relative to `frontend/` unless stated otherwise. **No file under `back
 
 ## Phase 10: Polish & Validation
 
-- [ ] T051 Run the full frontend suite and `npm run typecheck` in `frontend/` — both green
-- [ ] T052 Confirm no `any` at the API boundary in `frontend/src/api/judge-settings.ts` (NFR-TYPE)
-- [ ] T053 Walk every validation V1–V8 in `quickstart.md` and record each outcome against its success criterion
-- [ ] T054 Verify against a live backend that the language check reports correctly for a real runtime set — the alias behaviour is the one design decision resting on an external system's data
-- [ ] T055 Update `knowledge/draft/piston穩定度與併發問題.md` marking section C complete; the draft may then retire
-- [ ] T056 Update `knowledge/vision.md`, which records "前端 Vitest 尚未導入" — no longer true, though it now covers one feature rather than the frontend
-- [ ] T057 Record the three findings from `plan.md` in `knowledge/draft/` so they are not lost: container settings are not reportable, the language mapping lives only in the backend, and nothing binds the frontend's exam-config type to the backend schema
+- [X] T051 Run the full frontend suite and `npm run typecheck` in `frontend/` — both green
+- [X] T052 Confirm no `any` at the API boundary in `frontend/src/api/judge-settings.ts` (NFR-TYPE)
+- [X] T053 Walk every validation V1–V8 in `quickstart.md` and record each outcome against its success criterion
+- [X] T054 Verify against a live backend that the language check reports correctly for a real runtime set — the alias behaviour is the one design decision resting on an external system's data
+- [X] T055 Update `knowledge/draft/piston穩定度與併發問題.md` marking section C complete; the draft may then retire
+- [X] T056 Update `knowledge/vision.md`, which records "前端 Vitest 尚未導入" — no longer true, though it now covers one feature rather than the frontend
+- [X] T057 Record the three findings from `plan.md` in `knowledge/draft/` so they are not lost: container settings are not reportable, the language mapping lives only in the backend, and nothing binds the frontend's exam-config type to the backend schema
 
 ---
 
