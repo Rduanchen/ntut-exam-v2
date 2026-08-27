@@ -23,12 +23,12 @@ Paths are relative to the repository root `ntut-exam-v2/host/`. Backend sources 
 
 ## Phase 1: Setup
 
-- [ ] T001 Create branch `feat/004-judge-backend-migration` from `develop` (Constitution III)
-- [ ] T002 Upgrade `piston-judger` to `^0.2.0` in `backend/package.json`
-- [ ] T003 Upgrade `p-limit` from `3.1.0` to `^7.3.1` in `backend/package.json` — v7 exposes a settable `concurrency` that also drains the queue when raised (research D1)
-- [ ] T004 Declare `engines: { "node": ">=20.19.0" }` in `backend/package.json` — `p-limit@7` is ESM-only and requires Node's `require(ESM)` support. **Verified boundary: works on 20.20.2, fails on 20.18.0 with `ERR_REQUIRE_ESM`**
-- [ ] T005 Pin `Dockerfile` to an explicit Node version satisfying `>=20.19.0` instead of the floating `node:20-alpine` tag — a rebuild against an older 20.x would fail at startup with an error that looks nothing like its cause
-- [ ] T006 Record the baseline in `backend/`: `npm install && npm test`, capturing the current pass count so later failures are attributable to this feature
+- [X] T001 Create branch `feat/004-judge-backend-migration` from `develop` (Constitution III)
+- [X] T002 Upgrade `piston-judger` to `^0.2.0` in `backend/package.json`
+- [X] T003 Upgrade `p-limit` from `3.1.0` to `^7.3.1` in `backend/package.json` — v7 exposes a settable `concurrency` that also drains the queue when raised (research D1)
+- [X] T004 Declare `engines: { "node": ">=20.19.0" }` in `backend/package.json` — `p-limit@7` is ESM-only and requires Node's `require(ESM)` support. **Verified boundary: works on 20.20.2, fails on 20.18.0 with `ERR_REQUIRE_ESM`**
+- [X] T005 Pin `Dockerfile` to an explicit Node version satisfying `>=20.19.0` instead of the floating `node:20-alpine` tag — a rebuild against an older 20.x would fail at startup with an error that looks nothing like its cause
+- [X] T006 Record the baseline in `backend/`: `npm install && npm test`, capturing the current pass count so later failures are attributable to this feature
 
 **Checkpoint**: Dependencies current, runtime constraint declared and pinned, baseline recorded.
 
@@ -38,13 +38,13 @@ Paths are relative to the repository root `ntut-exam-v2/host/`. Backend sources 
 
 **⚠️ CRITICAL**: no user story work can begin until this phase completes. Every story either uses the limiter, the settings, or the migrated test doubles.
 
-- [ ] T007 Define a closed `SubmissionStatus` union (`Pending` | `Judging` | `Graded` | `SystemError`) in `backend/src/types/` and apply it to `backend/src/models/submission.model.ts`, replacing the unconstrained string (research S2, data-model § SubmissionStatus)
-- [ ] T008 Replace every `"Error"` write with `"SystemError"` across `backend/src/`, and add a startup normalisation for any historical `"Error"` rows — the old value already meant "the system could not judge this", it was merely named as though the student owned it (research D3)
-- [ ] T009 [P] Create `backend/src/config/judge.config.ts` resolving `compileTimeout`, `compileMemoryLimit`, `maxConcurrentJobs` and `maxSystemRetries` in the order stored-config → environment (first-run seed only) → documented default, reporting each effective value **with its origin** (`config` | `env` | `default` | `clamped`) per data-model § EffectiveSetting
-- [ ] T010 [P] Extend `judgerSettings` in `backend/src/schemas/config.schema.ts` with the four new fields, **each optional with a default** — this is what makes an absent field fall back to the default instead of retaining the previous value, with no merge logic to get wrong (FR-015)
-- [ ] T011 [P] Delete the unused `CPU_TIME_LIMIT_MS`, `WALL_TIME_LIMIT_MS` and `MEMORY_LIMIT_KB` from `backend/src/constants/piston.config.ts`. **Keep the module** — it still provides `CONFIG.languages` to the config schema and the startup probe (research S5, FR-021)
-- [ ] T012 Create `backend/src/services/judge-limiter.ts` owning a module-level `p-limit` singleton, the ceiling clamp, and a setter that applies a new ceiling to already-queued work. It MUST expose a way to observe in-flight count so tests can assert the ceiling (data-model § ExecutionSlot)
-- [ ] T013 Update both test mock layers to the 0.2.0 contract: the global `piston-judger` mock in `backend/test/setup.ts` and the per-scenario overrides in `backend/test/unit/services/judger.service.test.ts` (research S9)
+- [X] T007 Define a closed `SubmissionStatus` union (`Pending` | `Judging` | `Graded` | `SystemError`) in `backend/src/types/` and apply it to `backend/src/models/submission.model.ts`, replacing the unconstrained string (research S2, data-model § SubmissionStatus)
+- [X] T008 Replace every `"Error"` write with `"SystemError"` across `backend/src/`, and add a startup normalisation for any historical `"Error"` rows — the old value already meant "the system could not judge this", it was merely named as though the student owned it (research D3)
+- [X] T009 [P] Create `backend/src/config/judge.config.ts` resolving `compileTimeout`, `compileMemoryLimit`, `maxConcurrentJobs` and `maxSystemRetries` in the order stored-config → environment (first-run seed only) → documented default, reporting each effective value **with its origin** (`config` | `env` | `default` | `clamped`) per data-model § EffectiveSetting
+- [X] T010 [P] Extend `judgerSettings` in `backend/src/schemas/config.schema.ts` with the four new fields, **each optional with a default** — this is what makes an absent field fall back to the default instead of retaining the previous value, with no merge logic to get wrong (FR-015)
+- [X] T011 [P] Delete the unused `CPU_TIME_LIMIT_MS`, `WALL_TIME_LIMIT_MS` and `MEMORY_LIMIT_KB` from `backend/src/constants/piston.config.ts`. **Keep the module** — it still provides `CONFIG.languages` to the config schema and the startup probe (research S5, FR-021)
+- [X] T012 Create `backend/src/services/judge-limiter.ts` owning a module-level `p-limit` singleton, the ceiling clamp, and a setter that applies a new ceiling to already-queued work. It MUST expose a way to observe in-flight count so tests can assert the ceiling (data-model § ExecutionSlot)
+- [X] T013 Update both test mock layers to the 0.2.0 contract: the global `piston-judger` mock in `backend/test/setup.ts` and the per-scenario overrides in `backend/test/unit/services/judger.service.test.ts` (research S9)
 
 **Checkpoint**: `npm test` type-checks and runs. Type layer, settings, and limiter available to every story.
 
@@ -58,22 +58,22 @@ Paths are relative to the repository root `ntut-exam-v2/host/`. Backend sources 
 
 ### Tests for US1
 
-- [ ] T014 [P] [US1] Add a scripted execution double in `backend/test/fixtures/` producing verdicts by attribution — system-terminated compile, genuine compiler diagnostic, execution-failure arm, and normal completion
-- [ ] T015 [US1] Test in `backend/test/unit/services/judger.service.test.ts`: a system-attributed verdict leaves the student's score **unchanged** and does not mark the submission graded (SC-001)
-- [ ] T016 [US1] Test: a system-attributed verdict is retried up to the configured maximum (FR-003)
-- [ ] T017 [US1] Test: once retries are exhausted the submission ends in `SystemError`, carries no score, and is **not** counted among wrong answers (FR-005)
-- [ ] T018 [US1] Test: a submission-attributed verdict is graded and is **never** retried — guards the opposite failure, where a fix blames the system for everything (FR-004, contract G2)
-- [ ] T019 [US1] Test: an unreachable backend produces a system failure verdict rather than an unhandled error (FR-010 of the library contract; spec US1 AS5)
-- [ ] T020 [US1] Test: a submission whose test cases mix system and student failures is not scored as if fully evaluated (spec Edge Cases)
+- [X] T014 [P] [US1] Add a scripted execution double in `backend/test/fixtures/` producing verdicts by attribution — system-terminated compile, genuine compiler diagnostic, execution-failure arm, and normal completion
+- [X] T015 [US1] Test in `backend/test/unit/services/judger.service.test.ts`: a system-attributed verdict leaves the student's score **unchanged** and does not mark the submission graded (SC-001)
+- [X] T016 [US1] Test: a system-attributed verdict is retried up to the configured maximum (FR-003)
+- [X] T017 [US1] Test: once retries are exhausted the submission ends in `SystemError`, carries no score, and is **not** counted among wrong answers (FR-005)
+- [X] T018 [US1] Test: a submission-attributed verdict is graded and is **never** retried — guards the opposite failure, where a fix blames the system for everything (FR-004, contract G2)
+- [X] T019 [US1] Test: an unreachable backend produces a system failure verdict rather than an unhandled error (FR-010 of the library contract; spec US1 AS5)
+- [X] T020 [US1] Test: a submission whose test cases mix system and student failures is not scored as if fully evaluated (spec Edge Cases)
 
 ### Implementation for US1
 
-- [ ] T021 [US1] Migrate `backend/src/services/judger.service.ts` to the 0.2.0 types: **delete the `executeRes.success === false || executeRes.error || !executeRes.run` pre-check** — `judge()` now accepts the failure arm, and that pre-check is the bypassed-abstraction smell the library fix was built to remove (FR-001, contract G6)
-- [ ] T022 [US1] Remove every `any` from the judging path in `backend/src/services/judger.service.ts`, reading attribution and stage facts from the typed verdict (NFR-TYPE, SC-006)
-- [ ] T023 [US1] Implement retry of the **individual execution** — not the whole submission — in `backend/src/services/judger.service.ts`, so one bad test case does not re-run every passing one at the moment the machine is already saturated (research D2)
-- [ ] T024 [US1] Route retries through the limiter from T012. **A retry that bypasses the ceiling adds load exactly when the machine is failing** (data-model § ExecutionSlot)
-- [ ] T025 [US1] Exclude system-attributed results from scoring and from wrong-answer counts in the scoreboard sync in `backend/src/services/judger.service.ts` (FR-002)
-- [ ] T026 [US1] Correct the misleading comment in `backend/src/services/judger.service.ts` that claims the query selects pending submissions — there is no status filter and every submission is re-judged on every trigger (research S1). **Fix the comment, not the behaviour**: changing what gets re-judged is a semantic change outside this specification, and is recorded for a separate decision
+- [X] T021 [US1] Migrate `backend/src/services/judger.service.ts` to the 0.2.0 types: **delete the `executeRes.success === false || executeRes.error || !executeRes.run` pre-check** — `judge()` now accepts the failure arm, and that pre-check is the bypassed-abstraction smell the library fix was built to remove (FR-001, contract G6)
+- [X] T022 [US1] Remove every `any` from the judging path in `backend/src/services/judger.service.ts`, reading attribution and stage facts from the typed verdict (NFR-TYPE, SC-006)
+- [X] T023 [US1] Implement retry of the **individual execution** — not the whole submission — in `backend/src/services/judger.service.ts`, so one bad test case does not re-run every passing one at the moment the machine is already saturated (research D2)
+- [X] T024 [US1] Route retries through the limiter from T012. **A retry that bypasses the ceiling adds load exactly when the machine is failing** (data-model § ExecutionSlot)
+- [X] T025 [US1] Exclude system-attributed results from scoring and from wrong-answer counts in the scoreboard sync in `backend/src/services/judger.service.ts` (FR-002)
+- [X] T026 [US1] Correct the misleading comment in `backend/src/services/judger.service.ts` that claims the query selects pending submissions — there is no status filter and every submission is re-judged on every trigger (research S1). **Fix the comment, not the behaviour**: changing what gets re-judged is a semantic change outside this specification, and is recorded for a separate decision
 
 **Checkpoint**: US1 tests green. The production incident is closed on the backend side.
 

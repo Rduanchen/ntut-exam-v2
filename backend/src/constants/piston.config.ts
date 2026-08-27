@@ -1,13 +1,14 @@
+/* Judging *limits* deliberately do not live here.
+ *
+ * This module used to carry CPU_TIME_LIMIT_MS, WALL_TIME_LIMIT_MS and
+ * MEMORY_LIMIT_KB. Nothing read them -- the judging service took its limits
+ * from the exam configuration -- so they were three values that looked like
+ * guarantees and enforced nothing. Effective limits now resolve in one place,
+ * src/config/judge.config.ts, with their origin attached.
+ *
+ * What remains here is the language catalogue, which the exam config schema
+ * uses to build its language enum, and the startup reachability probe. */
 const CONFIG = {
-  CPU_TIME_LIMIT_MS: process.env.JUDGE_CPU_TIME_LIMIT_MS
-    ? Number(process.env.JUDGE_CPU_TIME_LIMIT_MS)
-    : 10000, // 預設 10 秒
-  WALL_TIME_LIMIT_MS: process.env.JUDGE_WALL_TIME_LIMIT_MS
-    ? Number(process.env.JUDGE_WALL_TIME_LIMIT_MS)
-    : 15000, // 預設 15 秒
-  MEMORY_LIMIT_KB: process.env.JUDGE_MEMORY_LIMIT_KB
-    ? Number(process.env.JUDGE_MEMORY_LIMIT_KB)
-    : 102400, // 預設 100 MB
   url: process.env.PISTON_URL || "http://localhost:2000",
   languages: {
     Python: {

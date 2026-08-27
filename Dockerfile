@@ -1,4 +1,10 @@
-FROM node:20-alpine
+# Pinned, not floating. `node:20-alpine` resolves to the newest 20.x at build
+# time, which satisfies the requirement today but records nothing. The backend
+# needs Node >= 20.19 because p-limit@7 is ESM-only and is loaded from a
+# CommonJS build via require(ESM), which lands in 20.19. Verified: works on
+# 20.20.2, fails on 20.18.0 with ERR_REQUIRE_ESM -- a failure that surfaces at
+# startup and looks nothing like its cause. See backend/package.json engines.
+FROM node:22.23.2-alpine
 
 WORKDIR /app
 

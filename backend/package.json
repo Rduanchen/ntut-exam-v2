@@ -1,6 +1,9 @@
 {
   "name": "backend",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "private": true,
   "scripts": {
     "dev": "nodemon --watch src/index.ts --config tsconfig.json",
@@ -15,8 +18,8 @@
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",
-    "p-limit": "3.1.0",
-    "piston-judger": "^0.1.1",
+    "p-limit": "^7.3.1",
+    "piston-judger": "^0.2.0",
     "reflect-metadata": "^0.2.2",
     "sequelize": "^6.37.3",
     "sequelize-typescript": "^2.1.6",

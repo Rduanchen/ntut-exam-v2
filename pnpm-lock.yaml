@@ -23,11 +23,11 @@ importers:
         specifier: ^4.19.2
         version: 4.22.2
       p-limit:
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: ^7.3.1
+        version: 7.3.1
       piston-judger:
-        specifier: ^0.1.1
-        version: 0.1.1
+        specifier: ^0.2.0
+        version: 0.2.0
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -1884,6 +1884,10 @@ packages:
     resolution: {integrity: sha512-TYOanM3wGwNGsZN2cVTYPArw454xnXj5qmWF1bEoAc4+cU/ol7GVh7odevjp1FNHduHc3KZMcFduxU5Xc6uJRQ==}
     engines: {node: '>=10'}
 
+  p-limit@7.3.1:
+    resolution: {integrity: sha512-0trZaiG7Y7kN/Egy9a8j47t9osC0Tch4PaIWd9yGF6bvmlk7muExRvGNYb8sXBwEKMoNKsbNN9P8EefuQekE4Q==}
+    engines: {node: '>=20'}
+
   p-locate@5.0.0:
     resolution: {integrity: sha512-LaNjtRWUBY++zB5nE/NwcaoMylSPk+S+ZHNB1TzdbMJMny6dynpAGt7X/tl/QYq3TIeE6nxHppbo2LGymrG5Pw==}
     engines: {node: '>=10'}
@@ -1946,8 +1950,8 @@ packages:
       typescript:
         optional: true
 
-  piston-judger@0.1.1:
-    resolution: {integrity: sha512-95g29fl/yPQcRXm2NP86/v6lYfhyysa9PkVwrRQHozpG/ftdtCpw456TBaRGXA9sjBmVdB5V/tD/ytwv7wO3wg==}
+  piston-judger@0.2.0:
+    resolution: {integrity: sha512-/fJaCujFvlna1y7I14uNmIs2YSUsRYnyAU6ScTvU+N1Skm8MwTnNjNei3GGK4brWhtWg21p/xZmC+LxT/iVnJw==}
 
   pkg-types@1.3.1:
     resolution: {integrity: sha512-/Jm5M4RvtBFVkKWRu2BLUTNP8/M2a+UwuAX+ae4770q1qVGtfjG+WTCupoZixokjmHiry8uI+dlY8KXYV5HVVQ==}
@@ -2625,6 +2629,10 @@ packages:
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+
+  yocto-queue@1.2.2:
+    resolution: {integrity: sha512-4LCcse/U2MHZ63HAJVE+v71o7yOdIe4cZ70Wpf8D/IyjDKYQLV5GD46B+hSTjJsvV5PztjvHoU580EftxjDZFQ==}
+    engines: {node: '>=12.20'}
 
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
@@ -4465,6 +4473,10 @@ snapshots:
     dependencies:
       yocto-queue: 0.1.0
 
+  p-limit@7.3.1:
+    dependencies:
+      yocto-queue: 1.2.2
+
   p-locate@5.0.0:
     dependencies:
       p-limit: 3.1.0
@@ -4507,7 +4519,7 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
-  piston-judger@0.1.1:
+  piston-judger@0.2.0:
     dependencies:
       axios: 1.16.1
     transitivePeerDependencies:
@@ -5226,5 +5238,7 @@ snapshots:
   yn@3.1.1: {}
 
   yocto-queue@0.1.0: {}
+
+  yocto-queue@1.2.2: {}
 
   zod@3.25.76: {}
