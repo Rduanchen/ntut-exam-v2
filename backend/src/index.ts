@@ -11,6 +11,9 @@ import SocketService from "./sockets/socket.service";
 import MessageSocketService from "./sockets/message-socket.service";
 
 import { checkPistonServer } from "./constants/piston.config";
+import { JudgeStartupService } from "./services/judge-startup.service";
+import { applyJudgeSettings } from "./services/judge-limiter";
+import { SystemSettingsService } from "./services/system-settings.service";
 
 dotenv.config();
 
@@ -25,6 +28,18 @@ MessageSocketService.initialize(io.of("/user"));
 async function startServer() {
   try {
     await initDatabase();
+
+    /* Repair judging state left by a previous process before anything can
+     * observe it. A crash mid-judge otherwise leaves submissions permanently
+     * "being judged" by a process that no longer exists, and nothing in the
+     * system ever revisits them. */
+    await JudgeStartupService.run();
+
+    /* Apply the stored concurrency ceiling now, so the first judging run of
+     * the day is bounded rather than the second. */
+    const examConfig = await SystemSettingsService.getExamConfig().catch(() => null);
+    applyJudgeSettings(examConfig?.judgerSettings);
+
     await checkPistonServer();
     // 移除強制綁定 0.0.0.0，因為我們現在有 IP 正規化 (normalizeIp) 處理了
     server.listen(typeof port === 'string' ? parseInt(port) : port, () => {

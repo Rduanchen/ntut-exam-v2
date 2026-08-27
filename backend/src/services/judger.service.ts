@@ -1,4 +1,3 @@
-import pLimit from "p-limit";
 import { Op } from "sequelize";
 import { sequelize } from "../config/database.config";
 import { Submission } from "../models/submission.model";
@@ -6,11 +5,46 @@ import { ScoreBoard } from "../models/score-board.model";
 import { SystemSettingsService } from "./system-settings.service";
 import { getEffectiveSpecialRules } from "./special-rules/rule-provider";
 import { evaluateSpecialRules } from "./special-rules/engine";
-import { piston, pistonJudger } from "piston-judger";
+import {
+  pistonJudger,
+  FaultAttribution,
+  StatusCode,
+  type JudgeResult,
+} from "piston-judger";
+import { withExecutionSlot, applyJudgeSettings } from "./judge-limiter";
+import { valuesOf, type JudgeSettings } from "../config/judge.config";
 import logger from "../utils/logger.util";
 import { ExamConfig, Puzzle } from "../schemas/config.schema";
 
 const MAX_OUTPUT_LENGTH = 5000;
+
+/** Truncate untrusted output before it is stored or returned. */
+const truncate = (value: unknown, limit: number = MAX_OUTPUT_LENGTH): string => {
+  if (typeof value !== "string") return "";
+  return value.length <= limit ? value : value.substring(0, limit) + "\n...[Output Truncated]";
+};
+
+export interface TestCaseResult {
+  status: string;
+  attribution: string;
+  message: string;
+  userOutput: string;
+  expectedOutput: string;
+  time: string;
+}
+
+export interface PuzzleResult {
+  subtasks: Array<{ visible: TestCaseResult[]; hidden: TestCaseResult[] }>;
+  specialRuleResults: unknown;
+}
+
+export interface JudgeOptionsResolved {
+  language: string;
+  timeLimit: number;
+  memoryLimit: number;
+  compareMode: string;
+}
+
 
 export class JudgerService {
   /**
@@ -25,7 +59,16 @@ export class JudgerService {
       throw new Error("Exam configuration is missing. Cannot proceed with judging.");
     }
 
-    // 2. Query Pending submissions for the given testId (and optionally questionIds)
+    /* 2. Query ALL submissions for this student, not only pending ones.
+     *
+     * The comment here used to claim this selected pending submissions. It
+     * never did — there is no status filter — so every trigger re-judges every
+     * question, already-graded ones included, multiplying the load this
+     * feature exists to survive.
+     *
+     * The comment is corrected rather than the behaviour: a TA pressing
+     * "re-judge" plausibly wants everything re-judged, so narrowing the query
+     * is a semantic change that belongs to its own decision, not to this one. */
     const whereClause: any = { testId };
     if (questionIds && questionIds.length > 0) {
       whereClause.questionId = { [Op.in]: questionIds };
@@ -33,7 +76,7 @@ export class JudgerService {
 
     const submissions = await Submission.findAll({ where: whereClause });
     if (submissions.length === 0) {
-      return { message: "No submissions found to judge.", results: {} };
+      return { message: "No submissions found to judge.", results: {}, graded: 0, systemFailures: 0 };
     }
 
     // 3. Mark state as "Judging"
@@ -42,37 +85,102 @@ export class JudgerService {
       { where: whereClause }
     );
 
-    // 4. Concurrency limit setup
-    const limit = pLimit(5); // Process up to 5 questions concurrently
-
+    /* 4. No limiter here.
+     *
+     * The ceiling lives on the execution call itself (see judge-limiter), which
+     * is what makes it hold however callers batch work. A limiter constructed
+     * here — as one was — bounds nothing: it is per request, so N simultaneous
+     * requests admitted N times its value, and the system had no ceiling at all.
+     */
     // Process submissions
     const latestResults: Record<string, any> = {};
+    let systemFailures = 0;
     const tasks = submissions.map(sub =>
-      limit(async () => {
+      (async () => {
         try {
-          const result = await JudgerService.processSingleSubmission(sub, examConfig);
-          latestResults[sub.questionId] = result;
+          const outcome = await JudgerService.processSingleSubmission(sub, examConfig);
+          latestResults[sub.questionId] = outcome.result;
+          if (outcome.systemFailure) systemFailures += 1;
         } catch (error: any) {
           logger.error(`Error processing submission ${sub.questionId} for ${testId}: ${error.message}`);
           await Submission.update(
-            { status: "Error", autoScore: null },
+            { status: "SystemError", autoScore: null },
             { where: { testId, questionId: sub.questionId } }
           );
+          systemFailures += 1;
         }
-      })
+      })()
     );
 
     await Promise.all(tasks);
     // 5. Sync results to ScoreBoard
     await JudgerService.syncScoreBoard(testId, latestResults, examConfig);
 
-    return latestResults;
+    return { results: latestResults, systemFailures, graded: submissions.length - systemFailures };
+  }
+
+  /**
+   * Run one test case, retrying only what is worth retrying.
+   *
+   * A system-attributed verdict is retried because it says nothing about the
+   * submission — the same code may well pass on the next attempt. A
+   * submission-attributed verdict is never retried: it is deterministic, so a
+   * retry cannot change it and merely consumes capacity at the moment capacity
+   * is scarcest.
+   *
+   * Every attempt, retries included, goes through the execution ceiling. A
+   * retry that bypassed it would add load exactly when the machine is already
+   * failing, which is how a transient overload becomes a sustained one.
+   */
+  private static async runTestCase(
+    judger: ReturnType<typeof pistonJudger>,
+    options: JudgeOptionsResolved,
+    settings: JudgeSettings,
+    code: string,
+    testCase: { input: string; output: string },
+  ): Promise<JudgeResult> {
+    let attempt = 0;
+
+    for (;;) {
+      const outcome = await withExecutionSlot(() =>
+        judger.execute(options.language, code, {
+          stdin: testCase.input,
+          run_timeout: options.timeLimit,
+          run_memory_limit: options.memoryLimit,
+          compile_timeout: settings.compileTimeout,
+          compile_memory_limit: settings.compileMemoryLimit,
+        }),
+      );
+
+      /* No pre-check before judging.
+       *
+       * judge() accepts the failure arm, so the guard that used to sit here —
+       * inspecting the raw response for success/error/run before daring to
+       * judge it — is gone. That guard was the visible sign that the old
+       * contract could not express what the caller needed. */
+      const verdict = judger.judge(outcome, {
+        expectedOutput: testCase.output,
+        memoryLimit: options.memoryLimit,
+        compareMode: options.compareMode,
+      });
+
+      if (verdict.attribution !== FaultAttribution.SYSTEM) return verdict;
+      if (attempt >= settings.maxSystemRetries) return verdict;
+
+      attempt += 1;
+      logger.warn(
+        `[Judger] System-attributed verdict (${verdict.status}); retry ${attempt}/${settings.maxSystemRetries}`,
+      );
+    }
   }
 
   /**
    * Process a single submission (rules + piston grading).
    */
-  static async processSingleSubmission(submission: Submission, examConfig: ExamConfig) {
+  static async processSingleSubmission(
+    submission: Submission,
+    examConfig: ExamConfig,
+  ): Promise<{ result: PuzzleResult; systemFailure: boolean }> {
     const puzzle = JudgerService.findPuzzleById(examConfig, submission.questionId);
     if (!puzzle) {
       throw new Error(`Puzzle config not found for question ${submission.questionId}`);
@@ -130,123 +238,91 @@ export class JudgerService {
     const pistonUrl = process.env.PISTON_URL || "http://localhost:2000";
     const judger = pistonJudger({ server: pistonUrl });
 
-    const resultPayload: any = {
+    /* Applies the ceiling as a side effect, so a configuration upload takes
+     * effect on the next run rather than on the next restart. */
+    const judgeSettings = valuesOf(
+      applyJudgeSettings(examConfig.judgerSettings as Partial<JudgeSettings>),
+    );
+
+    const resultPayload: PuzzleResult = {
       subtasks: [],
-      specialRuleResults: evalResults
+      specialRuleResults: evalResults,
     };
 
     let totalRawScore = 0;
+    /* Set when any test case ends in a system-attributed verdict that survived
+     * its retries. Such a submission has not been evaluated, so it must not be
+     * scored -- neither as a pass nor as a failure. */
+    let systemFailure: JudgeResult | null = null;
 
     // Subtask Grading
     for (const subtask of puzzle.subtasks) {
       let isSubtaskPassed = true;
-      const visibleResults = [];
-      const hiddenResults = [];
+      const visibleResults: TestCaseResult[] = [];
+      const hiddenResults: TestCaseResult[] = [];
 
-      // Evaluate Visible Testcases
-      for (const tc of subtask.visible) {
-        const executeRes: any = await judger.execute(options.language, submission.codeContent, {
-          stdin: tc.input,
-          run_timeout: options.timeLimit,
-          run_memory_limit: options.memoryLimit,
-        } as any);
+      for (const [cases, sink] of [
+        [subtask.visible, visibleResults],
+        [subtask.hidden, hiddenResults],
+      ] as const) {
+        for (const tc of cases) {
+          const verdict = await JudgerService.runTestCase(
+            judger,
+            options,
+            judgeSettings,
+            submission.codeContent,
+            tc,
+          );
 
-        const truncateString = (str: any, limit: number = MAX_OUTPUT_LENGTH) => {
-          if (typeof str !== 'string') return str;
-          if (str.length <= limit) return str;
-          return str.substring(0, limit) + "\\n...[Output Truncated]";
-        };
+          if (verdict.attribution === FaultAttribution.SYSTEM) {
+            systemFailure ??= verdict;
+          }
 
-        let judgeRes: any;
-        if (executeRes.success === false || executeRes.error || !executeRes.run) {
-          judgeRes = {
-            status: "SE",
-            message: truncateString(executeRes.error || "System Error during execution"),
-            details: { isServerError: true }
-          };
-        } else {
-          judgeRes = judger.judge(executeRes as any, {
+          sink.push({
+            status: verdict.status,
+            attribution: verdict.attribution,
+            message: truncate(verdict.message),
+            userOutput: truncate(verdict.actualOutput ?? ""),
             expectedOutput: tc.output,
-            timeLimit: options.timeLimit,
-            memoryLimit: options.memoryLimit,
-            compareMode: options.compareMode,
+            time: verdict.details?.run?.wall_time?.toString() ?? "0",
           });
+
+          if (verdict.status !== StatusCode.AC) isSubtaskPassed = false;
         }
-
-        const formattedRes = {
-          status: judgeRes.status,
-          message: judgeRes.message,
-          userOutput: truncateString(judgeRes.actualOutput || ""),
-          expectedOutput: tc.output,
-          time: judgeRes.details?.runInfo?.wallTime?.toString() || "0"
-        };
-
-        visibleResults.push(formattedRes);
-        if (judgeRes.status !== "AC") isSubtaskPassed = false;
-      }
-
-      // Evaluate Hidden Testcases
-      for (const tc of subtask.hidden) {
-        const executeRes: any = await judger.execute(options.language, submission.codeContent, {
-          stdin: tc.input,
-          run_timeout: options.timeLimit,
-          run_memory_limit: options.memoryLimit,
-        } as any);
-
-        const truncateString = (str: any, limit: number = MAX_OUTPUT_LENGTH) => {
-          if (typeof str !== 'string') return str;
-          if (str.length <= limit) return str;
-          return str.substring(0, limit) + "\\n...[Output Truncated]";
-        };
-
-        let judgeRes: any;
-        if (executeRes.success === false || executeRes.error || !executeRes.run) {
-          judgeRes = {
-            status: "SE",
-            message: truncateString(executeRes.error || "System Error during execution"),
-            details: { isServerError: true }
-          };
-        } else {
-          judgeRes = judger.judge(executeRes as any, {
-            expectedOutput: tc.output,
-            timeLimit: options.timeLimit,
-            memoryLimit: options.memoryLimit,
-            compareMode: options.compareMode,
-          });
-        }
-
-        const formattedRes = {
-          status: judgeRes.status,
-          message: judgeRes.message,
-          userOutput: truncateString(judgeRes.actualOutput || ""),
-          expectedOutput: tc.output,
-          time: judgeRes.details?.runInfo?.wallTime?.toString() || "0"
-        };
-
-        hiddenResults.push(formattedRes);
-        if (judgeRes.status !== "AC") isSubtaskPassed = false;
       }
 
       if (isSubtaskPassed) {
         totalRawScore += subtask.score;
       }
 
-      resultPayload.subtasks.push({
-        visible: visibleResults,
-        hidden: hiddenResults
-      });
+      resultPayload.subtasks.push({ visible: visibleResults, hidden: hiddenResults });
+    }
+
+    /* A submission the system could not evaluate is not a submission that
+     * scored zero. Recording it as graded would take marks from a student for
+     * a machine's failure, which is the entire defect this feature removes. */
+    if (systemFailure) {
+      logger.warn(
+        `[Judger] ${submission.testId}/${submission.questionId} could not be judged: ` +
+          `${systemFailure.status} — ${systemFailure.message}`,
+      );
+      await Submission.update(
+        { status: "SystemError", autoScore: null },
+        { where: { testId: submission.testId, questionId: submission.questionId } },
+      );
+      return { result: resultPayload, systemFailure: true };
     }
 
     // Final Auto Score Calculation
     const finalAutoScore = Math.floor(totalRawScore * multiplier);
 
-    // Update Submission
     await Submission.update(
       { status: "Graded", autoScore: finalAutoScore },
-      { where: { testId: submission.testId, questionId: submission.questionId } }
+      { where: { testId: submission.testId, questionId: submission.questionId } },
     );
 
-    return resultPayload;
+    return { result: resultPayload, systemFailure: false };
+
   }
 
   /**
@@ -288,9 +364,22 @@ export class JudgerService {
       for (const section of config.sections) {
         let sectionScore = 0;
         for (const puzzle of section.puzzles) {
+          const sub = submissionMap.get(puzzle.id);
+
+          /* A submission the system could not evaluate is excluded from the
+           * denominators entirely.
+           *
+           * Leaving it in would count it as "not passed", which is precisely
+           * "recorded as an incorrect answer" — the thing this feature exists
+           * to prevent. A TA reading 3/5 has no way to know one of the two
+           * failures was the machine's. The count of system failures is
+           * reported separately, on the judging job's outcome. */
+          if (sub?.status === "SystemError") {
+            continue;
+          }
+
           puzzleAmount++;
 
-          const sub = submissionMap.get(puzzle.id);
           if (sub) {
             const puzzleScore = sub.autoScore || 0;
             sectionScore += puzzleScore;

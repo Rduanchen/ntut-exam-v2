@@ -1,4 +1,5 @@
 import type { ExamConfig, SpecialRule } from '../../src/schemas/config.schema';
+import { JUDGE_DEFAULTS } from '../../src/config/judge.config';
 
 /**
  * Single source of truth for a valid exam configuration in tests.
@@ -15,6 +16,10 @@ export const buildExamConfig = (overrides: Partial<ExamConfig> = {}): ExamConfig
     timeLimit: 5000,
     memoryLimit: 65536,
     compareMode: 'loose',
+    // From the resolver's own defaults, so this fixture cannot drift from the
+    // values the system actually applies. The type check just proved the point:
+    // adding four schema fields broke compilation here immediately.
+    ...JUDGE_DEFAULTS,
   },
   environmentVariables: {
     startPassword: 'exam-start-password',

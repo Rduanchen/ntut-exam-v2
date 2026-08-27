@@ -1,5 +1,6 @@
 import { z, ZodError } from "zod";
 import CONFIG, { LanguageKey } from "../constants/piston.config"
+import { JUDGE_DEFAULTS } from "../config/judge.config"
 
 const supportedLanguages = Object.keys(CONFIG.languages) as [
     LanguageKey,
@@ -67,6 +68,24 @@ export const examConfigSchema = z.object({
         timeLimit: z.number(),
         memoryLimit: z.number(),
         compareMode: z.enum(["strict", "loose"]).optional().default("loose"),
+        /* Judging infrastructure settings.
+         *
+         * Every one is optional WITH a default, and that is what implements
+         * replacement-not-merge: an uploaded config.json omitting a field
+         * arrives here as the default, never as the previously stored value.
+         * Making any of them required would break every existing config file;
+         * making them optional WITHOUT a default would let the old value
+         * survive an upload, which is the behaviour the deployment model
+         * explicitly rejects. */
+        compileTimeout: z.number().optional().default(JUDGE_DEFAULTS.compileTimeout),
+        compileMemoryLimit: z.number().optional().default(JUDGE_DEFAULTS.compileMemoryLimit),
+        /* A property of the machine, not of the exam paper. It travels with
+         * config.json anyway, because one file must fully define one machine;
+         * the consequence is that copying a paper between machines carries a
+         * ceiling sized for the wrong hardware, and the operator is told to
+         * re-measure. */
+        maxConcurrentJobs: z.number().optional().default(JUDGE_DEFAULTS.maxConcurrentJobs),
+        maxSystemRetries: z.number().optional().default(JUDGE_DEFAULTS.maxSystemRetries),
     }),
     environmentVariables: z.object({
         startPassword: z.string().min(1, "startPassword is required"),

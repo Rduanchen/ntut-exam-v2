@@ -1,5 +1,6 @@
 import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
 import { User } from "./user.model";
+import { SubmissionStatus, SUBMISSION_STATUSES } from "../types/submission.type";
 
 @Table({ 
   tableName: "submissions", 
@@ -28,8 +29,11 @@ export class Submission extends Model {
   @Column({ field: "submit_time", type: DataType.DATE, defaultValue: DataType.NOW })
   declare submitTime: Date;
 
-  @Column({ type: DataType.STRING, defaultValue: "Pending" })
-  declare status: string;
+  @Column({
+    type: DataType.ENUM(...SUBMISSION_STATUSES),
+    defaultValue: "Pending" satisfies SubmissionStatus,
+  })
+  declare status: SubmissionStatus;
 
   @Column({ field: "auto_score", type: DataType.INTEGER, allowNull: true })
   declare autoScore: number;

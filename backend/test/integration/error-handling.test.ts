@@ -5,7 +5,7 @@ import type express from 'express';
 import { createApp } from '../../src/app';
 import { adminRequest } from '../helpers/admin-request';
 import { SystemSettings } from '../../src/models/system-settings.model';
-import { JudgerService } from '../../src/services/judger.service';
+import { SystemSettingsService } from '../../src/services/system-settings.service';
 import { vi } from 'vitest';
 
 /**
@@ -55,9 +55,14 @@ describe('Global error handler (integration)', () => {
   });
 
   it('returns 500 with an { error } body when a service throws unexpectedly', async () => {
-    vi.spyOn(JudgerService, 'judgeStudentSubmissions').mockRejectedValue(new Error('boom'));
+    /* Retargeted from the judging endpoint, which no longer surfaces service
+     * failures through the response: judging is accepted with 202 and runs in
+     * the background, so a throw there lands on the job's state, not on this
+     * handler. The judging job's own `failed` state is covered in
+     * admin-judger.controller.test.ts. */
+    vi.spyOn(SystemSettingsService, 'getExamConfig').mockRejectedValue(new Error('boom'));
 
-    const res = await adminRequest(app).post('/admin/judger/judge/s-1').send({});
+    const res = await adminRequest(app).get('/admin/config');
 
     expect(res.status).toBe(500);
     expect(res.body).toHaveProperty('error');

@@ -6,14 +6,23 @@ import { JudgerService } from "../../../src/services/judger.service";
 import { ExamConfig } from "../../../src/schemas/config.schema";
 import { buildExamConfig } from "../../fixtures/exam-config.fixture";
 import { createMockPayload, setupTestUser } from "../../fixtures/mockFactories";
+import * as fx from "../../fixtures/judge-verdicts.fixture";
+import { JUDGE_DEFAULTS } from "../../../src/config/judge.config";
+
 
 // Sandbox behaviour is driven through these; the global piston mock in
 // test/setup.ts is overridden here so each scenario can script a response.
 const mockExecute = vi.fn();
 const mockJudge = vi.fn();
 
-vi.mock('piston-judger', () => {
+// `...actual` is not optional here: the judging service now reads
+// FaultAttribution and StatusCode from this module to decide whether a verdict
+// is scored or retried. Replacing the module wholesale leaves those undefined,
+// and every attribution comparison silently becomes false.
+vi.mock('piston-judger', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('piston-judger')>();
   return {
+    ...actual,
     pistonJudger: () => ({
       execute: mockExecute,
       judge: mockJudge,
@@ -150,172 +159,195 @@ describe("JudgerService syncScoreBoard", () => {
   });
 });
 
-describe('JudgerService - Filesystem Isolation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+// ---------------------------------------------------------------------------
+// US1 — a system failure is never charged to the student
+// ---------------------------------------------------------------------------
+
+const seedSubmission = async (testId = "test_123", questionId = "Q1") => {
+  await setupTestUser(testId);
+  return Submission.create({
+    testId,
+    questionId,
+    codeContent: "int main(){}",
+    language: "c",
+    status: "Pending",
+  });
+};
+
+/** Script every attempt to yield the same verdict. */
+const alwaysJudge = (verdict: unknown) => {
+  mockExecute.mockResolvedValue(fx.executionOk());
+  mockJudge.mockReturnValue(verdict);
+};
+
+describe("US1 - system failures are not charged to the student", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("does not mark a submission graded when the compile stage was killed", async () => {
+    const sub = await seedSubmission();
+    alwaysJudge(fx.compileTimedOut());
+
+    const outcome = await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
+
+    expect(outcome.systemFailure).toBe(true);
+    const stored = await Submission.findOne({ where: { testId: "test_123", questionId: "Q1" } });
+    expect(stored!.status).toBe("SystemError");
+    expect(stored!.autoScore).toBeNull();
   });
 
-  it('should handle permission denied errors from sandbox execution and return SE status', async () => {
-    const maliciousPayload = createMockPayload({
-      code: 'import os; os.system("cat /etc/passwd")',
-      language: 'python'
-    });
+  it("leaves an existing score untouched rather than zeroing it", async () => {
+    // The distinction matters: a score of 0 is a statement about the student's
+    // work. A system failure is a statement about the machine.
+    const sub = await seedSubmission();
+    await Submission.update({ status: "Graded", autoScore: 80 }, { where: { id: sub.id } });
+    alwaysJudge(fx.compileTimedOut());
 
-    await setupTestUser('test_123');
+    await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
 
-    const sub = await Submission.create({
-      testId: 'test_123',
-      questionId: 'Q1',
-      codeContent: maliciousPayload.code,
-      language: maliciousPayload.language,
-      status: 'Pending'
-    });
+    const stored = await Submission.findOne({ where: { id: sub.id } });
+    expect(stored!.status).toBe("SystemError");
+    expect(stored!.autoScore).toBeNull();
+  });
 
-    // Simulate Piston returning a permission denied / system error
-    mockExecute.mockResolvedValue({
-      success: false,
-      error: 'Permission denied: /etc/passwd',
-      run: null
-    });
+  it("retries a system-attributed verdict up to the configured maximum", async () => {
+    const sub = await seedSubmission();
+    alwaysJudge(fx.compileTimedOut());
 
-    const result = await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
+    await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
 
-    expect(mockExecute).toHaveBeenCalled();
-    expect(result.subtasks[0].visible[0].status).toBe('SE');
-    expect(result.subtasks[0].visible[0].message).toContain('Permission denied');
+    // Two test cases (one visible, one hidden), each attempted 1 + maxRetries.
+    const attemptsPerCase = 1 + JUDGE_DEFAULTS.maxSystemRetries;
+    expect(mockExecute).toHaveBeenCalledTimes(attemptsPerCase * 2);
+  });
+
+  it("stops retrying as soon as a verdict becomes the submission's", async () => {
+    const sub = await seedSubmission();
+    mockExecute.mockResolvedValue(fx.executionOk());
+    mockJudge
+      .mockReturnValueOnce(fx.compileTimedOut())   // system -> retry
+      .mockReturnValue(fx.accepted("1"));          // submission -> stop
+
+    await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
+
+    // 2 for the first case (one retry), 1 for the second.
+    expect(mockExecute).toHaveBeenCalledTimes(3);
+  });
+
+  it("never retries a genuine compilation error", async () => {
+    // Guards the opposite failure: a change that blames the system for
+    // everything would pass the tests above and be just as wrong.
+    const sub = await seedSubmission();
+    alwaysJudge(fx.compileError());
+
+    const outcome = await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
+
+    expect(outcome.systemFailure).toBe(false);
+    expect(mockExecute).toHaveBeenCalledTimes(2); // one per test case, no retries
+    const stored = await Submission.findOne({ where: { id: sub.id } });
+    expect(stored!.status).toBe("Graded");
+  });
+
+  it("judges an unreachable backend without a pre-check and without throwing", async () => {
+    const sub = await seedSubmission();
+    mockExecute.mockResolvedValue(fx.executionFailed());
+    mockJudge.mockReturnValue(fx.backendUnreachable());
+
+    const outcome = await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
+
+    // The failure arm went straight into judge(); the service inspected nothing.
+    expect(mockJudge).toHaveBeenCalledWith(
+      expect.objectContaining({ ok: false }),
+      expect.anything(),
+    );
+    expect(outcome.systemFailure).toBe(true);
+  });
+
+  it("records attribution on every test-case result", async () => {
+    const sub = await seedSubmission();
+    alwaysJudge(fx.accepted("1"));
+
+    const outcome = await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
+
+    expect(outcome.result.subtasks[0].visible[0].attribution).toBe("submission");
+  });
+
+  it("does not score a submission whose cases mix system and student failures", async () => {
+    const sub = await seedSubmission();
+    mockExecute.mockResolvedValue(fx.executionOk());
+    mockJudge
+      .mockReturnValueOnce(fx.wrongAnswer())        // student's failure
+      .mockReturnValue(fx.compileTimedOut());       // then the machine dies
+
+    const outcome = await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
+
+    // Partially evaluated is not evaluated.
+    expect(outcome.systemFailure).toBe(true);
+    const stored = await Submission.findOne({ where: { id: sub.id } });
+    expect(stored!.status).toBe("SystemError");
+  });
+
+  it("passes the configured compile allowance to the execution backend", async () => {
+    // The allowance that used to default silently inside the dependency.
+    const sub = await seedSubmission();
+    alwaysJudge(fx.accepted("1"));
+
+    await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
+
+    expect(mockExecute).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({ compile_timeout: JUDGE_DEFAULTS.compileTimeout }),
+    );
   });
 });
 
-describe('JudgerService - Network Isolation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+describe("JudgerService - system errors surface as SE, not as student failures", () => {
+  beforeEach(() => vi.clearAllMocks());
 
-  it('should handle network timeout/block errors from sandbox and return SE status', async () => {
-    const maliciousPayload = createMockPayload({
-      code: 'import urllib.request; urllib.request.urlopen("http://google.com")',
-      language: 'python'
-    });
+  it("reports a sandbox permission failure as a system fault", async () => {
+    const sub = await seedSubmission("test_fs");
+    mockExecute.mockResolvedValue(fx.executionFailed());
+    mockJudge.mockReturnValue(fx.backendUnreachable());
 
-    await setupTestUser('test_123');
+    const outcome = await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
 
-    const sub = await Submission.create({
-      testId: 'test_123',
-      questionId: 'Q1',
-      codeContent: maliciousPayload.code,
-      language: maliciousPayload.language,
-      status: 'Pending'
-    });
-
-    // Simulate Piston returning a network unreachable / timeout error
-    mockExecute.mockResolvedValue({
-      success: false,
-      error: 'Network is unreachable',
-      run: null
-    });
-
-    const result = await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
-
-    expect(mockExecute).toHaveBeenCalled();
-    expect(result.subtasks[0].visible[0].status).toBe('SE');
-    expect(result.subtasks[0].visible[0].message).toContain('Network is unreachable');
+    expect(outcome.result.subtasks[0].visible[0].status).toBe("SE");
+    expect(outcome.result.subtasks[0].visible[0].attribution).toBe("system");
   });
 });
 
-describe('JudgerService - Timeout (TLE)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+describe("JudgerService - Timeout (TLE) stays the student's failure", () => {
+  beforeEach(() => vi.clearAllMocks());
 
-  it('should handle infinite loops and return TLE status without hanging', async () => {
-    const maliciousPayload = createMockPayload({
-      code: 'while True: pass',
-      language: 'python'
+  it("attributes a run-stage timeout to the submission, unlike a compile timeout", async () => {
+    const sub = await seedSubmission("test_tle");
+    alwaysJudge({
+      status: "TLE",
+      attribution: "submission",
+      message: "Time Limit Exceeded",
+      actualOutput: "",
+      details: { attribution: "submission", stage: "run" },
     });
 
-    await setupTestUser('test_123');
+    const outcome = await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
 
-    const sub = await Submission.create({
-      testId: 'test_123',
-      questionId: 'Q1',
-      codeContent: maliciousPayload.code,
-      language: maliciousPayload.language,
-      status: 'Pending'
-    });
-
-    // Simulate Piston stopping the execution due to timeout
-    mockExecute.mockResolvedValue({
-      success: true,
-      run: {
-        output: '',
-        stdout: '',
-        stderr: ''
-      }
-    });
-
-    mockJudge.mockReturnValue({
-      status: 'TLE',
-      actualOutput: '',
-      details: {
-        runInfo: { wallTime: '10000' }
-      }
-    });
-
-    const result = await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
-
-    expect(mockExecute).toHaveBeenCalled();
-    expect(result.subtasks[0].visible[0].status).toBe('TLE');
+    expect(outcome.systemFailure).toBe(false);
+    expect(outcome.result.subtasks[0].visible[0].status).toBe("TLE");
+    expect(mockExecute).toHaveBeenCalledTimes(2); // the run allowance IS the question; no retry
   });
 });
 
-describe('JudgerService - Output Truncation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+describe("JudgerService - Output Truncation", () => {
+  beforeEach(() => vi.clearAllMocks());
 
-  it('should truncate extremely large outputs from the sandbox to prevent freezing', async () => {
-    const maliciousPayload = createMockPayload({
-      code: 'print("A" * 10000000)',
-      language: 'python'
-    });
+  it("truncates an enormous output before it is stored", async () => {
+    const sub = await seedSubmission("test_trunc");
+    alwaysJudge({ ...fx.accepted("X".repeat(50000)) });
 
-    await setupTestUser('test_123');
+    const outcome = await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
 
-    const sub = await Submission.create({
-      testId: 'test_123',
-      questionId: 'Q1',
-      codeContent: maliciousPayload.code,
-      language: maliciousPayload.language,
-      status: 'Pending'
-    });
-
-    // Simulate Piston returning a massive output string
-    const hugeOutput = "A".repeat(10000000);
-    mockExecute.mockResolvedValue({
-      success: true,
-      run: {
-        output: hugeOutput,
-        stdout: hugeOutput,
-        stderr: ''
-      }
-    });
-
-    mockJudge.mockReturnValue({
-      status: 'WA',
-      actualOutput: hugeOutput,
-      details: {
-        runInfo: { wallTime: '10' }
-      }
-    });
-
-    const result = await JudgerService.processSingleSubmission(sub, mockExamConfig as any);
-
-    expect(mockExecute).toHaveBeenCalled();
-    const formattedOutput = result.subtasks[0].visible[0].userOutput;
-    
-    // Default truncation limit is 5000 in judger.service.ts
-    // Plus the length of "\n...[Output Truncated]" which is 22 chars
-    expect(formattedOutput.length).toBeLessThanOrEqual(5000 + 30);
-    expect(formattedOutput).toContain('[Output Truncated]');
+    const stored = outcome.result.subtasks[0].visible[0].userOutput;
+    expect(stored.length).toBeLessThan(50000);
+    expect(stored).toContain("[Output Truncated]");
   });
 });

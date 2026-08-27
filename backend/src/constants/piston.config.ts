@@ -1,13 +1,14 @@
+/* Judging *limits* deliberately do not live here.
+ *
+ * This module used to carry CPU_TIME_LIMIT_MS, WALL_TIME_LIMIT_MS and
+ * MEMORY_LIMIT_KB. Nothing read them -- the judging service took its limits
+ * from the exam configuration -- so they were three values that looked like
+ * guarantees and enforced nothing. Effective limits now resolve in one place,
+ * src/config/judge.config.ts, with their origin attached.
+ *
+ * What remains here is the language catalogue, which the exam config schema
+ * uses to build its language enum, and the startup reachability probe. */
 const CONFIG = {
-  CPU_TIME_LIMIT_MS: process.env.JUDGE_CPU_TIME_LIMIT_MS
-    ? Number(process.env.JUDGE_CPU_TIME_LIMIT_MS)
-    : 10000, // 預設 10 秒
-  WALL_TIME_LIMIT_MS: process.env.JUDGE_WALL_TIME_LIMIT_MS
-    ? Number(process.env.JUDGE_WALL_TIME_LIMIT_MS)
-    : 15000, // 預設 15 秒
-  MEMORY_LIMIT_KB: process.env.JUDGE_MEMORY_LIMIT_KB
-    ? Number(process.env.JUDGE_MEMORY_LIMIT_KB)
-    : 102400, // 預設 100 MB
   url: process.env.PISTON_URL || "http://localhost:2000",
   languages: {
     Python: {
@@ -37,17 +38,40 @@ export default CONFIG;
 export type LanguageKey = keyof typeof CONFIG.languages;
 export type LanguageConfig = (typeof CONFIG.languages)[LanguageKey];
 
-export const checkPistonServer = async () => {
+export interface PistonHealth {
+  reachable: boolean;
+  url: string;
+  runtimes: Array<{ language: string; version: string; aliases?: string[] }>;
+  error?: string;
+}
+
+/**
+ * Report whether the execution backend is usable, and what it can actually run.
+ *
+ * Used to only write to the log at startup, which meant "Python is not
+ * installed" was discoverable exactly once, by whoever happened to read the
+ * console. An operator needs to be able to ask before an exam begins — the
+ * measurement that started this work found a machine with only the gcc family
+ * installed, and nothing surfaced that.
+ *
+ * An unreachable backend is a normal report, not a thrown error: the caller
+ * asked a question and gets an answer.
+ */
+export const checkPistonServer = async (): Promise<PistonHealth> => {
+  const url = CONFIG.url;
   try {
-    const response = await fetch(CONFIG.url, {
-      method: "GET",
-    });
+    const response = await fetch(`${url}/api/v2/runtimes`, { method: "GET" });
     if (!response.ok) {
-      console.error(`[Error] Piston server at ${CONFIG.url} is not running correctly. Status: ${response.status}`);
-    } else {
-      console.log(`[Info] Piston server is reachable at ${CONFIG.url}`);
+      const error = `Piston responded ${response.status}`;
+      console.error(`[Error] ${error} at ${url}`);
+      return { reachable: false, url, runtimes: [], error };
     }
+    const runtimes = (await response.json()) as PistonHealth["runtimes"];
+    console.log(`[Info] Piston reachable at ${url} with ${runtimes.length} runtime(s)`);
+    return { reachable: true, url, runtimes };
   } catch (error: any) {
-    console.error(`[Error] Failed to reach Piston server at ${CONFIG.url}. Is it reachable? Error: ${error.message}`);
+    const message = error?.message ?? String(error);
+    console.error(`[Error] Failed to reach Piston at ${url}: ${message}`);
+    return { reachable: false, url, runtimes: [], error: message };
   }
 };
