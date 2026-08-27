@@ -11,12 +11,8 @@ import {
   StatusCode,
   type JudgeResult,
 } from "piston-judger";
-import { withExecutionSlot } from "./judge-limiter";
-import {
-  resolveJudgeSettings,
-  valuesOf,
-  type JudgeSettings,
-} from "../config/judge.config";
+import { withExecutionSlot, applyJudgeSettings } from "./judge-limiter";
+import { valuesOf, type JudgeSettings } from "../config/judge.config";
 import logger from "../utils/logger.util";
 import { ExamConfig, Puzzle } from "../schemas/config.schema";
 
@@ -242,8 +238,10 @@ export class JudgerService {
     const pistonUrl = process.env.PISTON_URL || "http://localhost:2000";
     const judger = pistonJudger({ server: pistonUrl });
 
+    /* Applies the ceiling as a side effect, so a configuration upload takes
+     * effect on the next run rather than on the next restart. */
     const judgeSettings = valuesOf(
-      resolveJudgeSettings(examConfig.judgerSettings as Partial<JudgeSettings>),
+      applyJudgeSettings(examConfig.judgerSettings as Partial<JudgeSettings>),
     );
 
     const resultPayload: PuzzleResult = {

@@ -89,17 +89,17 @@ Paths are relative to the repository root `ntut-exam-v2/host/`. Backend sources 
 
 ### Tests for US2
 
-- [ ] T027 [P] [US2] Test in `backend/test/unit/services/judge-limiter.test.ts`: with ceiling *N*, work submitted **concurrently** never exceeds *N* in flight, asserting the observed maximum rather than an average. **A sequentially-written test passes with no limiter at all** — the work must genuinely overlap (SC-002, quickstart V2)
-- [ ] T028 [US2] Test: the ceiling applies **across** independent judging requests — with ceiling *N* and *k* simultaneous requests, the maximum in flight is *N*, not *N × k* (FR-006, spec US2 AS2)
-- [ ] T029 [US2] Test: retries are subject to the ceiling too, verified while retries are being consumed (quickstart V3)
-- [ ] T030 [US2] Test: lowering and raising the ceiling takes effect on queued work without a restart, and no moment exceeds the higher of the two values (FR-008, quickstart V4)
-- [ ] T031 [US2] Test: zero, negative and absurdly large ceilings are each clamped and reported as `clamped`, and **none produces unlimited concurrency** (FR-019, contract G8)
+- [X] T027 [P] [US2] Test in `backend/test/unit/services/judge-limiter.test.ts`: with ceiling *N*, work submitted **concurrently** never exceeds *N* in flight, asserting the observed maximum rather than an average. **A sequentially-written test passes with no limiter at all** — the work must genuinely overlap (SC-002, quickstart V2)
+- [X] T028 [US2] Test: the ceiling applies **across** independent judging requests — with ceiling *N* and *k* simultaneous requests, the maximum in flight is *N*, not *N × k* (FR-006, spec US2 AS2)
+- [X] T029 [US2] Test: retries are subject to the ceiling too, verified while retries are being consumed (quickstart V3)
+- [X] T030 [US2] Test: lowering and raising the ceiling takes effect on queued work without a restart, and no moment exceeds the higher of the two values (FR-008, quickstart V4)
+- [X] T031 [US2] Test: zero, negative and absurdly large ceilings are each clamped and reported as `clamped`, and **none produces unlimited concurrency** (FR-019, contract G8)
 
 ### Implementation for US2
 
-- [ ] T032 [US2] Wrap the piston execution call in `backend/src/services/judger.service.ts` with the global limiter, so the ceiling holds regardless of how callers above batch or parallelise (FR-007)
-- [ ] T033 [US2] Delete the per-request `pLimit(5)` from `backend/src/services/judger.service.ts` — constructed per request, it admitted *5N* executions for *N* simultaneous requests, which is no ceiling at all
-- [ ] T034 [US2] Drive the limiter's ceiling from `judge.config.ts`, applying clamping and recording `clamped` provenance (FR-019)
+- [X] T032 [US2] Wrap the piston execution call in `backend/src/services/judger.service.ts` with the global limiter, so the ceiling holds regardless of how callers above batch or parallelise (FR-007)
+- [X] T033 [US2] Delete the per-request `pLimit(5)` from `backend/src/services/judger.service.ts` — constructed per request, it admitted *5N* executions for *N* simultaneous requests, which is no ceiling at all
+- [X] T034 [US2] Drive the limiter's ceiling from `judge.config.ts`, applying clamping and recording `clamped` provenance (FR-019)
 
 **Checkpoint**: US2 tests green. Load produces queueing rather than a cliff.
 

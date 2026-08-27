@@ -1,5 +1,11 @@
 import pLimit from "p-limit";
-import { JUDGE_BOUNDS, JUDGE_DEFAULTS } from "../config/judge.config";
+import {
+  JUDGE_BOUNDS,
+  JUDGE_DEFAULTS,
+  resolveJudgeSettings,
+  type EffectiveJudgeSettings,
+  type JudgeSettings,
+} from "../config/judge.config";
 import logger from "../utils/logger.util";
 
 /**
@@ -41,6 +47,13 @@ let peakInFlight = 0;
  * Every call that reaches the execution backend must go through here. A caller
  * that reaches it directly is not merely bypassing a convenience — it is
  * removing the only thing standing between a busy exam and the cliff.
+ *
+ * MUST NOT be nested. Acquiring a slot from inside a slot deadlocks as soon as
+ * every slot is held by a task waiting for another: the holders can only
+ * proceed by acquiring, and can only release by proceeding. Retries therefore
+ * loop *around* this call, releasing between attempts, rather than recursing
+ * through it. (Learned the hard way — a test written the nested way hung and
+ * starved every test that followed it.)
  */
 export async function withExecutionSlot<T>(task: () => Promise<T>): Promise<T> {
   return limit(async () => {
@@ -101,4 +114,20 @@ export function peakInFlightCount(): number {
 
 export function resetPeakInFlight(): void {
   peakInFlight = 0;
+}
+
+/**
+ * Resolve settings and apply the ceiling they specify.
+ *
+ * Called at startup, whenever settings are written, and at the start of each
+ * judging run — the last of those is what makes an uploaded configuration take
+ * effect without anyone remembering to restart anything. It is idempotent, so
+ * calling it often costs nothing.
+ */
+export function applyJudgeSettings(
+  stored?: Partial<JudgeSettings> | null,
+): EffectiveJudgeSettings {
+  const effective = resolveJudgeSettings(stored);
+  setExecutionCeiling(effective.maxConcurrentJobs.value);
+  return effective;
 }
