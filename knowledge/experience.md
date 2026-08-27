@@ -41,11 +41,15 @@
   3. **負載來源**：每個測資都完整重編譯一次（Piston 無編譯快取），一題 20 筆測資 = 20 次 g++；且 `compile_timeout` 從未被明確設定，落回套件內硬編的 10s。
   
   併發 sweep 顯示延遲隨併發近似線性成長，撞到 10s 後是**斷崖**而非漸進劣化：併發 20 時 max 7.3s / CE 0%，併發 30 時 max 10.6s / **CE 23%**。
-- **解決方案 (Resolved by)**: 🚧 **修復進行中，尚無 commit 錨點**。設計已定案於 `draft/piston穩定度與併發問題.md`（上游套件保留 stage 原始資訊、全域 limiter 下沉到 execute 層、評測改非同步、compile 逾時標 SE 並重試、Piston 容器設定補齊）。**實作完成後應回填此處的 commit hash。**
+- **解決方案 (Resolved by)**: 分兩個 feature 完成。
+  - **上游**（feature `003-judge-fault-attribution`，`dd6238b` / `0ea8ba0` / `d299eb8`）：`piston-judger@0.2.0` 於 2026-08-27 發布。每個判定帶 `attribution`，新增 `CTLE`，`judge()` 接受執行失敗分支，`Result = any` 換成可收窄的 union。
+  - **後端**（feature `004-judge-backend-migration`，`41768ce` / `52186e2` / `2c76117` / `2df1005`）：評分改讀 attribution，系統性失敗重試且不計分；`pLimit` 從每請求提升為全域並下沉到 execute 呼叫；評測改非同步（202 + socket）；設定收進 `config.json` 並附來源標記；Piston 容器補上 privileged / tmpfs / 自身併發上限。
 - **教訓 (Lesson)**:
   1. **隨機的症狀不代表隨機的成因。** 最初三個猜測（資源衝突、套件相容性、編譯器缺陷）全部落空，因為隨機性其實來自**負載相依的臨界行為**。沿併發軸做一次 sweep 就定位了；憑症狀的「感覺」猜測則走了兩個月冤枉路。**面對隨機性，先找臨界點，不要先找瑕疵。**
   2. **併發限制器必須包在最底層的資源呼叫上，不能包在請求層。** 包在請求層時，保護強度取決於「同時有幾個請求」這個系統無法控制的變數。目前 1 request : 1 concurrent job 只是內層迴圈剛好序列執行的巧合 —— 一旦有人把測資並行化，保護就無聲失效。**limiter 要貼著被保護的稀缺資源，不是貼著呼叫者。**
   3. **抽象被呼叫端繞過，就是抽象不合用的訊號。** `judger.service.ts` 早已在呼叫 `judge()` 前手動前置判斷 `executeRes.success === false || executeRes.error || !executeRes.run`。那段防禦性程式碼是 bug 的自白 —— 作者當時已隱約知道分類不可信，卻選擇繞過而非回頭修分類器。**「繞過抽象的程式碼」值得被當成 code smell 主動搜尋。**
-  4. **預設值藏在依賴裡，等於沒有預設值。** `compile_timeout` 的 10s 寫在 `piston-judger` 的 `or(config.compile_timeout, 10000)`，呼叫端完全不知情，卻是這次事故的引信。**會影響正確性的參數必須在呼叫端顯式傳遞。**
+  4. **預設值藏在依賴裡，等於沒有預設值。** `compile_timeout` 的 10s 寫在 `piston-judger` 的 `or(config.compile_timeout, 10000)`，呼叫端完全不知情，卻是這次事故的引信。**會影響正確性的參數必須在呼叫端顯式傳遞**，而且要能回報「這個值從哪來」——否則「30 秒是因為有人量過」與「30 秒是因為沒人選過」無從分辨。
+  5. **`any` 會讓破壞性契約變更對編譯器隱形。** 把 `piston-judger` 從 0.1.1 升到 0.2.0——一次刻意的 breaking change——在整個 judging service 只產生 **2 個型別錯誤**，因為那段程式碼到處是 `any`。直接升級上線會編譯通過然後靜默地錯。這比規格書上任何一句「要型別安全」都更能說明理由。
+  6. **驗證產物，不要只驗證原始碼。** 只檢查 `src/` 會漏掉：`dist/` 從未清理所以已刪除檔案持續被發布、以及套件其實根本沒有型別宣告。兩者都只有在檢視實際交付物時才會現形。
 
 （相關概念：`concepts/失敗歸因的隔離.md`；決策脈絡：`history/確立考卷即機器完整設定.md`）

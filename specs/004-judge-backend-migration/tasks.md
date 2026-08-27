@@ -206,12 +206,12 @@ Paths are relative to the repository root `ntut-exam-v2/host/`. Backend sources 
 
 ## Phase 10: Polish & Validation
 
-- [ ] T070 Run the full backend suite: `npm test` in `backend/` — type check across sources and tests, then all tests green
-- [ ] T071 Walk every validation V1–V10 in `quickstart.md` and record each outcome against its success criterion
-- [ ] T072 Verify the runtime constraint end to end: build the image from the pinned `Dockerfile` and confirm the backend starts, since `require(ESM)` failure surfaces only at boot
-- [ ] T073 Confirm no `any` remains in the judging path and no pre-check of raw execution responses survives (SC-006, quickstart V9)
-- [ ] T074 Update `knowledge/draft/piston穩定度與併發問題.md` marking sections B and D complete, and reflow the incident into `knowledge/experience.md` #6 — its `Resolved by` has been deliberately blank since 2026-08-26 awaiting exactly this
-- [ ] T075 Note in `knowledge/draft/全專案環境標準化.md` that a declared `engines` range is now a correctness requirement rather than tidiness, since the runtime minimum is load-bearing
+- [X] T070 Run the full backend suite: `npm test` in `backend/` — type check across sources and tests, then all tests green
+- [X] T071 Walk every validation V1–V10 in `quickstart.md` and record each outcome against its success criterion
+- [X] T072 Verify the runtime constraint end to end — **partially**: the Docker daemon was unavailable, so the image was not built. Verified the equivalent instead: the compiled CommonJS artifact loads `p-limit` successfully under Node 20.20.2 and 24.19.0, which is the mechanism the image would exercise. **An actual image build remains unverified.**
+- [X] T073 Confirm no `any` remains in the judging path and no pre-check of raw execution responses survives (SC-006, quickstart V9)
+- [X] T074 Update `knowledge/draft/piston穩定度與併發問題.md` marking sections B and D complete, and reflow the incident into `knowledge/experience.md` #6 — its `Resolved by` has been deliberately blank since 2026-08-26 awaiting exactly this
+- [X] T075 Note in `knowledge/draft/全專案環境標準化.md` that a declared `engines` range is now a correctness requirement rather than tidiness, since the runtime minimum is load-bearing
 
 ---
 
