@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import axios from 'axios';
 import { socket } from '../plugins/socket';
+import { startJudging, waitForJudging, type JudgingJob } from '../api/judging';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 
@@ -58,12 +59,31 @@ export const useStudentStore = defineStore('student', () => {
     }
   }
 
-  async function reevaluateStudentCode(testId: string) {
+  /**
+   * Re-evaluate one student's submissions.
+   *
+   * The endpoint answers immediately with a handle rather than with results,
+   * so this waits for the job to reach a terminal state before resolving. The
+   * live-update channel announces completion too; polling is the fallback that
+   * keeps a dropped notification from looking like lost work.
+   */
+  async function reevaluateStudentCode(testId: string): Promise<JudgingJob> {
     loading.value = true;
     error.value = null;
     try {
-      const res = await axios.post(`${BACKEND_URL}/admin/judger/judge/${testId}`);
-      return res.data;
+      const handle = await startJudging(testId);
+      const job = await waitForJudging(handle.jobId);
+
+      if (job.state === 'failed') {
+        error.value = job.error || 'Judging failed';
+      } else if (job.outcome && job.outcome.systemFailures > 0) {
+        /* Surfaced rather than swallowed: these are the machine's failures, not
+         * the student's, and an operator needs to know the machine is sick. */
+        error.value =
+          `${job.outcome.systemFailures} submission(s) could not be judged ` +
+          `for system reasons and were not scored.`;
+      }
+      return job;
     } catch (err: any) {
       error.value = err.response?.data?.error || err.message || 'Failed to re-evaluate student code';
       throw err;

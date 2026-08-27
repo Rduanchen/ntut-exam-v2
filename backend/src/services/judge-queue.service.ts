@@ -32,6 +32,8 @@ export interface JudgingJob {
  */
 export class JudgeQueueService {
   private static jobs = new Map<string, JudgingJob>();
+  /** In-flight executions, so callers can wait for quiescence. */
+  private static inFlight = new Set<Promise<void>>();
   /** testId -> job id, for jobs that have not reached a terminal state. */
   private static live = new Map<string, string>();
 
@@ -39,6 +41,19 @@ export class JudgeQueueService {
   static reset(): void {
     JudgeQueueService.jobs.clear();
     JudgeQueueService.live.clear();
+  }
+
+  /**
+   * Resolve once every started run has finished.
+   *
+   * Needed wherever background work must not outlive its context: tests that
+   * would otherwise leak a running job into the next test, and a graceful
+   * shutdown that would otherwise abandon one mid-write.
+   */
+  static async settle(): Promise<void> {
+    while (JudgeQueueService.inFlight.size > 0) {
+      await Promise.allSettled([...JudgeQueueService.inFlight]);
+    }
   }
 
   static get(jobId: string): JudgingJob | undefined {
@@ -79,8 +94,15 @@ export class JudgeQueueService {
 
     /* Deliberately not awaited: the caller returns immediately. Errors are
      * captured onto the job so a broken run reports `failed` rather than
-     * appearing to run forever. */
-    void JudgeQueueService.execute(job, run);
+     * appearing to run forever.
+     *
+     * The promise is retained so `settle()` can wait for it. Fire-and-forget
+     * work that nothing can wait for is work that outlives whatever started
+     * it — in tests it leaks across file boundaries, and on shutdown it is
+     * simply abandoned mid-write. */
+    const running = JudgeQueueService.execute(job, run);
+    JudgeQueueService.inFlight.add(running);
+    void running.finally(() => JudgeQueueService.inFlight.delete(running));
 
     return { job, alreadyRunning: false };
   }

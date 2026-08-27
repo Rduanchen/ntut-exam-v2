@@ -143,18 +143,18 @@ Paths are relative to the repository root `ntut-exam-v2/host/`. Backend sources 
 
 ### Tests for US4
 
-- [ ] T049 [P] [US4] Test in `backend/test/integration/`: uploading a configuration containing judging settings applies them, including the concurrency ceiling (FR-014)
-- [ ] T050 [US4] Test: uploading a configuration **omitting** judging settings falls back to documented defaults and does **not** retain previous values (FR-015, SC-004)
-- [ ] T051 [US4] Test: settings changed through the management endpoint are overridden by a later configuration upload — intended behaviour, asserted so it is not "fixed" later (spec US4 AS3)
-- [ ] T052 [US4] Test: reading settings reports each value's origin, distinguishing a default from a deliberate choice (FR-016)
-- [ ] T053 [US4] Test: health reports reachability and installed languages, and reports an unreachable backend rather than raising (FR-018, quickstart V8)
+- [X] T049 [P] [US4] Test in `backend/test/integration/`: uploading a configuration containing judging settings applies them, including the concurrency ceiling (FR-014)
+- [X] T050 [US4] Test: uploading a configuration **omitting** judging settings falls back to documented defaults and does **not** retain previous values (FR-015, SC-004)
+- [X] T051 [US4] Test: settings changed through the management endpoint are overridden by a later configuration upload — intended behaviour, asserted so it is not "fixed" later (spec US4 AS3)
+- [X] T052 [US4] Test: reading settings reports each value's origin, distinguishing a default from a deliberate choice (FR-016)
+- [X] T053 [US4] Test: health reports reachability and installed languages, and reports an unreachable backend rather than raising (FR-018, quickstart V8)
 
 ### Implementation for US4
 
-- [ ] T054 [US4] Add `GET /admin/judger/settings` returning effective values with provenance, in `backend/src/routes/admin/admin-judger.route.ts` and its controller
-- [ ] T055 [US4] Add `PUT /admin/judger/settings` applying changes immediately, including the ceiling, with no restart (FR-008, FR-017)
+- [X] T054 [US4] Add `GET /admin/judger/settings` returning effective values with provenance, in `backend/src/routes/admin/admin-judger.route.ts` and its controller
+- [X] T055 [US4] Add `PUT /admin/judger/settings` applying changes immediately, including the ceiling, with no restart (FR-008, FR-017)
 - [X] T056 [US4] Add `GET /admin/judger/health` reporting reachability and installed runtimes, extending the existing startup probe into something queryable (research S6, D8)
-- [ ] T057 [US4] Confirm `restrictedUpdate` in `backend/src/services/exam-config.service.ts` does **not** preserve judging settings across an upload — it preserves only accessible users and environment variables, and adding judging settings to that list would silently defeat FR-015
+- [X] T057 [US4] Confirm `restrictedUpdate` in `backend/src/services/exam-config.service.ts` does **not** preserve judging settings across an upload — it preserves only accessible users and environment variables, and adding judging settings to that list would silently defeat FR-015
 
 **Checkpoint**: US4 tests green. A new exam machine needs exactly one file.
 
@@ -168,14 +168,14 @@ Paths are relative to the repository root `ntut-exam-v2/host/`. Backend sources 
 
 ### Tests for US5
 
-- [ ] T058 [P] [US5] Test: a finished job's outcome reports system-attributed failures separately from student failures (FR-020, SC-005)
-- [ ] T059 [US5] Test: a run with no system failures reports zero rather than omitting the field — an absent count is indistinguishable from an unreported one
-- [ ] T060 [US5] Test: a submission in `SystemError` is distinguishable from one judged incorrect (spec US5 AS2)
+- [X] T058 [P] [US5] Test: a finished job's outcome reports system-attributed failures separately from student failures (FR-020, SC-005)
+- [X] T059 [US5] Test: a run with no system failures reports zero rather than omitting the field — an absent count is indistinguishable from an unreported one
+- [X] T060 [US5] Test: a submission in `SystemError` is distinguishable from one judged incorrect (spec US5 AS2)
 
 ### Implementation for US5
 
-- [ ] T061 [US5] Populate `JudgingOutcome` counts — graded, system failures, retries used — in `backend/src/services/judge-queue.service.ts` as the run proceeds (data-model § JudgingOutcome)
-- [ ] T062 [US5] Surface the counts through the job query endpoint
+- [X] T061 [US5] Populate `JudgingOutcome` counts — graded, system failures, retries used — in `backend/src/services/judge-queue.service.ts` as the run proceeds (data-model § JudgingOutcome)
+- [X] T062 [US5] Surface the counts through the job query endpoint
 
 **Checkpoint**: US5 tests green. Attribution is actionable, not merely stored.
 
@@ -183,10 +183,10 @@ Paths are relative to the repository root `ntut-exam-v2/host/`. Backend sources 
 
 ## Phase 8: User Story 6 — The deployment is configured for its machine (Priority: P3)
 
-- [ ] T063 [P] [US6] Update the piston service in `docker-compose.yml` with the isolation settings its documentation requires, a jobs tmpfs, a packages volume, and resource limits (FR-022)
-- [ ] T064 [US6] Set the execution backend's own concurrency ceiling in `docker-compose.yml` so excess **queues** rather than being admitted and timing out together — queue wait does not count against the compile allowance, which is what converts the measured cliff into backpressure (research D9)
-- [ ] T065 [P] [US6] Document the recommended deployment settings in `README.md`, together with the concurrency-sweep method for measuring a given machine, and the measured data point (0% failures at concurrency 20, 23% at 30 on an idle 12-core machine) as a worked example (FR-023)
-- [ ] T066 [US6] Document the `>=20.19.0` runtime requirement and why it exists in `README.md`
+- [X] T063 [P] [US6] Update the piston service in `docker-compose.yml` with the isolation settings its documentation requires, a jobs tmpfs, a packages volume, and resource limits (FR-022)
+- [X] T064 [US6] Set the execution backend's own concurrency ceiling in `docker-compose.yml` so excess **queues** rather than being admitted and timing out together — queue wait does not count against the compile allowance, which is what converts the measured cliff into backpressure (research D9)
+- [X] T065 [P] [US6] Document the recommended deployment settings in `README.md`, together with the concurrency-sweep method for measuring a given machine, and the measured data point (0% failures at concurrency 20, 23% at 30 on an idle 12-core machine) as a worked example (FR-023)
+- [X] T066 [US6] Document the `>=20.19.0` runtime requirement and why it exists in `README.md`
 
 **Checkpoint**: the stack starts from committed configuration with a documented sizing method.
 
@@ -196,9 +196,9 @@ Paths are relative to the repository root `ntut-exam-v2/host/`. Backend sources 
 
 **In scope because 004 and 005 ship together** (plan § Scope decisions). This migrates existing callers only — **the judging settings page remains in 005**.
 
-- [ ] T067 [P] Migrate `frontend/src/stores/student.store.ts` `reevaluateStudentCode` to the handle-and-notify contract: the response is now a handle, not results
-- [ ] T068 [P] Migrate `frontend/src/stores/score.store.ts` `rejudge` to the same contract. **Its 404 is silently swallowed today**, so this is the first time the action will do anything (research S4)
-- [ ] T069 Ensure the live-update handler refreshes results on the completion announcement, so a TA sees results without manual refresh
+- [X] T067 [P] Migrate `frontend/src/stores/student.store.ts` `reevaluateStudentCode` to the handle-and-notify contract: the response is now a handle, not results
+- [X] T068 [P] Migrate `frontend/src/stores/score.store.ts` `rejudge` to the same contract. **Its 404 is silently swallowed today**, so this is the first time the action will do anything (research S4)
+- [X] T069 Ensure the live-update handler refreshes results on the completion announcement, so a TA sees results without manual refresh
 
 **Checkpoint**: the TA flow works end to end.
 

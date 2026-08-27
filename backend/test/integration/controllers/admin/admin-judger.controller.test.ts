@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type express from 'express';
 
 import { createApp } from '../../../../src/app';
@@ -23,8 +23,11 @@ describe('AdminJudgerController (integration)', () => {
     JudgeQueueService.reset();
   });
 
+  afterEach(() => JudgeQueueService.settle());
+
   describe('POST /admin/judger/judge/:testId', () => {
-    const settle = () => new Promise((r) => setImmediate(r));
+    // Wait for real quiescence, not a guessed number of ticks.
+    const settle = () => JudgeQueueService.settle();
 
     it('accepts the request and returns a handle without waiting for the run', async () => {
       let release!: () => void;
@@ -121,7 +124,8 @@ describe('AdminJudgerController (integration)', () => {
   });
 
   describe('POST /admin/judger/rejudge', () => {
-    const settle = () => new Promise((r) => setImmediate(r));
+    // Wait for real quiescence, not a guessed number of ticks.
+    const settle = () => JudgeQueueService.settle();
 
     it('exists at all', async () => {
       // The TA-facing action has been posting here since before the route was

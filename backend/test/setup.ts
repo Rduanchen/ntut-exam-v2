@@ -1,4 +1,5 @@
 import { vi, beforeAll, afterAll, beforeEach } from 'vitest';
+import logger from '../src/utils/logger.util';
 
 // Force in-memory SQLite database before any imports
 process.env.DB_STORAGE = ':memory:';
@@ -25,6 +26,20 @@ vi.mock('socket.io', () => {
     })),
   };
 });
+
+/* Silence application logging during tests.
+ *
+ * Not cosmetic. vitest intercepts stdout per test, and a suite that writes
+ * hundreds of log lines from parallel workers contends on that single shared
+ * stream — enough to push an unrelated file's beforeEach past its timeout.
+ * That was observed: adding a test file that logs on every ceiling change made
+ * the crypto integration suite, which is untouched by it, fail intermittently
+ * with a 10s hook timeout while taking 20x its solo runtime.
+ *
+ * Set LOG_LEVEL to see them when debugging a specific test. */
+if (!process.env.LOG_LEVEL) {
+  logger.silent = true;
+}
 
 // Mock the Piston sandbox so no test reaches a real code-execution server.
 // The real enums are preserved: services compare against StatusCode/CompareMode

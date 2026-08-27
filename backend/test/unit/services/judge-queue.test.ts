@@ -1,9 +1,13 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { JudgeQueueService } from "../../../src/services/judge-queue.service";
 
-const settle = () => new Promise((r) => setImmediate(r));
+/* Wait for real quiescence rather than guessing a number of ticks. Counting
+ * ticks is how background work escapes its test and starts corrupting the
+ * next one — observed here, as intermittent failures in unrelated files. */
+const settle = () => JudgeQueueService.settle();
 
 beforeEach(() => JudgeQueueService.reset());
+afterEach(() => JudgeQueueService.settle());
 
 describe("US3 - judging runs in the background behind a handle", () => {
   it("returns a handle before the run finishes", async () => {

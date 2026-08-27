@@ -38,6 +38,13 @@ export class ExamConfigService {
 
     mergedConfig.accessibleUsers = oldConfig.accessibleUsers;
     mergedConfig.environmentVariables = oldConfig.environmentVariables;
+    /* judgerSettings is deliberately NOT preserved here.
+     *
+     * Adding it to this list would quietly defeat the deployment model: an
+     * uploaded configuration is meant to replace judging settings wholesale,
+     * so that one file fully defines one machine. Preserving them would make
+     * an omitted field keep its previous value, which is the merge behaviour
+     * that was explicitly rejected. */
 
     if (mergedConfig.sections.length !== oldConfig.sections.length) {
       throw new HttpError(400, "Bad Request: Cannot change the number of sections after initialization");

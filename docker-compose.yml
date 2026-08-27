@@ -40,6 +40,38 @@ services:
     ports:
       - "${PISTON_PORT:-2000}:2000"
     restart: unless-stopped
+    # Required by Piston's own documentation. Without it the runner cannot set
+    # up the isolation each job depends on.
+    privileged: true
+    environment:
+      # The default is 64, far above what an exam machine can actually run.
+      # Piston admits everything up to this number, so an over-large value does
+      # not mean "more throughput" -- it means every admitted job competes and
+      # they all hit their compile allowance together. Set at or below the
+      # value the machine was measured for. See README for the sweep method.
+      - PISTON_MAX_CONCURRENT_JOBS=${PISTON_MAX_CONCURRENT_JOBS:-8}
+      # Compile and run output caps. The default (1 KiB) truncates ordinary
+      # compiler diagnostics, which makes a real compile error unreadable.
+      - PISTON_OUTPUT_MAX_SIZE=${PISTON_OUTPUT_MAX_SIZE:-65536}
+    volumes:
+      # Installed language packages, so a rebuild does not re-download them --
+      # and so the languages an operator installed survive a restart.
+      - piston-packages:/piston/packages
+    tmpfs:
+      # Job scratch space on tmpfs rather than the overlay filesystem. Job dirs
+      # are created and destroyed constantly; on overlayfs that I/O becomes its
+      # own source of compile-stage timeouts.
+      - /piston/jobs:exec,uid=1000,gid=1000,mode=711,size=1g
+      - /tmp:exec
+    deploy:
+      resources:
+        limits:
+          # Bound what the sandbox can take from the machine the exam is also
+          # running on. Judging that starves the application is not an
+          # improvement over judging that fails.
+          cpus: "${PISTON_CPUS:-4}"
+          memory: ${PISTON_MEMORY:-4g}
 
 volumes:
   ntut-data:
+  piston-packages:
