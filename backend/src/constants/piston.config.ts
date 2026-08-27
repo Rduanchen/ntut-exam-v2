@@ -38,17 +38,40 @@ export default CONFIG;
 export type LanguageKey = keyof typeof CONFIG.languages;
 export type LanguageConfig = (typeof CONFIG.languages)[LanguageKey];
 
-export const checkPistonServer = async () => {
+export interface PistonHealth {
+  reachable: boolean;
+  url: string;
+  runtimes: Array<{ language: string; version: string; aliases?: string[] }>;
+  error?: string;
+}
+
+/**
+ * Report whether the execution backend is usable, and what it can actually run.
+ *
+ * Used to only write to the log at startup, which meant "Python is not
+ * installed" was discoverable exactly once, by whoever happened to read the
+ * console. An operator needs to be able to ask before an exam begins — the
+ * measurement that started this work found a machine with only the gcc family
+ * installed, and nothing surfaced that.
+ *
+ * An unreachable backend is a normal report, not a thrown error: the caller
+ * asked a question and gets an answer.
+ */
+export const checkPistonServer = async (): Promise<PistonHealth> => {
+  const url = CONFIG.url;
   try {
-    const response = await fetch(CONFIG.url, {
-      method: "GET",
-    });
+    const response = await fetch(`${url}/api/v2/runtimes`, { method: "GET" });
     if (!response.ok) {
-      console.error(`[Error] Piston server at ${CONFIG.url} is not running correctly. Status: ${response.status}`);
-    } else {
-      console.log(`[Info] Piston server is reachable at ${CONFIG.url}`);
+      const error = `Piston responded ${response.status}`;
+      console.error(`[Error] ${error} at ${url}`);
+      return { reachable: false, url, runtimes: [], error };
     }
+    const runtimes = (await response.json()) as PistonHealth["runtimes"];
+    console.log(`[Info] Piston reachable at ${url} with ${runtimes.length} runtime(s)`);
+    return { reachable: true, url, runtimes };
   } catch (error: any) {
-    console.error(`[Error] Failed to reach Piston server at ${CONFIG.url}. Is it reachable? Error: ${error.message}`);
+    const message = error?.message ?? String(error);
+    console.error(`[Error] Failed to reach Piston at ${url}: ${message}`);
+    return { reachable: false, url, runtimes: [], error: message };
   }
 };

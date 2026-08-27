@@ -44,8 +44,12 @@ export class SocketService {
    * Notify the frontend that a student's score has been updated.
    * @param scoreData The score data to broadcast.
    */
-  static triggerScoreUpdateEvent(scoreData: any): void {
-    logger.info(`[SocketService] Triggering score update event with data: ${JSON.stringify(scoreData)}`);
+  /* Narrowed from `any` deliberately. This logs its whole argument, so an
+   * `any` invites a caller to pass a result object and quietly write student
+   * output into the log — the same defect class already fixed upstream in the
+   * judging library. A student identifier is all this event needs. */
+  static triggerScoreUpdateEvent(scoreData: string): void {
+    logger.info(`[SocketService] Triggering score update event for: ${scoreData}`);
     try {
       const instance = SocketService.getInstance();
       instance.emitEvent("score-update", {

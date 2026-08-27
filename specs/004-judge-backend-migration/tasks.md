@@ -113,23 +113,23 @@ Paths are relative to the repository root `ntut-exam-v2/host/`. Backend sources 
 
 ### Tests for US3
 
-- [ ] T035 [P] [US3] Test in `backend/test/integration/controllers/admin/admin-judger.controller.test.ts`: the trigger responds **202 with a handle** before judging completes (FR-009, SC-003)
-- [ ] T036 [US3] Test: a job's state can be queried through waiting → running → finished, and a failed run reports `failed` rather than appearing to run forever (FR-010)
-- [ ] T037 [US3] Test: completion is announced on the existing live-update channel (FR-011)
-- [ ] T038 [US3] Test: the outcome is retrievable by querying when the notification is discarded — a lost notification must not look like lost work (contract G5)
-- [ ] T039 [US3] Test: a second request for a student already being judged returns the **existing** handle and starts no second run (FR-013)
-- [ ] T040 [US3] Test: the startup path returns submissions stuck in `Judging` to `Pending`, leaving none stuck (FR-012, SC-007, quickstart V6)
-- [ ] T041 [US3] Test: the re-judge endpoint accepts a student id and behaves as the trigger does (research S4)
+- [X] T035 [P] [US3] Test in `backend/test/integration/controllers/admin/admin-judger.controller.test.ts`: the trigger responds **202 with a handle** before judging completes (FR-009, SC-003)
+- [X] T036 [US3] Test: a job's state can be queried through waiting → running → finished, and a failed run reports `failed` rather than appearing to run forever (FR-010)
+- [X] T037 [US3] Test: completion is announced on the existing live-update channel (FR-011)
+- [X] T038 [US3] Test: the outcome is retrievable by querying when the notification is discarded — a lost notification must not look like lost work (contract G5)
+- [X] T039 [US3] Test: a second request for a student already being judged returns the **existing** handle and starts no second run (FR-013)
+- [X] T040 [US3] Test: the startup path returns submissions stuck in `Judging` to `Pending`, leaving none stuck (FR-012, SC-007, quickstart V6)
+- [X] T041 [US3] Test: the re-judge endpoint accepts a student id and behaves as the trigger does (research S4)
 
 ### Implementation for US3
 
-- [ ] T042 [US3] Create `backend/src/services/judge-queue.service.ts` holding the in-memory job registry — handle, state, timestamps, outcome — with at most one non-terminal job per student (data-model § JudgingJob, research D4, D5)
-- [ ] T043 [US3] Change `backend/src/controllers/admin/admin-judger.controller.ts` to accept-and-acknowledge with **202** and a handle, running judging in the background
-- [ ] T044 [US3] Announce completion through `SocketService` from the background run, not from the request handler
-- [ ] T045 [US3] Add `GET /admin/judger/jobs/:jobId` in `backend/src/routes/admin/admin-judger.route.ts` and its controller method
-- [ ] T046 [US3] Add `POST /admin/judger/rejudge` in `backend/src/routes/admin/admin-judger.route.ts` — **the frontend has been calling this route all along and receiving 404s, so the TA's re-judge button silently does nothing today** (research S4)
-- [ ] T047 [US3] Add startup recovery in `backend/src/index.ts` after database initialisation, returning interrupted `Judging` submissions to `Pending` (FR-012)
-- [ ] T048 [US3] Narrow the `any` payload type on `SocketService.triggerScoreUpdateEvent` in `backend/src/sockets/socket.service.ts` — it serialises its whole argument into the log, and one caller passing a result object would log student output, the defect class already fixed upstream (research S8)
+- [X] T042 [US3] Create `backend/src/services/judge-queue.service.ts` holding the in-memory job registry — handle, state, timestamps, outcome — with at most one non-terminal job per student (data-model § JudgingJob, research D4, D5)
+- [X] T043 [US3] Change `backend/src/controllers/admin/admin-judger.controller.ts` to accept-and-acknowledge with **202** and a handle, running judging in the background
+- [X] T044 [US3] Announce completion through `SocketService` from the background run, not from the request handler
+- [X] T045 [US3] Add `GET /admin/judger/jobs/:jobId` in `backend/src/routes/admin/admin-judger.route.ts` and its controller method
+- [X] T046 [US3] Add `POST /admin/judger/rejudge` in `backend/src/routes/admin/admin-judger.route.ts` — **the frontend has been calling this route all along and receiving 404s, so the TA's re-judge button silently does nothing today** (research S4)
+- [X] T047 [US3] Add startup recovery in `backend/src/index.ts` after database initialisation, returning interrupted `Judging` submissions to `Pending` (FR-012)
+- [X] T048 [US3] Narrow the `any` payload type on `SocketService.triggerScoreUpdateEvent` in `backend/src/sockets/socket.service.ts` — it serialises its whole argument into the log, and one caller passing a result object would log student output, the defect class already fixed upstream (research S8)
 
 **Checkpoint**: US3 tests green. With US2, load is survivable end to end.
 
@@ -153,7 +153,7 @@ Paths are relative to the repository root `ntut-exam-v2/host/`. Backend sources 
 
 - [ ] T054 [US4] Add `GET /admin/judger/settings` returning effective values with provenance, in `backend/src/routes/admin/admin-judger.route.ts` and its controller
 - [ ] T055 [US4] Add `PUT /admin/judger/settings` applying changes immediately, including the ceiling, with no restart (FR-008, FR-017)
-- [ ] T056 [US4] Add `GET /admin/judger/health` reporting reachability and installed runtimes, extending the existing startup probe into something queryable (research S6, D8)
+- [X] T056 [US4] Add `GET /admin/judger/health` reporting reachability and installed runtimes, extending the existing startup probe into something queryable (research S6, D8)
 - [ ] T057 [US4] Confirm `restrictedUpdate` in `backend/src/services/exam-config.service.ts` does **not** preserve judging settings across an upload — it preserves only accessible users and environment variables, and adding judging settings to that list would silently defeat FR-015
 
 **Checkpoint**: US4 tests green. A new exam machine needs exactly one file.

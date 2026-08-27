@@ -76,7 +76,7 @@ export class JudgerService {
 
     const submissions = await Submission.findAll({ where: whereClause });
     if (submissions.length === 0) {
-      return { message: "No submissions found to judge.", results: {} };
+      return { message: "No submissions found to judge.", results: {}, graded: 0, systemFailures: 0 };
     }
 
     // 3. Mark state as "Judging"
