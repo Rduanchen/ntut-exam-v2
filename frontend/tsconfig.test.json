@@ -1,0 +1,22 @@
+{
+  /* Type-checks the tests.
+   *
+   * tsconfig.app.json includes only src/, so without this the test files are
+   * compiled by vitest but checked by nothing — fixtures could drift from the
+   * types they claim to model and the suite would keep passing for the wrong
+   * reason. The same trap was hit in the judging library and is recorded in
+   * knowledge/experience.md #4.
+   *
+   * A separate project rather than a widened include, because tsconfig.app is
+   * what the build emits from. */
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+    "composite": true,
+    "types": ["vite/client", "vitest/globals"],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["test/**/*.ts", "src/**/*.ts", "src/**/*.vue"]
+}

@@ -56,6 +56,18 @@ export interface ExamConfig {
         timeLimit: number;
         memoryLimit: number;
         compareMode?: "strict" | "loose";
+        /* Added in feature 004. This block described the pre-004 schema for
+         * some time and nothing caught it, because nothing binds this type to
+         * the backend's. Binding them is recorded as a finding, not attempted
+         * here — but the standalone `typecheck` script added alongside makes
+         * the next drift visible on demand rather than only at build time. */
+        compileTimeout?: number;
+        compileMemoryLimit?: number;
+        /** A property of THIS MACHINE that nonetheless travels with the exam
+         *  paper, because one config file must fully define one machine.
+         *  Re-measure it whenever a paper moves to different hardware. */
+        maxConcurrentJobs?: number;
+        maxSystemRetries?: number;
     };
     environmentVariables: {
         startPassword: string;
