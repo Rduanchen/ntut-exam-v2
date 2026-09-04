@@ -81,7 +81,7 @@ UNINITIALIZED | INITIALIZED | SETUP_FINISHED | IN_PROGRESS | FINISHED
 | `description` | string | 原考卷 | 顯示 |
 | `accessibleUsers[]` | `{ id, name, ip? }` | 原考卷 | 自動登入、離線名單比對 |
 | `judgerSettings` | `{ timeLimit, memoryLimit, ... }` | 原考卷 | 環境檢查探針的真實上限 |
-| `submitGraceSeconds` | number | **新增設定** | 收卷緩衝期，預設 60（見 research R1） |
+| `submitGraceSeconds` | number | **新增設定** | 收卷緩衝期，預設 60（見 research R1）。新增此欄位須同步三份 schema 定義與管理端表單 |
 | `sections[]` | `{ id, title, maxScore, puzzles[] }` | 原考卷（裁剪） | 結構骨架 |
 | `sections[].puzzles[]` | `{ id, language, timeLimit?, memoryLimit? }` | 原考卷（裁剪） | **僅此四欄** |
 | `wrappedExamKey` | `{ salt, iv, ciphertext, tag }` | 新產生 | 離線取得 `K_exam` |

@@ -451,6 +451,26 @@ wrappedExamKey = AES-256-GCM(K_exam, derivedKey)
 | `type` | 由 `FIRST_TIME / SECONDARY` 擴充為可區分 §6.3 三種情境 |
 | 新增欄位 | `previousTestId`（該裝置原本綁定的學號），供助教判斷 |
 
+### 10.4b 管理端 `host/frontend`（設定編輯器）
+
+config schema 在本專案有**三份**定義，管理端的 `types/config.ts` 是第三份。新增任何考卷欄位都必須同步這一份，否則設定編輯器無法讀寫該欄位。
+
+| 檔案 | 修改 |
+|---|---|
+| `src/types/config.ts` | `ExamConfig` 新增 `submitGraceSeconds` |
+| `src/stores/config.store.ts` | 預設 config 加入 `submitGraceSeconds: 60`；初始化後的階段值由 `NOT_STARTED` 改為 `INITIALIZED` |
+| `src/stores/manage.store.ts` | `examState` 預設值改為 `UNINITIALIZED`；新增 `allowedNext` |
+| `src/views/config/components/GeneralSettingsEditor.vue` | 新增 `submitGraceSeconds` 欄位；改寫 `startPassword` 的標籤與說明 |
+| `src/views/config/components/ConfigForm.vue` | 口令弱度警告與二次確認 |
+| `src/views/config/components/DbInitPanel.vue` | 顯示 `preconditions_not_met` 的缺項清單 |
+| `src/views/config/ConfigView.vue` | 離線佈署檔匯出 |
+| `src/views/manage/components/ExamStateControls.vue` | 四顆任選按鈕改為「下一階段」單一按鈕 + reset |
+| `src/views/manage/components/StudentReadiness.vue` | 新增，學生準備狀況頁 |
+| `src/views/connection/ConnectionView.vue` | 三種入場情境分組、指定學號的核准對話框 |
+| `test/fixtures/exam-config-payload.fixture.json` | 新增，契約錨點的第三份 |
+
+> `startPassword` 的語意在本功能中改變：它從「開考的 UI 閘門」變成「考卷的解密金鑰」。這個改變必須在編輯器上明確告知管理員，否則他們會以為那只是一個口頭密碼而隨意設定。
+
 ### 10.5 桌面版 `desktop/src/main/schemas/examConfig.schema.ts`
 
 | 修改 | 內容 |

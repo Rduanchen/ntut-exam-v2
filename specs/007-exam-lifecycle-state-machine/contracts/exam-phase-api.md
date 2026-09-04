@@ -221,22 +221,31 @@ payload → { resetAt: string, reason?: string }
 
 ---
 
-## 9. 跨 repo 契約 fixture
+## 9. 跨端契約 fixture
 
-兩個 repo 各持一份**逐位元組相同**的檔案：
+config schema 在本專案共有**三份**獨立定義：
+
+| 定義 | 檔案 | 形式 |
+|---|---|---|
+| 後端 | `host/backend/src/schemas/config.schema.ts` | zod `^3` |
+| 學生端 | `desktop/src/main/schemas/examConfig.schema.ts` | zod `^4` |
+| 管理端 | `host/frontend/src/types/config.ts` | TypeScript type |
+
+三者各自持有一份**逐位元組相同**的 fixture：
 
 ```
 host/backend/test/fixtures/exam-config-payload.fixture.json
 desktop/test/fixtures/exam-config-payload.fixture.json
+host/frontend/test/fixtures/exam-config-payload.fixture.json
 ```
 
-**G25 — 雙向驗證**：兩端各有測試以該 fixture 驗證自身的 schema。任一端修改 schema 而未同步 fixture，另一端測試失敗。
+**G25 — 三向驗證**：三端各有測試以該 fixture 驗證自身定義。任一端修改契約而未同步其餘兩份，其他端的測試失敗。
 
 **G26 — 涵蓋範圍**：fixture 必須同時包含 `meta`、`cipher` 封包與 `wrappedExamKey` 三種結構的完整樣本，含選填欄位存在與缺席兩種情形。
 
-> 兩端的 zod 主版本不同（後端 `^3`、桌面版 `^4`），預設值填充與 `catchall` 行為未必一致。此 fixture 的作用即為讓該差異在測試時暴露。
-
----
+> 這不是理論風險。`host/frontend/src/types/config.ts` 內留有一段註解，記錄 feature 004 新增 `judgerSettings` 欄位後，該型別描述了舊 schema 一段時間而無人察覺 —— 「nothing binds this type to the backend's」。本 fixture 即為那個缺口的補救。
+>
+> 三端的驗證方式不同：後端與學生端可直接 parse，管理端是 TypeScript type 而非 runtime schema，需以型別層斷言（`satisfies` 或編譯期檢查）驗證 fixture 可指派為 `ExamConfig`。
 
 ## 10. 加密參數
 

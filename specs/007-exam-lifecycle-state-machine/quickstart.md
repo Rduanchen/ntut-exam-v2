@@ -40,18 +40,26 @@ npm run dev
 這是唯一同時保護兩個 repo 的測試，**每次修改契約後都必須跑**。
 
 ```bash
-# 確認兩份 fixture 逐位元組相同
-diff ~/Documents/ntut-exam-v2/host/backend/test/fixtures/exam-config-payload.fixture.json \
-     ~/Documents/ntut-exam-v2/desktop/test/fixtures/exam-config-payload.fixture.json
-# 預期：無輸出
+H=~/Documents/ntut-exam-v2/host
+D=~/Documents/ntut-exam-v2/desktop
 
-cd ~/Documents/ntut-exam-v2/host && pnpm test        # 後端以該 fixture 驗證 schema
-cd ~/Documents/ntut-exam-v2/desktop && npm test      # 桌面版以同一份 fixture 驗證
+# 確認三份 fixture 逐位元組相同
+diff $H/backend/test/fixtures/exam-config-payload.fixture.json \
+     $D/test/fixtures/exam-config-payload.fixture.json
+diff $H/backend/test/fixtures/exam-config-payload.fixture.json \
+     $H/frontend/test/fixtures/exam-config-payload.fixture.json
+# 預期：兩次皆無輸出
+
+cd $H && pnpm test                      # 後端 zod ^3 驗證
+cd $H && pnpm --filter frontend test    # 管理端 TypeScript type 驗證
+cd $D && npm test                       # 學生端 zod ^4 驗證
 ```
 
-**預期**：`diff` 無差異，兩端測試皆綠。
+**預期**：兩次 `diff` 皆無差異，三端測試皆綠。
 
-> 兩端 zod 主版本不同（後端 `^3`、桌面版 `^4`），此測試的目的即為讓行為差異在此暴露，而非在考試現場。
+> config schema 有**三份**定義：後端 zod `^3`、學生端 zod `^4`、管理端 TypeScript type。zod 主版本不同，且管理端根本不是 runtime schema —— 此測試的目的即為讓三者的差異在此暴露，而非在考試現場。
+>
+> 這個缺口已經咬過一次：`frontend/src/types/config.ts` 的註解記載 feature 004 新增欄位後，該型別描述了舊 schema 一段時間而無人察覺。
 
 ### A2. 階段轉移的單向性（G4）
 
@@ -97,6 +105,8 @@ cd ~/Documents/ntut-exam-v2/host && pnpm test -- exam-phase
 |---|---|---|---|
 | 1 | 後端啟動，尚未初始化 | 兩台停在等待畫面；任何註冊／登入嘗試被拒 | US1-1 |
 | 2 | 管理端上傳考卷、初始化 | 成功；`allowedNext` 為 `INITIALIZED` | G5 |
+| 2b | 在設定編輯器檢視一般設定頁 | 看得到 `submitGraceSeconds` 欄位；`startPassword` 的說明已改為「考卷解密金鑰」 | T068–T071 |
+| 2c | 將口令改為 3 個字元後儲存 | 出現弱度警告並要求二次確認 | R4 / T072 |
 | 3 | 推進到 `INITIALIZED` | 兩台自動註冊成功 | US1-2 |
 | 4 | 觀察兩台 | 自動執行環境檢查；**畫面上沒有登入入口** | US1-2 |
 | 5 | 檢視管理端 | 顯示已註冊機器數與環境檢查通過數 | R9 |

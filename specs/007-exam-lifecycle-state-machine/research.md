@@ -76,20 +76,25 @@
 
 ---
 
-## R5. 跨 repo 的 schema 對齊方式
+## R5. 跨端的 schema 對齊方式
 
-**決策**：於兩個 repo 各放置一份**逐位元組相同**的契約 fixture，並各自撰寫測試驗證其能通過該端的 schema：
+**決策**：於**三處** schema 定義各放置一份**逐位元組相同**的契約 fixture，並各自撰寫測試驗證其能通過該端的定義：
 
 ```
-host/backend/test/fixtures/exam-config-payload.fixture.json
-desktop/test/fixtures/exam-config-payload.fixture.json
+host/backend/test/fixtures/exam-config-payload.fixture.json     # zod ^3
+desktop/test/fixtures/exam-config-payload.fixture.json          # zod ^4
+host/frontend/test/fixtures/exam-config-payload.fixture.json    # TypeScript type
 ```
+
+config schema 有三份定義而非兩份 —— 除了後端與學生端的 zod，管理端另有 `host/frontend/src/types/config.ts` 供設定編輯器使用。
 
 fixture 內容涵蓋 `config.meta`、`config.cipher` 封包與 `wrappedExamKey` 三種結構的完整樣本。任一端修改 schema 而未同步更新 fixture，另一端的測試即失敗。
 
 **理由**：
 - 兩個 repo 無法共用程式碼（獨立版控、獨立套件管理），因此不存在真正的單一來源。
-- `knowledge/experience.md` 第 4 條記載過同類事故：fixture 與 production schema 脫鉤，紅燈持續約兩個月無人察覺。其教訓是「fixture 必須型別綁定到 production schema 且只有單一來源」。跨 repo 的最佳近似，就是讓 fixture 內容成為兩端共同的錨點。
+- `knowledge/experience.md` 第 4 條記載過同類事故：fixture 與 production schema 脫鉤，紅燈持續約兩個月無人察覺。其教訓是「fixture 必須型別綁定到 production schema 且只有單一來源」。跨 repo 的最佳近似，就是讓 fixture 內容成為三端共同的錨點。
+- **同一個缺口已經咬過一次**：`host/frontend/src/types/config.ts` 內留有註解，記錄 feature 004 新增 `judgerSettings` 欄位後，該型別描述了舊 schema 一段時間而無人察覺，且當時明確記為「a finding, not attempted here」。本次一併補上。
+- 管理端是 TypeScript type 而非 runtime schema，因此其驗證為型別層斷言（fixture 可指派為 `ExamConfig`），而非 parse。
 - **關鍵細節**：兩端的 zod 主版本不同（後端 `^3.23.8`、桌面版 `^4.3.5`）。同一份 schema 定義在兩個主版本間的行為並非完全一致（尤其是預設值填充與 `catchall` 的處理）。fixture 驗證正是為了讓這類差異在測試時就暴露，而非在考試現場。
 
 **已排除**：

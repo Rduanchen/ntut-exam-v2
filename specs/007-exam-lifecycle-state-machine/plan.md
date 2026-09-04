@@ -20,7 +20,7 @@
 
 **Primary Dependencies**:
 - 後端 — Express 4、Sequelize 6 + sequelize-typescript、socket.io 4、zod **^3.23**、Node `crypto`（內建）
-- 管理端 — Vue 3、Pinia、Vuetify 3、axios
+- 管理端 — Vue 3、Pinia、Vuetify 3、axios（設定編輯器持有 config schema 的第三份定義，為 TypeScript type）
 - 桌面版 — Electron 31、electron-vite、Vue 3、socket.io-client 4、zod **^4.3**、Node `crypto`（內建）
 
 **Storage**: SQLite（Sequelize）。本功能新增 `SystemSettings` 三個鍵（`exam_key`、`exam_config_cipher`、`exam_config_meta`）與 `DeviceKeyMap` 四個欄位；`LoginRequest` 變更 `type` 值域並新增 `previousTestId`。桌面版一律 RAM-only，永不落盤。
@@ -116,10 +116,24 @@ backend/test/
 └── unit|integration/...                        # 對應新增
 
 frontend/src/
-├── stores/manage.store.ts              # 改 —— allowedNext
-└── views/manage/components/
-    ├── ExamStateControls.vue           # 改 —— 單一「下一階段」按鈕 + reset
-    └── StudentReadiness.vue            # 新增 —— 準備狀況頁
+├── types/config.ts                     # 改 —— submitGraceSeconds（schema 的第三份定義）
+├── stores/
+│   ├── manage.store.ts                 # 改 —— allowedNext、預設階段值
+│   └── config.store.ts                 # 改 —— 預設 config、初始化後的階段值
+└── views/
+    ├── manage/components/
+    │   ├── ExamStateControls.vue       # 改 —— 單一「下一階段」按鈕 + reset
+    │   └── StudentReadiness.vue        # 新增 —— 準備狀況頁
+    ├── config/
+    │   ├── ConfigView.vue              # 改 —— 離線佈署檔匯出
+    │   └── components/
+    │       ├── GeneralSettingsEditor.vue   # 改 —— submitGraceSeconds 欄位、口令語意說明
+    │       ├── ConfigForm.vue              # 改 —— 口令弱度警告與二次確認
+    │       └── DbInitPanel.vue             # 改 —— 顯示前置條件缺項
+    └── connection/ConnectionView.vue   # 改 —— 三種入場情境與指定學號
+
+frontend/test/
+└── fixtures/exam-config-payload.fixture.json   # 新增 —— 契約錨點第三份
 ```
 
 **`desktop` repo**
@@ -152,6 +166,6 @@ test/fixtures/exam-config-payload.fixture.json   # 新增 —— 與 host 逐位
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |---|---|---|
-| **C1** — 同一份契約在兩個 repo 各定義一次（zod `^3` vs `^4`），非單一來源 | 兩個 repo 獨立版控、獨立套件管理，無法共用程式碼。zod 主版本已分歧，統一升級會牽動兩端既有的全部 schema，風險遠大於本功能 | *抽出共用 npm 套件*：需維護第三個發布流程，對兩個結構而言成本過高。*以 JSON Schema 產生 zod*：引入產生步驟與新工具。緩解為 G25/G26 的逐位元組相同 fixture + 兩端各自的驗證測試 —— 這是 `experience.md` 第 4 條教訓在跨 repo 情境下的最佳近似 |
+| **C1** — 同一份契約有**三份**定義（後端 zod `^3`、學生端 zod `^4`、管理端 TypeScript type），非單一來源 | 兩個 repo 獨立版控、獨立套件管理，無法共用程式碼；管理端的設定編輯器另需一份可供表單綁定的 TypeScript type。zod 主版本已分歧，統一升級會牽動兩端既有的全部 schema，風險遠大於本功能 | *抽出共用 npm 套件*：需維護第三個發布流程，對兩個結構而言成本過高。*以 JSON Schema 產生 zod*：引入產生步驟與新工具。緩解為 G25/G26 的逐位元組相同 fixture + 三端各自的驗證測試 —— 這是 `experience.md` 第 4 條教訓在跨 repo 情境下的最佳近似。**此缺口已咬過一次**：`frontend/src/types/config.ts` 的註解記載 004 的同類漂移當時被記為 finding 而未處理，本次一併補上 |
 | **C2** — 部分路徑無法達到憲法要求的 100% 自動化覆蓋 | 監考現場宣讀口令、隨身碟佈署、拔網路線、機器重啟，皆涉及人與實體硬體。這些正是本功能最關鍵的路徑（SC-002、SC-003） | *以 mock 模擬*：可覆蓋程式碼行，但無法證明「後端真的關掉時考試能開始」—— 而那正是需求本身。緩解為 `quickstart.md` B/C/D 三段人工走查，每個 SC 皆有對應步驟，且列為每個實作 Phase 的收尾條件 |
 | **C3** — 跨 repo 的破壞性變更，無版本協商 | 考試機器一次性使用，每場重新佈署，因此不需要新舊並存。加入版本協商會為一個不存在的情境增加永久複雜度 | *保留舊 payload 形狀並漸進遷移*：需同時維護兩套考卷下發路徑，而其中一套（明文整份下發）正是本功能要消除的測資外洩面。代價為佈署必須原子化，記於 `EXAM-LIFECYCLE.md` 與 `quickstart.md` 前置條件 |

@@ -37,9 +37,10 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 **Purpose**: 建立兩個 repo 之間唯一的契約錨點。這必須最先做，因為後續兩端的 schema 都以它為準。
 
 - [ ] T001 在 `host/backend/test/fixtures/exam-config-payload.fixture.json` 建立契約 fixture，依 contracts/ G26 涵蓋 `meta`、`cipher` 封包、`wrappedExamKey` 三種結構，且每種都含「選填欄位存在」與「選填欄位缺席」兩組樣本
-- [ ] T002 將 T001 的檔案**逐位元組複製**到 `desktop/test/fixtures/exam-config-payload.fixture.json`
-- [ ] T003 [P] 在 `host/package.json` 新增 `test:contract-fixture` script，以 `diff` 比對兩份 fixture 並在不一致時失敗（contracts/ G25）
-- [ ] T004 [P] 在 `host/specs/007-exam-lifecycle-state-machine/` 記錄 fixture 的維護規則：任一端修改契約必須同步兩份檔案
+- [ ] T002 將 `host/backend/test/fixtures/exam-config-payload.fixture.json` **逐位元組複製**到 `desktop/test/fixtures/exam-config-payload.fixture.json`
+- [ ] T003 將同一份檔案**逐位元組複製**到 `host/frontend/test/fixtures/exam-config-payload.fixture.json` —— config schema 共有**三份**定義：backend zod、desktop zod、frontend TS type
+- [ ] T004 [P] 在 `host/package.json` 新增 `test:contract-fixture` script，以 `diff` 比對**三份** fixture 並在任一份不一致時失敗（contracts/ G25）
+- [ ] T005 [P] 在 `host/specs/007-exam-lifecycle-state-machine/` 記錄 fixture 的維護規則：任一端修改契約必須同步三份檔案
 
 **Checkpoint**: 契約錨點就位，兩端可各自開始定義 schema
 
@@ -53,21 +54,21 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 ### Tests
 
-- [ ] T005 [P] 在 `host/backend/test/unit/services/exam-state.service.test.ts` 撰寫轉移表測試，涵蓋 data-model.md §1 的全部 5×5 = 25 種組合（4 種合法、21 種必須拒絕）
-- [ ] T006 [P] 在 `host/backend/test/unit/middlewares/exam-phase.middleware.test.ts` 撰寫權限矩陣測試，涵蓋 contracts/ §2 的 13 端點 × 5 階段
-- [ ] T007 [P] 在 `desktop/test/ui/phase-derivation.test.ts` 撰寫畫面推導測試，涵蓋 EXAM-LIFECYCLE.md §4.2 的 5 階段 × 3 裝置狀態
+- [ ] T006 [P] 在 `host/backend/test/unit/services/exam-state.service.test.ts` 撰寫轉移表測試，涵蓋 data-model.md §1 的全部 5×5 = 25 種組合（4 種合法、21 種必須拒絕）
+- [ ] T007 [P] 在 `host/backend/test/unit/middlewares/exam-phase.middleware.test.ts` 撰寫權限矩陣測試，涵蓋 contracts/ §2 的 13 端點 × 5 階段
+- [ ] T008 [P] 在 `desktop/test/ui/phase-derivation.test.ts` 撰寫畫面推導測試，涵蓋 EXAM-LIFECYCLE.md §4.2 的 5 階段 × 3 裝置狀態
 
 ### Implementation
 
-- [ ] T008 在 `host/backend/src/services/exam-state.service.ts` 將 `ExamState` enum 改為 `UNINITIALIZED / INITIALIZED / SETUP_FINISHED / IN_PROGRESS / FINISHED`
-- [ ] T009 在 `host/backend/src/services/exam-state.service.ts` 加入轉移表並於 `changeState` 前驗證，拒絕跳階、回退與 `from === to`
-- [ ] T010 在 `host/backend/src/services/exam-state.service.ts` 新增 `getAllowedNext()`，回傳至多一個元素（contracts/ §3）
-- [ ] T011 建立 `host/backend/src/middlewares/exam-phase.middleware.ts`，以宣告式路由對階段表實作，未列出的 `/user/*` 端點預設拒絕（contracts/ G3）
-- [ ] T012 在 `host/backend/src/routes/user/index.ts` 掛載 T011 的 middleware，位於 `loadTestIpMockMiddleware` 之後、各子路由之前
-- [ ] T013 [P] 在 `host/backend/src/services/system-settings.service.ts` 將 `exam_key`、`exam_config_cipher`、`exam_config_meta` 加入 `PROTECTED_SETTINGS_KEYS`
-- [ ] T014 [P] 在 `desktop/src/common/types.ts` 將 `ExamState` type 改為五個新值
-- [ ] T015 在 `desktop/src/renderer/router/index.ts` 改為 EXAM-LIFECYCLE.md §4.2 的推導式守衛，移除既有的散落條件判斷
-- [ ] T016 在 `desktop/src/renderer/router/index.ts` 於 `SETUP_FINISHED` 之後禁止進入 Settings 頁（spec.md FR-008）
+- [ ] T009 在 `host/backend/src/services/exam-state.service.ts` 將 `ExamState` enum 改為 `UNINITIALIZED / INITIALIZED / SETUP_FINISHED / IN_PROGRESS / FINISHED`
+- [ ] T010 在 `host/backend/src/services/exam-state.service.ts` 加入轉移表並於 `changeState` 前驗證，拒絕跳階、回退與 `from === to`
+- [ ] T011 在 `host/backend/src/services/exam-state.service.ts` 新增 `getAllowedNext()`，回傳至多一個元素（contracts/ §3）
+- [ ] T012 建立 `host/backend/src/middlewares/exam-phase.middleware.ts`，以宣告式路由對階段表實作，未列出的 `/user/*` 端點預設拒絕（contracts/ G3）
+- [ ] T013 在 `host/backend/src/routes/user/index.ts` 掛載 `exam-phase.middleware.ts`，位於 `loadTestIpMockMiddleware` 之後、各子路由之前
+- [ ] T014 [P] 在 `host/backend/src/services/system-settings.service.ts` 將 `exam_key`、`exam_config_cipher`、`exam_config_meta` 加入 `PROTECTED_SETTINGS_KEYS`
+- [ ] T015 [P] 在 `desktop/src/common/types.ts` 將 `ExamState` type 改為五個新值
+- [ ] T016 在 `desktop/src/renderer/router/index.ts` 改為 EXAM-LIFECYCLE.md §4.2 的推導式守衛，移除既有的散落條件判斷
+- [ ] T017 在 `desktop/src/renderer/router/index.ts` 於 `SETUP_FINISHED` 之後禁止進入 Settings 頁（spec.md FR-008）
 
 **Checkpoint**: 階段骨架就位，user story 可開始
 
@@ -81,31 +82,35 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 ### Tests for User Story 1 (MANDATORY) ⚠️
 
-- [ ] T017 [P] [US1] 在 `host/backend/test/integration/controllers/admin/admin-exam-state.controller.test.ts` 測試 `GET /admin/exam-state` 回傳 `allowedNext`，且 `FINISHED` 時為空陣列
-- [ ] T018 [P] [US1] 在 `host/backend/test/unit/services/device.service.test.ts` 測試註冊在 `INITIALIZED` 開放、`SETUP_FINISHED` 起關閉（spec.md FR-006）
-- [ ] T019 [P] [US1] 在 `host/backend/test/integration/controllers/user/user-exam.controller.test.ts` 測試 `POST /user/exam/environment-report` 在未登入狀態下可用
-- [ ] T020 [P] [US1] 在 `host/backend/test/unit/services/exam-state.service.test.ts` 測試收卷緩衝：`FINISHED` 後 `submitGraceSeconds` 內接受提交、之後拒絕（spec.md FR-033/034）
-- [ ] T021 [P] [US1] 在 `desktop/test/ipc/auth.ipc.test.ts` 測試裝置註冊已自登入流程拆出，可獨立呼叫
-- [ ] T022 [P] [US1] 在 `desktop/test/ui/standby-page.test.ts` 測試 `INITIALIZED` 待命畫面**不提供登入入口**
+- [ ] T018 [P] [US1] 在 `host/backend/test/integration/controllers/admin/admin-exam-state.controller.test.ts` 測試 `GET /admin/exam-state` 回傳 `allowedNext`，且 `FINISHED` 時為空陣列
+- [ ] T019 [P] [US1] 在 `host/backend/test/unit/services/device.service.test.ts` 測試註冊在 `INITIALIZED` 開放、`SETUP_FINISHED` 起關閉（spec.md FR-006）
+- [ ] T020 [P] [US1] 在 `host/backend/test/integration/controllers/user/user-exam.controller.test.ts` 測試 `POST /user/exam/environment-report` 在未登入狀態下可用
+- [ ] T021 [P] [US1] 在 `host/backend/test/unit/services/exam-state.service.test.ts` 測試收卷緩衝：`FINISHED` 後 `submitGraceSeconds` 內接受提交、之後拒絕（spec.md FR-033/034）
+- [ ] T022 [P] [US1] 在 `desktop/test/ipc/auth.ipc.test.ts` 測試裝置註冊已自登入流程拆出，可獨立呼叫
+- [ ] T023 [P] [US1] 在 `desktop/test/ui/standby-page.test.ts` 測試 `INITIALIZED` 待命畫面**不提供登入入口**
+- [ ] T024 [P] [US1] 在 `host/frontend/test/exam-state-controls.test.ts` 測試管理端只呈現「下一階段」與 reset 兩個動作，且五個階段名稱正確
 
 ### Implementation for User Story 1
 
-- [ ] T023 [US1] 在 `host/backend/src/services/exam-state.service.ts` 將 `setAllowDeviceRegistration(false)` 的觸發點從 `IN_PROGRESS` 移到 `SETUP_FINISHED`，並在 `INITIALIZED` 設為 `true`
-- [ ] T024 [US1] 在 `host/backend/src/services/init.service.ts` 移除初始化時的 `setAllowDeviceRegistration(true)`，改由 T023 的階段副作用負責
-- [ ] T025 [P] [US1] 在 `host/backend/src/models/device-key-map.model.ts` 新增 `envCheckStatus`、`envCheckFailedLanguages`、`envCheckReportedAt`、`lastDisconnectedAt` 欄位（data-model.md §6）
-- [ ] T026 [US1] 在 `host/backend/src/controllers/user/user.controller.ts` 新增 `POST /user/exam/environment-report` 處理，驗證層級為「已註冊裝置」，payload 僅接受 `status` 與 `failedLanguages`（contracts/ G12）
-- [ ] T027 [US1] 在 `host/backend/src/routes/user/user-exam.route.ts` 掛載 T026 的端點
-- [ ] T028 [US1] 在 `host/backend/src/sockets/message-socket.service.ts` 的 disconnect handler 寫入 `lastDisconnectedAt`
-- [ ] T029 [US1] 在 `host/backend/src/controllers/admin/admin-exam-state.controller.ts` 的 `getState` 加入 `allowedNext`，`changeState` 回傳 `invalid_transition` 與 `preconditions_not_met` 兩種錯誤（contracts/ G4/G5）
-- [ ] T030 [US1] 在 `host/backend/src/middlewares/exam-phase.middleware.ts` 實作收卷緩衝：`FINISHED` 後依 `submitGraceSeconds` 判定提交端點的允許與否
-- [ ] T031 [P] [US1] 在 `host/frontend/src/stores/manage.store.ts` 加入 `allowedNext` 狀態
-- [ ] T032 [US1] 改寫 `host/frontend/src/views/manage/components/ExamStateControls.vue` 為「下一階段」單一按鈕加 reset，移除四顆任選按鈕
-- [ ] T033 [P] [US1] 建立 `host/frontend/src/api/readiness.ts` 與 `host/frontend/src/stores/readiness.store.ts`
-- [ ] T034 [US1] 建立 `host/frontend/src/views/manage/components/StudentReadiness.vue`，依 EXAM-LIFECYCLE.md §4.3 的四項條件呈現就緒狀態
-- [ ] T035 [US1] 在 `desktop/src/main/ipc/auth.ipc.ts` 將裝置註冊自 `auth:login` 拆出為獨立的 `auth:register` 流程，供 `INITIALIZED` 階段呼叫
-- [ ] T036 [US1] 建立 `desktop/src/renderer/pages/StandbyPage.vue`（`INITIALIZED` 待命畫面），顯示註冊與環境檢查進度，**不提供登入入口**
-- [ ] T037 [US1] 在 `desktop/src/renderer/router/index.ts` 加入 `/standby` 路由並納入推導表
-- [ ] T038 [US1] 在 `desktop/src/main/services/environment-check.service.ts` 於檢查完成時呼叫 T026 的端點上報結果
+- [ ] T025 [US1] 在 `host/backend/src/services/exam-state.service.ts` 將 `setAllowDeviceRegistration(false)` 的觸發點從 `IN_PROGRESS` 移到 `SETUP_FINISHED`，並在 `INITIALIZED` 設為 `true`
+- [ ] T026 [US1] 在 `host/backend/src/services/init.service.ts` 移除初始化時的 `setAllowDeviceRegistration(true)`，改由 `exam-state.service.ts` 的階段副作用負責
+- [ ] T027 [P] [US1] 在 `host/backend/src/models/device-key-map.model.ts` 新增 `envCheckStatus`、`envCheckFailedLanguages`、`envCheckReportedAt`、`lastDisconnectedAt` 欄位（data-model.md §6）
+- [ ] T028 [US1] 在 `host/backend/src/controllers/user/user.controller.ts` 新增 `POST /user/exam/environment-report` 處理，驗證層級為「已註冊裝置」，payload 僅接受 `status` 與 `failedLanguages`（contracts/ G12）
+- [ ] T029 [US1] 在 `host/backend/src/routes/user/user-exam.route.ts` 掛載 `POST /user/exam/environment-report` 路由
+- [ ] T030 [US1] 在 `host/backend/src/sockets/message-socket.service.ts` 的 disconnect handler 寫入 `lastDisconnectedAt`
+- [ ] T031 [US1] 在 `host/backend/src/controllers/admin/admin-exam-state.controller.ts` 的 `getState` 加入 `allowedNext`，`changeState` 回傳 `invalid_transition` 與 `preconditions_not_met` 兩種錯誤（contracts/ G4/G5）
+- [ ] T032 [US1] 在 `host/backend/src/middlewares/exam-phase.middleware.ts` 實作收卷緩衝：`FINISHED` 後依 `submitGraceSeconds` 判定提交端點的允許與否
+- [ ] T033 [P] [US1] 在 `host/frontend/src/stores/manage.store.ts` 加入 `allowedNext` 狀態
+- [ ] T034 [US1] 改寫 `host/frontend/src/views/manage/components/ExamStateControls.vue` 為「下一階段」單一按鈕加 reset，移除四顆任選按鈕
+- [ ] T035 [US1] 在 `host/frontend/src/stores/config.store.ts` 將初始化後硬編的 `examState = 'NOT_STARTED'` 改為 `'INITIALIZED'`，並改為向後端重新查詢而非硬編
+- [ ] T036 [P] [US1] 在 `host/frontend/src/stores/manage.store.ts` 將 `examState` 預設值由 `'NOT_STARTED'` 改為 `'UNINITIALIZED'`
+- [ ] T037 [US1] 在 `host/frontend/src/views/config/components/DbInitPanel.vue` 顯示後端回傳的 `preconditions_not_met` 缺項清單，取代目前只有成功／失敗的提示
+- [ ] T038 [P] [US1] 建立 `host/frontend/src/api/readiness.ts` 與 `host/frontend/src/stores/readiness.store.ts`
+- [ ] T039 [US1] 建立 `host/frontend/src/views/manage/components/StudentReadiness.vue`，依 EXAM-LIFECYCLE.md §4.3 的四項條件呈現就緒狀態
+- [ ] T040 [US1] 在 `desktop/src/main/ipc/auth.ipc.ts` 將裝置註冊自 `auth:login` 拆出為獨立的 `auth:register` 流程，供 `INITIALIZED` 階段呼叫
+- [ ] T041 [US1] 建立 `desktop/src/renderer/pages/StandbyPage.vue`（`INITIALIZED` 待命畫面），顯示註冊與環境檢查進度，**不提供登入入口**
+- [ ] T042 [US1] 在 `desktop/src/renderer/router/index.ts` 加入 `/standby` 路由並納入推導表
+- [ ] T043 [US1] 在 `desktop/src/main/services/environment-check.service.ts` 於檢查完成時呼叫 `POST /user/exam/environment-report` 上報結果
 
 **Checkpoint**: 五階段依序運作，監考端看得到準備狀況。此時考卷仍走舊的整份下發。
 
@@ -119,32 +124,38 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 ### Tests for User Story 2 (MANDATORY) ⚠️
 
-- [ ] T039 [P] [US2] 在 `host/backend/test/unit/services/exam-config-crypto.service.test.ts` 測試 `config.meta` 序列化後不含 `"input"`、`"output"`、`puzzles[].title`、`puzzles[].score`、`subtasks`、`specialRules`、`startPassword`（contracts/ G8）
-- [ ] T040 [P] [US2] 在同檔測試 `config.cipher` 以 `K_exam` AES-256-GCM 加密、每次使用新 IV，且竄改一位元組後解密拋錯（contracts/ G28）
-- [ ] T041 [P] [US2] 在 `host/backend/test/integration/controllers/user/user-exam.controller.test.ts` 測試 `POST /user/exam/key` 僅 `IN_PROGRESS` 回應，其餘階段回 `409` 且不透露金鑰是否存在（contracts/ G9）
-- [ ] T042 [P] [US2] 在同檔測試 `POST /user/exam/config` 免除 session token、僅需已註冊裝置即可取得 `{ meta, cipher }`（contracts/ G7）
-- [ ] T043 [P] [US2] 在 `host/backend/test/unit/schemas/config.schema.test.ts` 以 T001 的 fixture 驗證 `meta`／`secret`／`wrappedExamKey` schema
-- [ ] T044 [P] [US2] 在 `desktop/test/service/examConfig.schema.test.ts` 以 T002 的 fixture 驗證桌面版對應 schema（zod ^4 行為差異在此暴露）
-- [ ] T045 [P] [US2] 在 `desktop/test/service/config-merge.test.ts` 測試 `mergeExamConfig(meta, secret)` 的結果通過既有 `examConfigSchema`，且 `puzzle.id` 集合不一致時拋錯
+- [ ] T044 [P] [US2] 在 `host/backend/test/unit/services/exam-config-crypto.service.test.ts` 測試 `config.meta` 序列化後不含 `"input"`、`"output"`、`puzzles[].title`、`puzzles[].score`、`subtasks`、`specialRules`、`startPassword`（contracts/ G8）
+- [ ] T045 [P] [US2] 在同檔測試 `config.cipher` 以 `K_exam` AES-256-GCM 加密、每次使用新 IV，且竄改一位元組後解密拋錯（contracts/ G28）
+- [ ] T046 [P] [US2] 在 `host/backend/test/integration/controllers/user/user-exam.controller.test.ts` 測試 `POST /user/exam/key` 僅 `IN_PROGRESS` 回應，其餘階段回 `409` 且不透露金鑰是否存在（contracts/ G9）
+- [ ] T047 [P] [US2] 在同檔測試 `POST /user/exam/config` 免除 session token、僅需已註冊裝置即可取得 `{ meta, cipher }`（contracts/ G7）
+- [ ] T048 [P] [US2] 在 `host/backend/test/unit/schemas/config.schema.test.ts` 以 `host/backend/test/fixtures/exam-config-payload.fixture.json` 驗證 `meta`／`secret`／`wrappedExamKey` schema
+- [ ] T049 [P] [US2] 在 `desktop/test/service/examConfig.schema.test.ts` 以 `desktop/test/fixtures/exam-config-payload.fixture.json` 驗證桌面版對應 schema（zod ^4 行為差異在此暴露）
+- [ ] T050 [P] [US2] 在 `desktop/test/service/config-merge.test.ts` 測試 `mergeExamConfig(meta, secret)` 的結果通過既有 `examConfigSchema`，且 `puzzle.id` 集合不一致時拋錯
+- [ ] T051 [P] [US2] 在 `host/frontend/test/config-schema.test.ts` 以 `host/frontend/test/fixtures/exam-config-payload.fixture.json` 驗證 `frontend/src/types/config.ts` 的 `ExamConfig`（三份定義的第三份）
 
 ### Implementation for User Story 2
 
-- [ ] T046 [US2] 在 `host/backend/src/schemas/config.schema.ts` 新增 `examConfigMetaSchema`、`examConfigSecretSchema`、`wrappedExamKeySchema`（data-model.md §3/§4）
-- [ ] T047 [US2] 在 `host/backend/src/schemas/config.schema.ts` 的 `judgerSettings` 之外新增 `submitGraceSeconds`，預設 60（research.md R1）
-- [ ] T048 [US2] 建立 `host/backend/src/services/exam-config-crypto.service.ts`：產生 `K_exam`、切分 meta/cipher、AES-256-GCM 加密、PBKDF2 600,000 迭代包裝 `wrappedExamKey`（research.md R2/R6）
-- [ ] T049 [US2] 在 `host/backend/src/services/exam-config-crypto.service.ts` 加入口令長度警告：少於 6 字元時回報需二次確認的旗標（research.md R4）
-- [ ] T050 [US2] 在 `host/backend/src/services/init.service.ts` 的初始化流程呼叫 T048，將三項產出存入 `SystemSettings`
-- [ ] T051 [US2] 在 `host/backend/src/services/exam-state.service.ts` 的 `UNINITIALIZED → INITIALIZED` 前置檢查加入「`K_exam`、`cipher`、`meta` 皆已產生」（contracts/ G5）
-- [ ] T052 [US2] 改寫 `host/backend/src/services/exam.service.ts` 的 `getSecureConfig`：驗證層級放寬為已註冊裝置，回傳 `{ meta, cipher }`
-- [ ] T053 [US2] 在 `host/backend/src/controllers/user/user.controller.ts` 與 `host/backend/src/routes/user/user-exam.route.ts` 新增 `POST /user/exam/key`，僅 `IN_PROGRESS` 回應且冪等（contracts/ G9/G11）
-- [ ] T054 [US2] 確認 `startPassword` 不出現在任何下發 payload —— 檢查 `exam.service.ts` 與 T048 的輸出（spec.md FR-026）
-- [ ] T055 [US2] 在 `host/backend/src/services/exam-config.service.ts` 的考卷更新流程重新產生 meta/cipher，**不重新產生 `K_exam`**（design.md §7.4）
-- [ ] T056 [US2] 在 `desktop/src/main/schemas/examConfig.schema.ts` 新增 meta/secret/wrappedExamKey schema 並實作 `mergeExamConfig()`
-- [ ] T057 [US2] 在 `desktop/src/main/services/ramStore.service.ts` 新增 `examConfigMeta`、`examConfigCipher`、`examKey` 欄位，`examConfig` 維持既有形狀且**開考前為 `null`**（data-model.md §5、research.md R10）
-- [ ] T058 [US2] 在 `desktop/src/main/services/crypto.service.ts` 新增 `K_exam` 解密 cipher 的函式
-- [ ] T059 [US2] 在 `desktop/src/main/services/config.service.ts` 改為接收 `{ meta, cipher }`，僅以 meta 觸發環境檢查
-- [ ] T060 [US2] 在 `desktop/src/main/services/message-sync.service.ts` 收到 `IN_PROGRESS` 廣播後呼叫 `POST /user/exam/key`，取得金鑰後解密並合併（contracts/ G19）
-- [ ] T061 [US2] 確認 `host/backend/src/sockets/message-socket.service.ts` 的開考廣播不含金鑰或任何可導出金鑰的資訊（contracts/ G10）
+- [ ] T052 [US2] 在 `host/backend/src/schemas/config.schema.ts` 新增 `examConfigMetaSchema`、`examConfigSecretSchema`、`wrappedExamKeySchema`（data-model.md §3/§4）
+- [ ] T053 [US2] 在 `host/backend/src/schemas/config.schema.ts` 的 `judgerSettings` 之外新增 `submitGraceSeconds`，預設 60（research.md R1）
+- [ ] T054 [US2] 建立 `host/backend/src/services/exam-config-crypto.service.ts`：產生 `K_exam`、切分 meta/cipher、AES-256-GCM 加密、PBKDF2 600,000 迭代包裝 `wrappedExamKey`（research.md R2/R6）
+- [ ] T055 [US2] 在 `host/backend/src/services/exam-config-crypto.service.ts` 加入口令長度警告：少於 6 字元時回報需二次確認的旗標（research.md R4）
+- [ ] T056 [US2] 在 `host/backend/src/services/init.service.ts` 的初始化流程呼叫 `exam-config-crypto.service.ts`，將三項產出存入 `SystemSettings`
+- [ ] T057 [US2] 在 `host/backend/src/services/exam-state.service.ts` 的 `UNINITIALIZED → INITIALIZED` 前置檢查加入「`K_exam`、`cipher`、`meta` 皆已產生」（contracts/ G5）
+- [ ] T058 [US2] 改寫 `host/backend/src/services/exam.service.ts` 的 `getSecureConfig`：驗證層級放寬為已註冊裝置，回傳 `{ meta, cipher }`
+- [ ] T059 [US2] 在 `host/backend/src/controllers/user/user.controller.ts` 與 `host/backend/src/routes/user/user-exam.route.ts` 新增 `POST /user/exam/key`，僅 `IN_PROGRESS` 回應且冪等（contracts/ G9/G11）
+- [ ] T060 [US2] 確認 `startPassword` 不出現在任何下發 payload —— 檢查 `exam.service.ts` 與 `exam-config-crypto.service.ts` 的輸出（spec.md FR-026）
+- [ ] T061 [US2] 在 `host/backend/src/services/exam-config.service.ts` 的考卷更新流程重新產生 meta/cipher，**不重新產生 `K_exam`**（design.md §7.4）
+- [ ] T062 [US2] 在 `desktop/src/main/schemas/examConfig.schema.ts` 新增 meta/secret/wrappedExamKey schema 並實作 `mergeExamConfig()`
+- [ ] T063 [US2] 在 `desktop/src/main/services/ramStore.service.ts` 新增 `examConfigMeta`、`examConfigCipher`、`examKey` 欄位，`examConfig` 維持既有形狀且**開考前為 `null`**（data-model.md §5、research.md R10）
+- [ ] T064 [US2] 在 `desktop/src/main/services/crypto.service.ts` 新增 `K_exam` 解密 cipher 的函式
+- [ ] T065 [US2] 在 `desktop/src/main/services/config.service.ts` 改為接收 `{ meta, cipher }`，僅以 meta 觸發環境檢查
+- [ ] T066 [US2] 在 `desktop/src/main/services/message-sync.service.ts` 收到 `IN_PROGRESS` 廣播後呼叫 `POST /user/exam/key`，取得金鑰後解密並合併（contracts/ G19）
+- [ ] T067 [US2] 確認 `host/backend/src/sockets/message-socket.service.ts` 的開考廣播不含金鑰或任何可導出金鑰的資訊（contracts/ G10）
+- [ ] T068 [P] [US2] 在 `host/frontend/src/types/config.ts` 的 `ExamConfig` 新增 `submitGraceSeconds`（該檔既有註解已記錄 004 的同類漂移事故）
+- [ ] T069 [P] [US2] 在 `host/frontend/src/stores/config.store.ts` 的預設 config 加入 `submitGraceSeconds: 60`
+- [ ] T070 [US2] 在 `host/frontend/src/views/config/components/GeneralSettingsEditor.vue` 新增 `submitGraceSeconds` 表單欄位（收卷緩衝秒數）
+- [ ] T071 [US2] 在 `host/frontend/src/views/config/components/GeneralSettingsEditor.vue` 改寫 `startPassword` 的標籤與說明 —— 它已由「開考的 UI 閘門」變更為「考卷解密金鑰」，管理員必須知道這個語意改變
+- [ ] T072 [US2] 在 `host/frontend/src/views/config/components/ConfigForm.vue` 加入口令弱度警告與二次確認（少於 6 字元），警告文字須說明考卷在開考前的保護強度等同於此口令（research.md R4）
 
 **Checkpoint**: 開考前 0 筆測資可讀（SC-001）。下游程式碼應 0 處修改（SC-009）。
 
@@ -158,24 +169,24 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 ### Tests for User Story 3 (MANDATORY) ⚠️
 
-- [ ] T062 [P] [US3] 在 `host/backend/test/unit/services/device.service.test.ts` 測試被拒絕的註冊請求**不修改** `DeviceKeyMap` 任何欄位，特別是既有裝置的 `status`（contracts/ G13）
-- [ ] T063 [P] [US3] 在同檔測試同一 `deviceUuid` 連送三次註冊只產生一筆 `PENDING` 申請（contracts/ G14）
-- [ ] T064 [P] [US3] 在同檔測試三種申請分類的判別：`NEW_DEVICE` / `REBIND` / `UNBOUND_DEVICE`（research.md R3）
-- [ ] T065 [P] [US3] 在 `host/backend/test/integration/controllers/admin/connection.controller.test.ts` 測試 `POST /admin/device/:uuid/re-entry` 清除裝置身分但**不觸及** `Submission` 與 `ScoreBoard`（contracts/ G18）
-- [ ] T066 [P] [US3] 在 `desktop/test/ipc/auth.ipc.test.ts` 測試重啟後（無 `cryptoState`）走註冊申請路徑，而非直接失敗
+- [ ] T073 [P] [US3] 在 `host/backend/test/unit/services/device.service.test.ts` 測試被拒絕的註冊請求**不修改** `DeviceKeyMap` 任何欄位，特別是既有裝置的 `status`（contracts/ G13）
+- [ ] T074 [P] [US3] 在同檔測試同一 `deviceUuid` 連送三次註冊只產生一筆 `PENDING` 申請（contracts/ G14）
+- [ ] T075 [P] [US3] 在同檔測試三種申請分類的判別：`NEW_DEVICE` / `REBIND` / `UNBOUND_DEVICE`（research.md R3）
+- [ ] T076 [P] [US3] 在 `host/backend/test/integration/controllers/admin/connection.controller.test.ts` 測試 `POST /admin/device/:uuid/re-entry` 清除裝置身分但**不觸及** `Submission` 與 `ScoreBoard`（contracts/ G18）
+- [ ] T077 [P] [US3] 在 `desktop/test/ipc/auth.ipc.test.ts` 測試重啟後（無 `cryptoState`）走註冊申請路徑，而非直接失敗
 
 ### Implementation for User Story 3
 
-- [ ] T067 [P] [US3] 在 `host/backend/src/models/login-request.model.ts` 將 `type` 值域改為 `NEW_DEVICE / REBIND / UNBOUND_DEVICE`，新增 `previousTestId`
-- [ ] T068 [US3] 在 `host/backend/src/services/device.service.ts` 移除 throw 403 之前對 `existing.status` 的寫入（spec.md FR-010）
-- [ ] T069 [US3] 在 `host/backend/src/services/device.service.ts` 依 data-model.md §7 的判別條件分類三種申請並填入 `previousTestId`
-- [ ] T070 [US3] 在 `host/backend/src/services/device.service.ts` 的申請建立加入去重檢查（contracts/ G14）
-- [ ] T071 [US3] 在 `host/backend/src/services/binding.service.ts` 新增 `reEntry(deviceUuid)`：`forceLogoutDevice` 加 `unregisterDevice`，明確不觸及成果層
-- [ ] T072 [US3] 在 `host/backend/src/controllers/admin/connection.controller.ts` 與 `host/backend/src/routes/admin/connection.route.ts` 新增 `POST /admin/device/:deviceUuid/re-entry`
-- [ ] T073 [US3] 在 `desktop/src/main/ipc/auth.ipc.ts` 讓註冊失敗回 `entry_pending` 時進入待審畫面，而非清空 `cryptoState` 後失敗
-- [ ] T074 [US3] 建立 `desktop/src/renderer/pages/PendingApprovalPage.vue`（待審畫面），輪詢核准狀態
-- [ ] T075 [US3] 在 `desktop/src/renderer/router/index.ts` 將待審畫面納入推導表
-- [ ] T076 [US3] 確認 `desktop/src/main/ipc/auth.ipc.ts` 登入後的 `getSubmissions` 復原流程在重來路徑上同樣執行（spec.md US3-2）
+- [ ] T078 [P] [US3] 在 `host/backend/src/models/login-request.model.ts` 將 `type` 值域改為 `NEW_DEVICE / REBIND / UNBOUND_DEVICE`，新增 `previousTestId`
+- [ ] T079 [US3] 在 `host/backend/src/services/device.service.ts` 移除 throw 403 之前對 `existing.status` 的寫入（spec.md FR-010）
+- [ ] T080 [US3] 在 `host/backend/src/services/device.service.ts` 依 data-model.md §7 的判別條件分類三種申請並填入 `previousTestId`
+- [ ] T081 [US3] 在 `host/backend/src/services/device.service.ts` 的申請建立加入去重檢查（contracts/ G14）
+- [ ] T082 [US3] 在 `host/backend/src/services/binding.service.ts` 新增 `reEntry(deviceUuid)`：`forceLogoutDevice` 加 `unregisterDevice`，明確不觸及成果層
+- [ ] T083 [US3] 在 `host/backend/src/controllers/admin/connection.controller.ts` 與 `host/backend/src/routes/admin/connection.route.ts` 新增 `POST /admin/device/:deviceUuid/re-entry`
+- [ ] T084 [US3] 在 `desktop/src/main/ipc/auth.ipc.ts` 讓註冊失敗回 `entry_pending` 時進入待審畫面，而非清空 `cryptoState` 後失敗
+- [ ] T085 [US3] 建立 `desktop/src/renderer/pages/PendingApprovalPage.vue`（待審畫面），輪詢核准狀態
+- [ ] T086 [US3] 在 `desktop/src/renderer/router/index.ts` 將待審畫面納入推導表
+- [ ] T087 [US3] 確認 `desktop/src/main/ipc/auth.ipc.ts` 登入後的 `getSubmissions` 復原流程在重來路徑上同樣執行（spec.md US3-2）
 
 **Checkpoint**: 目前 100% 重現的重啟死路已修復（SC-002）。
 
@@ -189,23 +200,23 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 ### Tests for User Story 4 (MANDATORY) ⚠️
 
-- [ ] T077 [P] [US4] 在 `host/backend/test/unit/services/exam-config-crypto.service.test.ts` 測試兩條路徑導出的金鑰**逐位元組相同**（contracts/ G27）
-- [ ] T078 [P] [US4] 在 `desktop/test/service/crypto.service.test.ts` 測試錯誤口令解不開 `wrappedExamKey`，且考卷維持不可讀
-- [ ] T079 [P] [US4] 在 `desktop/test/service/connection.service.test.ts` 測試待送佇列：斷線期間累積、恢復後依序重送、失敗放回佇列不丟棄（data-model.md §9）
-- [ ] T080 [P] [US4] 在 `desktop/test/service/connection.service.test.ts` 測試同一題目重複提交以最後一筆為準，佇列不無限成長
-- [ ] T081 [P] [US4] 在 `desktop/test/service/config.service.test.ts` 測試離線佈署檔與線上回應共用同一套解析（contracts/ G22）
+- [ ] T088 [P] [US4] 在 `host/backend/test/unit/services/exam-config-crypto.service.test.ts` 測試兩條路徑導出的金鑰**逐位元組相同**（contracts/ G27）
+- [ ] T089 [P] [US4] 在 `desktop/test/service/crypto.service.test.ts` 測試錯誤口令解不開 `wrappedExamKey`，且考卷維持不可讀
+- [ ] T090 [P] [US4] 在 `desktop/test/service/connection.service.test.ts` 測試待送佇列：斷線期間累積、恢復後依序重送、失敗放回佇列不丟棄（data-model.md §9）
+- [ ] T091 [P] [US4] 在 `desktop/test/service/connection.service.test.ts` 測試同一題目重複提交以最後一筆為準，佇列不無限成長
+- [ ] T092 [P] [US4] 在 `desktop/test/service/config.service.test.ts` 測試離線佈署檔與線上回應共用同一套解析（contracts/ G22）
 
 ### Implementation for User Story 4
 
-- [ ] T082 [US4] 在 `desktop/src/main/services/crypto.service.ts` 實作 PBKDF2-HMAC-SHA256 600,000 迭代導出並解開 `wrappedExamKey`（research.md R2）
-- [ ] T083 [US4] 改寫 `desktop/src/renderer/pages/WaitingForExamPage.vue`：口令由「與 config 明文比對」改為「導出金鑰並解密考卷」，成功才進入考試
-- [ ] T084 [US4] 在 `desktop/src/main/services/connection.service.ts` 以 `pendingSubmissions` 與 `pendingScores` 佇列取代 `pendingTestResult` / `pendingProgramFile` 旗標（data-model.md §9）
-- [ ] T085 [US4] 在 `desktop/src/main/services/connection.service.ts` 的 `onConnectionRestored` 依 data-model.md §9 的順序重送，失敗項目放回佇列
-- [ ] T086 [US4] 在 `desktop/src/main/services/judge-manager.service.ts` 將評測結果與程式碼提交在斷線時推入佇列而非只設旗標
-- [ ] T087 [P] [US4] 在 `host/backend/src/controllers/admin/exam-config.controller.ts` 新增離線佈署檔匯出端點，輸出 `{ meta, cipher }`（contracts/ §8）
-- [ ] T088 [P] [US4] 在 `host/frontend/src/views/config/ConfigView.vue` 加入匯出按鈕與口令保管提示
-- [ ] T089 [US4] 在 `desktop/src/main/services/config.service.ts` 將 `setConfigFromFile` 改為接受 `{ meta, cipher }` 佈署檔，**移除明文完整考卷的載入路徑**（contracts/ G24）
-- [ ] T090 [US4] 在 `desktop/src/main/services/ramStore.service.ts` 將 `isOfflineMode` 的判定改為「是否曾成功完成裝置註冊」（spec.md FR-028、data-model.md §8）
+- [ ] T093 [US4] 在 `desktop/src/main/services/crypto.service.ts` 實作 PBKDF2-HMAC-SHA256 600,000 迭代導出並解開 `wrappedExamKey`（research.md R2）
+- [ ] T094 [US4] 改寫 `desktop/src/renderer/pages/WaitingForExamPage.vue`：口令由「與 config 明文比對」改為「導出金鑰並解密考卷」，成功才進入考試
+- [ ] T095 [US4] 在 `desktop/src/main/services/connection.service.ts` 以 `pendingSubmissions` 與 `pendingScores` 佇列取代 `pendingTestResult` / `pendingProgramFile` 旗標（data-model.md §9）
+- [ ] T096 [US4] 在 `desktop/src/main/services/connection.service.ts` 的 `onConnectionRestored` 依 data-model.md §9 的順序重送，失敗項目放回佇列
+- [ ] T097 [US4] 在 `desktop/src/main/services/judge-manager.service.ts` 將評測結果與程式碼提交在斷線時推入佇列而非只設旗標
+- [ ] T098 [P] [US4] 在 `host/backend/src/controllers/admin/exam-config.controller.ts` 新增離線佈署檔匯出端點，輸出 `{ meta, cipher }`（contracts/ §8）
+- [ ] T099 [P] [US4] 在 `host/frontend/src/views/config/ConfigView.vue` 加入匯出按鈕與口令保管提示
+- [ ] T100 [US4] 在 `desktop/src/main/services/config.service.ts` 將 `setConfigFromFile` 改為接受 `{ meta, cipher }` 佈署檔，**移除明文完整考卷的載入路徑**（contracts/ G24）
+- [ ] T101 [US4] 在 `desktop/src/main/services/ramStore.service.ts` 將 `isOfflineMode` 的判定改為「是否曾成功完成裝置註冊」（spec.md FR-028、data-model.md §8）
 
 **Checkpoint**: 後端完全不可用時仍有 100% 機器能開考（SC-003）。
 
@@ -219,17 +230,17 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 ### Tests for User Story 5 (MANDATORY) ⚠️
 
-- [ ] T091 [P] [US5] 在 `host/backend/test/integration/controllers/admin/exam-config.controller.test.ts` 測試 reset 清除 `exam_key`、`exam_config_cipher`、`exam_config_meta`
-- [ ] T092 [P] [US5] 在同檔測試 reset 廣播 `exam-reset` 獨立事件，且**不寫入** `Message` 表（contracts/ G20/G21）
-- [ ] T093 [P] [US5] 在 `desktop/test/service/message-sync.service.test.ts` 測試收到 `exam-reset` 後 data-model.md §8 標示為「清」的欄位全數清空
+- [ ] T102 [P] [US5] 在 `host/backend/test/integration/controllers/admin/exam-config.controller.test.ts` 測試 reset 清除 `exam_key`、`exam_config_cipher`、`exam_config_meta`
+- [ ] T103 [P] [US5] 在同檔測試 reset 廣播 `exam-reset` 獨立事件，且**不寫入** `Message` 表（contracts/ G20/G21）
+- [ ] T104 [P] [US5] 在 `desktop/test/service/message-sync.service.test.ts` 測試收到 `exam-reset` 後 data-model.md §8 標示為「清」的欄位全數清空
 
 ### Implementation for User Story 5
 
-- [ ] T094 [US5] 在 `host/backend/src/sockets/message-socket.service.ts` 新增 `sendExamReset()`，發送獨立的 `exam-reset` 事件
-- [ ] T095 [US5] 在 `host/backend/src/services/init.service.ts` 的 `wipeAllData` 加入清除三個新 `SystemSettings` 鍵，並改為呼叫 T094 而非一般階段廣播
-- [ ] T096 [US5] 在 `host/backend/src/services/init.service.ts` 將 reset 的階段設定與 `changeState` 的程式路徑分離（contracts/ G6）
-- [ ] T097 [US5] 在 `desktop/src/main/services/ramStore.service.ts` 新增 `clearForReset()`，依 data-model.md §8 清除全部標示項目，含 `localProgramStore` 暫存目錄
-- [ ] T098 [US5] 在 `desktop/src/main/services/message-sync.service.ts` 監聽 `exam-reset` 並呼叫 T097，隨後導向等待畫面
+- [ ] T105 [US5] 在 `host/backend/src/sockets/message-socket.service.ts` 新增 `sendExamReset()`，發送獨立的 `exam-reset` 事件
+- [ ] T106 [US5] 在 `host/backend/src/services/init.service.ts` 的 `wipeAllData` 加入清除三個新 `SystemSettings` 鍵，並改為呼叫 `sendExamReset()` 而非一般階段廣播
+- [ ] T107 [US5] 在 `host/backend/src/services/init.service.ts` 將 reset 的階段設定與 `changeState` 的程式路徑分離（contracts/ G6）
+- [ ] T108 [US5] 在 `desktop/src/main/services/ramStore.service.ts` 新增 `clearForReset()`，依 data-model.md §8 清除全部標示項目，含 `localProgramStore` 暫存目錄
+- [ ] T109 [US5] 在 `desktop/src/main/services/message-sync.service.ts` 監聽 `exam-reset` 並呼叫 `ramStore.clearForReset()`，隨後導向等待畫面
 
 **Checkpoint**: reset 後重新註冊成功率 100%（SC-005）。
 
@@ -243,16 +254,16 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 ### Tests for User Story 6 (MANDATORY) ⚠️
 
-- [ ] T099 [P] [US6] 在 `host/backend/test/integration/controllers/admin/connection.controller.test.ts` 測試 `GET /admin/connection/requests` 回傳 contracts/ §6 的全部判斷欄位
-- [ ] T100 [P] [US6] 在同檔測試 `approve` 帶 `targetTestId` 時**同一次呼叫**解除兩邊綁定（contracts/ G17）
-- [ ] T101 [P] [US6] 在同檔測試 `reject` 後裝置與學生狀態完全不變（spec.md US6-3）
+- [ ] T110 [P] [US6] 在 `host/backend/test/integration/controllers/admin/connection.controller.test.ts` 測試 `GET /admin/connection/requests` 回傳 contracts/ §6 的全部判斷欄位
+- [ ] T111 [P] [US6] 在同檔測試 `approve` 帶 `targetTestId` 時**同一次呼叫**解除兩邊綁定（contracts/ G17）
+- [ ] T112 [P] [US6] 在同檔測試 `reject` 後裝置與學生狀態完全不變（spec.md US6-3）
 
 ### Implementation for User Story 6
 
-- [ ] T102 [US6] 在 `host/backend/src/controllers/admin/connection.controller.ts` 的 `getRequests` join 出原綁學生姓名、是否他機在線、`lastDisconnectedAt`、IP 是否與名單相符
-- [ ] T103 [US6] 在 `host/backend/src/controllers/admin/connection.controller.ts` 的 `approveRequest` 接受 `targetTestId`，依 contracts/ G17 解除兩邊綁定並回傳 `unbound`
-- [ ] T104 [P] [US6] 在 `host/frontend/src/views/connection/ConnectionView.vue` 依三種情境分組呈現待審清單並顯示判斷資訊
-- [ ] T105 [US6] 在 `host/frontend/src/views/connection/ConnectionView.vue` 的核准對話框加入「這台機器接下來給哪個學號」的選擇
+- [ ] T113 [US6] 在 `host/backend/src/controllers/admin/connection.controller.ts` 的 `getRequests` join 出原綁學生姓名、是否他機在線、`lastDisconnectedAt`、IP 是否與名單相符
+- [ ] T114 [US6] 在 `host/backend/src/controllers/admin/connection.controller.ts` 的 `approveRequest` 接受 `targetTestId`，依 contracts/ G17 解除兩邊綁定並回傳 `unbound`
+- [ ] T115 [P] [US6] 在 `host/frontend/src/views/connection/ConnectionView.vue` 依三種情境分組呈現待審清單並顯示判斷資訊
+- [ ] T116 [US6] 在 `host/frontend/src/views/connection/ConnectionView.vue` 的核准對話框加入「這台機器接下來給哪個學號」的選擇
 
 **Checkpoint**: 助教不需查詢其他畫面即可判斷（SC-007）。
 
@@ -260,16 +271,16 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 ## Phase 9: Polish & Cross-Cutting
 
-- [ ] T106 [P] 在 `host/backend/src/services/exam-state.service.ts` 與 `desktop` 兩端確認 `ExamPhase` 五值完全一致，無殘留的 `NOT_STARTED` 字串
-- [ ] T107 [P] 執行 quickstart.md §A 全部自動化驗證，確認兩端測試皆綠且 fixture `diff` 無差異
-- [ ] T108 執行 quickstart.md §B 六階段人工走查 27 步，**第 6、10、26 步不可省**
-- [ ] T109 執行 quickstart.md §C 全程離線走查 11 步
-- [ ] T110 執行 quickstart.md §D 安全性驗證 7 項
-- [ ] T111 執行 quickstart.md §E 回歸驗證，確認 judger／UI／special rules 的既有測試 0 處修改（SC-009）
-- [ ] T112 [P] 量測 `POST /user/exam/key` 與 `POST /user/exam/config` 的回應大小比例，確認小於 1%（SC-004）
-- [ ] T113 [P] 更新 `host/knowledge/vision.md` 的目前狀態與里程碑
-- [ ] T114 [P] 將本功能的教訓寫入 `host/knowledge/experience.md`（跨 repo 契約、扣留金鑰的設計取捨）
-- [ ] T115 在兩個 repo 各開 PR，描述互相引用並註明「必須同時 merge」
+- [ ] T117 [P] 在 `host/backend/src/services/exam-state.service.ts` 與 `desktop` 兩端確認 `ExamPhase` 五值完全一致，無殘留的 `NOT_STARTED` 字串
+- [ ] T118 [P] 執行 quickstart.md §A 全部自動化驗證，確認兩端測試皆綠且 fixture `diff` 無差異
+- [ ] T119 執行 quickstart.md §B 六階段人工走查 27 步，**第 6、10、26 步不可省**
+- [ ] T120 執行 quickstart.md §C 全程離線走查 11 步
+- [ ] T121 執行 quickstart.md §D 安全性驗證 7 項
+- [ ] T122 執行 quickstart.md §E 回歸驗證，確認 judger／UI／special rules 的既有測試 0 處修改（SC-009）
+- [ ] T123 [P] 量測 `POST /user/exam/key` 與 `POST /user/exam/config` 的回應大小比例，確認小於 1%（SC-004）
+- [ ] T124 [P] 更新 `host/knowledge/vision.md` 的目前狀態與里程碑
+- [ ] T125 [P] 將本功能的教訓寫入 `host/knowledge/experience.md`（跨 repo 契約、扣留金鑰的設計取捨）
+- [ ] T126 在兩個 repo 各開 PR，描述互相引用並註明「必須同時 merge」
 
 ---
 
