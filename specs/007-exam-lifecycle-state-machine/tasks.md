@@ -36,11 +36,11 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 **Purpose**: 建立兩個 repo 之間唯一的契約錨點。這必須最先做，因為後續兩端的 schema 都以它為準。
 
-- [ ] T001 在 `host/backend/test/fixtures/exam-config-payload.fixture.json` 建立契約 fixture，依 contracts/ G26 涵蓋 `meta`、`cipher` 封包、`wrappedExamKey` 三種結構，且每種都含「選填欄位存在」與「選填欄位缺席」兩組樣本
-- [ ] T002 將 `host/backend/test/fixtures/exam-config-payload.fixture.json` **逐位元組複製**到 `desktop/test/fixtures/exam-config-payload.fixture.json`
-- [ ] T003 將同一份檔案**逐位元組複製**到 `host/frontend/test/fixtures/exam-config-payload.fixture.json` —— config schema 共有**三份**定義：backend zod、desktop zod、frontend TS type
-- [ ] T004 [P] 在 `host/package.json` 新增 `test:contract-fixture` script，以 `diff` 比對**三份** fixture 並在任一份不一致時失敗（contracts/ G25）
-- [ ] T005 [P] 在 `host/specs/007-exam-lifecycle-state-machine/` 記錄 fixture 的維護規則：任一端修改契約必須同步三份檔案
+- [X] T001 在 `host/backend/test/fixtures/exam-config-payload.fixture.json` 建立契約 fixture，依 contracts/ G26 涵蓋 `meta`、`cipher` 封包、`wrappedExamKey` 三種結構，且每種都含「選填欄位存在」與「選填欄位缺席」兩組樣本
+- [X] T002 將 `host/backend/test/fixtures/exam-config-payload.fixture.json` **逐位元組複製**到 `desktop/test/fixtures/exam-config-payload.fixture.json`
+- [X] T003 將同一份檔案**逐位元組複製**到 `host/frontend/test/fixtures/exam-config-payload.fixture.json` —— config schema 共有**三份**定義：backend zod、desktop zod、frontend TS type
+- [X] T004 [P] 在 `host/package.json` 新增 `test:contract-fixture` script，以 `diff` 比對**三份** fixture 並在任一份不一致時失敗（contracts/ G25）
+- [X] T005 [P] 在 `host/specs/007-exam-lifecycle-state-machine/` 記錄 fixture 的維護規則：任一端修改契約必須同步三份檔案
 
 **Checkpoint**: 契約錨點就位，兩端可各自開始定義 schema
 
