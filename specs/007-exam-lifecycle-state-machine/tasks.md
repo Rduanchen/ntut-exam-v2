@@ -88,7 +88,7 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 - [X] T021 [P] [US1] 在 `host/backend/test/unit/services/exam-state.service.test.ts` 測試收卷緩衝：`FINISHED` 後 `submitGraceSeconds` 內接受提交、之後拒絕（spec.md FR-033/034）
 - [ ] T022 [P] [US1] 在 `desktop/test/ipc/auth.ipc.test.ts` 測試裝置註冊已自登入流程拆出，可獨立呼叫
 - [ ] T023 [P] [US1] 在 `desktop/test/ui/standby-page.test.ts` 測試 `INITIALIZED` 待命畫面**不提供登入入口**
-- [ ] T024 [P] [US1] 在 `host/frontend/test/exam-state-controls.test.ts` 測試管理端只呈現「下一階段」與 reset 兩個動作，且五個階段名稱正確
+- [X] T024 [P] [US1] 在 `host/frontend/test/exam-state-controls.test.ts` 測試管理端只呈現「下一階段」與 reset 兩個動作，且五個階段名稱正確
 
 ### Implementation for User Story 1
 
@@ -100,13 +100,13 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 - [X] T030 [US1] 在 `host/backend/src/sockets/message-socket.service.ts` 的 disconnect handler 寫入 `lastDisconnectedAt`
 - [X] T031 [US1] 在 `host/backend/src/controllers/admin/admin-exam-state.controller.ts` 的 `getState` 加入 `allowedNext`，`changeState` 回傳 `invalid_transition` 與 `preconditions_not_met` 兩種錯誤（contracts/ G4/G5）
 - [X] T032 [US1] 在 `host/backend/src/middlewares/exam-phase.middleware.ts` 實作收卷緩衝：`FINISHED` 後依 `submitGraceSeconds` 判定提交端點的允許與否
-- [ ] T033 [P] [US1] 在 `host/frontend/src/stores/manage.store.ts` 加入 `allowedNext` 狀態
-- [ ] T034 [US1] 改寫 `host/frontend/src/views/manage/components/ExamStateControls.vue` 為「下一階段」單一按鈕加 reset，移除四顆任選按鈕
-- [ ] T035 [US1] 在 `host/frontend/src/stores/config.store.ts` 將初始化後硬編的 `examState = 'NOT_STARTED'` 改為 `'INITIALIZED'`，並改為向後端重新查詢而非硬編
-- [ ] T036 [P] [US1] 在 `host/frontend/src/stores/manage.store.ts` 將 `examState` 預設值由 `'NOT_STARTED'` 改為 `'UNINITIALIZED'`
-- [ ] T037 [US1] 在 `host/frontend/src/views/config/components/DbInitPanel.vue` 顯示後端回傳的 `preconditions_not_met` 缺項清單，取代目前只有成功／失敗的提示
-- [ ] T038 [P] [US1] 建立 `host/frontend/src/api/readiness.ts` 與 `host/frontend/src/stores/readiness.store.ts`
-- [ ] T039 [US1] 建立 `host/frontend/src/views/manage/components/StudentReadiness.vue`，依 EXAM-LIFECYCLE.md §4.3 的四項條件呈現就緒狀態
+- [X] T033 [P] [US1] 在 `host/frontend/src/stores/manage.store.ts` 加入 `allowedNext` 狀態
+- [X] T034 [US1] 改寫 `host/frontend/src/views/manage/components/ExamStateControls.vue` 為「下一階段」單一按鈕加 reset，移除四顆任選按鈕
+- [X] T035 [US1] 在 `host/frontend/src/stores/config.store.ts` 將初始化後硬編的 `examState = 'NOT_STARTED'` 改為 `'INITIALIZED'`，並改為向後端重新查詢而非硬編
+- [X] T036 [P] [US1] 在 `host/frontend/src/stores/manage.store.ts` 將 `examState` 預設值由 `'NOT_STARTED'` 改為 `'UNINITIALIZED'`
+- [X] T037 [US1] 在 `host/frontend/src/views/config/components/DbInitPanel.vue` 顯示後端回傳的 `preconditions_not_met` 缺項清單，取代目前只有成功／失敗的提示
+- [X] T038 [P] [US1] 建立 `host/frontend/src/api/readiness.ts` 與 `host/frontend/src/stores/readiness.store.ts`
+- [X] T039 [US1] 建立 `host/frontend/src/views/manage/components/StudentReadiness.vue`，依 EXAM-LIFECYCLE.md §4.3 的四項條件呈現就緒狀態
 - [ ] T040 [US1] 在 `desktop/src/main/ipc/auth.ipc.ts` 將裝置註冊自 `auth:login` 拆出為獨立的 `auth:register` 流程，供 `INITIALIZED` 階段呼叫
 - [ ] T041 [US1] 建立 `desktop/src/renderer/pages/StandbyPage.vue`（`INITIALIZED` 待命畫面），顯示註冊與環境檢查進度，**不提供登入入口**
 - [ ] T042 [US1] 在 `desktop/src/renderer/router/index.ts` 加入 `/standby` 路由並納入推導表

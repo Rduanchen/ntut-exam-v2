@@ -7,14 +7,17 @@ import { adminRequest } from '../../../helpers/admin-request';
 import { ExamState } from '../../../../src/services/exam-state.service';
 import { SystemSettingsService } from '../../../../src/services/system-settings.service';
 import { MessageSocketService } from '../../../../src/sockets/message-socket.service';
+import { satisfyInitializePreconditions } from '../../../helpers/exam-phase';
+import { User } from '../../../../src/models/user.model';
 
 describe('AdminExamStateController (integration)', () => {
   let app: express.Express;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     app = createApp();
     vi.restoreAllMocks();
     vi.spyOn(MessageSocketService, 'sendStatusUpdateNotification').mockImplementation(() => {});
+    await satisfyInitializePreconditions();
   });
 
   describe('GET /admin/exam-state', () => {
@@ -92,6 +95,21 @@ describe('AdminExamStateController (integration)', () => {
       const end = await adminRequest(app).get('/admin/exam-state');
       expect(end.body.state).toBe(ExamState.FINISHED);
       expect(end.body.allowedNext).toEqual([]);
+    });
+
+    it('names what is missing rather than just refusing', async () => {
+      /* Without this, INITIALIZED could be reached by an operator who skipped
+       * initialisation, leaving a phase that claims machines may register
+       * against a roster that does not exist. */
+      await User.destroy({ where: {} });
+
+      const res = await adminRequest(app)
+        .post('/admin/exam-state')
+        .send({ state: ExamState.INITIALIZED });
+
+      expect(res.status).toBe(409);
+      expect(res.body.error).toBe('preconditions_not_met');
+      expect(res.body.missing).toContain('students');
     });
 
     it('returns 400 for a state outside the enum', async () => {

@@ -67,8 +67,10 @@ export const useConfigStore = defineStore('config', () => {
     try {
       await axios.post(`${BACKEND_URL}/admin/init`);
       isInitialized.value = true;
-      const manageStore = useManageStore();
-      manageStore.examState = 'NOT_STARTED';
+      /* Ask rather than assume. Initialisation advances the phase on the
+       * backend, and hardcoding what it becomes here is how the console ends up
+       * disagreeing with the server about where the exam is. */
+      await useManageStore().fetchExamState();
     } catch (err: any) {
       error.value = err.response?.data?.error || err.message || 'Failed to initialize database';
       throw err;
@@ -85,8 +87,7 @@ export const useConfigStore = defineStore('config', () => {
         confirm: "RESET"
       });
       isInitialized.value = false;
-      const manageStore = useManageStore();
-      manageStore.examState = 'UNINITIALIZED';
+      await useManageStore().fetchExamState();
     } catch (err: any) {
       error.value = err.response?.data?.error || err.message || 'Failed to reset database';
       throw err;

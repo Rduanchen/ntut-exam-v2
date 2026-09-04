@@ -1,4 +1,5 @@
 import { SystemSettings } from '../../src/models/system-settings.model';
+import { User } from '../../src/models/user.model';
 import { ExamState } from '../../src/services/exam-state.service';
 
 /**
@@ -22,4 +23,17 @@ export async function seedExamPhase(phase: ExamState): Promise<void> {
     name: 'exam_state_changed_at',
     value: JSON.stringify(new Date().toISOString()),
   });
+}
+
+/**
+ * Satisfy what UNINITIALIZED → INITIALIZED requires.
+ *
+ * The transition refuses until the paper is uploaded and the roster exists,
+ * so that phase cannot be reached by skipping initialisation. The global test
+ * setup already seeds the config; this adds the roster.
+ */
+export async function satisfyInitializePreconditions(): Promise<void> {
+  if ((await User.count()) === 0) {
+    await User.create({ testId: 'precondition-student', name: 'Precondition', ipAddress: null });
+  }
 }

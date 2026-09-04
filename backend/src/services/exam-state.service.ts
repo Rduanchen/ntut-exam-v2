@@ -1,4 +1,5 @@
 import { SystemSettingsService } from "./system-settings.service";
+import { User } from "../models/user.model";
 import { createMessage, MessageType } from "./message.service";
 import MessageSocketService from "../sockets/message-socket.service";
 import { HttpError } from "../utils/http-error";
@@ -80,6 +81,27 @@ export class ExamStateService {
   }
 
   /**
+   * What is still missing before the exam may advance to `target`.
+   *
+   * Only INITIALIZED has entry conditions today: everything after it is the
+   * operator judging that the room is ready, which no check can make for them.
+   * Returning the list rather than a boolean is deliberate — an operator being
+   * told "not yet" with no reason has to go looking.
+   */
+  static async getMissingPreconditions(target: ExamState): Promise<string[]> {
+    if (target !== ExamState.INITIALIZED) return [];
+
+    const missing: string[] = [];
+
+    const config = await SystemSettingsService.getExamConfig();
+    if (!config) missing.push("exam_config");
+
+    if ((await User.count()) === 0) missing.push("students");
+
+    return missing;
+  }
+
+  /**
    * Move the exam forward one phase.
    *
    * Rejects every other combination, same-phase included. The check lives here
@@ -95,6 +117,15 @@ export class ExamStateService {
         400,
         `Invalid transition: ${currentState} → ${newState}`,
         "invalid_transition"
+      );
+    }
+
+    const missing = await this.getMissingPreconditions(newState);
+    if (missing.length > 0) {
+      throw new HttpError(
+        409,
+        `Preconditions not met for ${newState}: ${missing.join(", ")}`,
+        "preconditions_not_met"
       );
     }
 

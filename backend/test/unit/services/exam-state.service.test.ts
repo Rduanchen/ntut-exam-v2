@@ -9,6 +9,7 @@ import { SystemSettingsService } from '../../../src/services/system-settings.ser
 import { SystemSettings } from '../../../src/models/system-settings.model';
 import { Message } from '../../../src/models/message.model';
 import { MessageSocketService } from '../../../src/sockets/message-socket.service';
+import { satisfyInitializePreconditions } from '../../helpers/exam-phase';
 
 /** The only forward step allowed from each phase. FINISHED is terminal. */
 const FORWARD: Array<[ExamState, ExamState]> = [
@@ -27,9 +28,13 @@ async function seedPhase(phase: ExamState): Promise<void> {
 }
 
 describe('ExamStateService', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.restoreAllMocks();
     vi.spyOn(MessageSocketService, 'sendStatusUpdateNotification').mockImplementation(() => {});
+    /* INITIALIZED cannot be reached without a roster — that is what stops it
+     * being reached by skipping initialisation. Tests about the table itself
+     * should not be about that check. */
+    await satisfyInitializePreconditions();
   });
 
   describe('getCurrentState', () => {

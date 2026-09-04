@@ -15,6 +15,15 @@ export class AdminExamStateController {
         throw new HttpError(400, "Bad Request: Invalid or missing state");
       }
 
+      const missing = await ExamStateService.getMissingPreconditions(state as ExamState);
+      if (missing.length > 0) {
+        return res.status(409).json({
+          error: "preconditions_not_met",
+          state,
+          missing
+        });
+      }
+
       await ExamStateService.changeState(state as ExamState);
 
       res.status(200).json({
