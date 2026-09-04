@@ -3,7 +3,7 @@ import { HttpError } from "../utils/http-error";
 import logger from "../utils/logger.util";
 
 export type SystemSettingKey = string;
-export const PROTECTED_SETTINGS_KEYS: SystemSettingKey[] = ["exam_config", "allow_device_registration"];
+export const PROTECTED_SETTINGS_KEYS: SystemSettingKey[] = ["exam_config", "allow_device_registration", "judger_deploy_test_latest"];
 
 export class SystemSettingsService {
   static async createSetting(key: SystemSettingKey, value: any): Promise<void> {

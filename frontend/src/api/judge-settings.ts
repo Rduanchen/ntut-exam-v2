@@ -1,11 +1,11 @@
 import axios from 'axios';
+import { BACKEND_URL } from './backend-url';
 import type {
   BackendHealth,
   JudgeSettingsResponse,
 } from '../types/judge-settings';
 import type { ExamConfig } from '../types/config';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 /**
  * The two endpoints this page exists to make reachable, plus the exam

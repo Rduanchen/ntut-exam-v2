@@ -14,6 +14,7 @@ import { checkPistonServer } from "./constants/piston.config";
 import { JudgeStartupService } from "./services/judge-startup.service";
 import { applyJudgeSettings } from "./services/judge-limiter";
 import { SystemSettingsService } from "./services/system-settings.service";
+import { DeployTestStartupService } from "./services/deploy-test-startup.service";
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ async function startServer() {
      * "being judged" by a process that no longer exists, and nothing in the
      * system ever revisits them. */
     await JudgeStartupService.run();
+    await DeployTestStartupService.run();
 
     /* Apply the stored concurrency ceiling now, so the first judging run of
      * the day is bounded rather than the second. */

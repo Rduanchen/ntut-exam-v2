@@ -16,6 +16,16 @@ export default mergeConfig(
       environment: 'happy-dom',
       globals: true,
       include: ['test/**/*.test.ts'],
+      coverage: {
+        provider: 'v8',
+        reporter: ['text', 'json-summary'],
+        include: [
+          'src/api/deploy-test.ts',
+          'src/stores/deploy-test.store.ts',
+          'src/utils/download-json.ts',
+        ],
+        thresholds: { lines: 100 },
+      },
       /* Vuetify ships components that import .css directly. Node cannot load
        * those, so the package must be processed by Vite rather than resolved
        * externally. */

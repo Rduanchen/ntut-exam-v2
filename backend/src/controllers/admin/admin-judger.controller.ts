@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { JudgerService } from '../../services/judger.service';
-import { JudgeQueueService, type JudgingJob } from '../../services/judge-queue.service';
+import { JudgeQueueService, JudgingWorkConflictError, type JudgingJob } from '../../services/judge-queue.service';
 import { applyJudgeSettings, getExecutionCeiling } from '../../services/judge-limiter';
 import { SystemSettingsService } from '../../services/system-settings.service';
 import { checkPistonServer } from '../../constants/piston.config';
@@ -50,11 +50,21 @@ export class AdminJudgerController {
       return;
     }
 
-    const { job, alreadyRunning } = JudgeQueueService.start(testId, async () => {
-      const summary = await JudgerService.judgeStudentSubmissions(testId, questionIds);
-      SocketService.triggerScoreUpdateEvent(testId);
-      return { graded: summary.graded, systemFailures: summary.systemFailures };
-    });
+    let admitted: ReturnType<typeof JudgeQueueService.start>;
+    try {
+      admitted = JudgeQueueService.start(testId, async () => {
+        const summary = await JudgerService.judgeStudentSubmissions(testId, questionIds);
+        SocketService.triggerScoreUpdateEvent(testId);
+        return { graded: summary.graded, systemFailures: summary.systemFailures };
+      });
+    } catch (error) {
+      if (error instanceof JudgingWorkConflictError) {
+        res.status(409).json({ error: 'Conflict: deployment test is active or draining' });
+        return;
+      }
+      throw error;
+    }
+    const { job, alreadyRunning } = admitted;
 
     res.status(202).json({
       message: alreadyRunning

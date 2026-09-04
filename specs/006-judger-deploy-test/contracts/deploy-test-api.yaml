@@ -1,0 +1,442 @@
+openapi: 3.1.0
+info:
+  title: Judger Deploy Test Admin API
+  version: 1.0.0
+  description: >-
+    Administrative contract for starting and observing the single latest
+    deployment test. All paths inherit the existing admin-token guard.
+servers:
+  - url: http://localhost:3000
+security:
+  - bearerAdmin: []
+  - headerAdmin: []
+paths:
+  /admin/judger/deploy-tests/profile:
+    get:
+      operationId: getDeployTestProfile
+      summary: Return authoritative defaults, bounds, and current eligibility
+      responses:
+        "200":
+          description: Profile descriptor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileDescriptor"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /admin/judger/deploy-tests:
+    post:
+      operationId: startDeployTest
+      summary: Admit one asynchronous deployment test
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeploymentTestProfile"
+      responses:
+        "202":
+          description: New run persisted and accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunEnvelope"
+        "200":
+          description: A deploy test is already active; return it idempotently
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/RunEnvelope"
+                  - type: object
+                    properties:
+                      alreadyRunning:
+                        const: true
+        "400":
+          $ref: "#/components/responses/InvalidProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: Exam active, student judging active, or previous run draining
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conflict"
+        "503":
+          description: Piston readiness failed; no run was created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /admin/judger/deploy-tests/latest:
+    get:
+      operationId: getLatestDeployTest
+      summary: Restore the active or latest terminal report
+      responses:
+        "200":
+          description: Latest run, or null when none has ever been admitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /admin/judger/deploy-tests/{runId}:
+    get:
+      operationId: getDeployTest
+      summary: Poll one known current/latest run
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Current durable run and operational draining state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Run is not the retained current/latest run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  securitySchemes:
+    bearerAdmin:
+      type: http
+      scheme: bearer
+    headerAdmin:
+      type: apiKey
+      in: header
+      name: x-admin-token
+  responses:
+    Unauthorized:
+      description: Missing or invalid admin token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InvalidProfile:
+      description: Strict request validation failed before admission
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/Error"
+              - type: object
+                properties:
+                  issues:
+                    type: array
+                    items:
+                      type: object
+                      required: [path, message]
+                      properties:
+                        path:
+                          type: string
+                        message:
+                          type: string
+  schemas:
+    DeploymentTestProfile:
+      type: object
+      additionalProperties: false
+      required: [phases, languages, concurrencyLevels, jobCount, deadlineMs]
+      properties:
+        phases:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            enum: [smoke, verdict, concurrency]
+        languages:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            enum: [c, cpp, python]
+        concurrencyLevels:
+          type: array
+          minItems: 1
+          maxItems: 8
+          uniqueItems: true
+          description: Strictly ascending when concurrency is selected
+          items:
+            type: integer
+            minimum: 1
+            maximum: 64
+        jobCount:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 100
+        deadlineMs:
+          type: integer
+          minimum: 60000
+          maximum: 1800000
+          default: 900000
+    ProfileDescriptor:
+      type: object
+      additionalProperties: false
+      required: [defaults, bounds, activeCeiling, canStart]
+      properties:
+        defaults:
+          $ref: "#/components/schemas/DeploymentTestProfile"
+        bounds:
+          type: object
+          additionalProperties: false
+          required: [maxLevels, minConcurrency, maxConcurrency, minJobs, maxJobs, minDeadlineMs, maxDeadlineMs]
+          properties:
+            maxLevels: { type: integer, const: 8 }
+            minConcurrency: { type: integer, const: 1 }
+            maxConcurrency: { type: integer, const: 64 }
+            minJobs: { type: integer, const: 1 }
+            maxJobs: { type: integer, const: 500 }
+            minDeadlineMs: { type: integer, const: 60000 }
+            maxDeadlineMs: { type: integer, const: 1800000 }
+        activeCeiling:
+          type: integer
+          minimum: 1
+          maximum: 64
+        canStart:
+          type: boolean
+        blockedReason:
+          type: string
+          enum: [exam_in_progress, student_judging_active, deploy_test_active, deploy_test_draining, piston_unreachable]
+    RunEnvelope:
+      type: object
+      additionalProperties: false
+      required: [run, draining]
+      properties:
+        run:
+          oneOf:
+            - $ref: "#/components/schemas/DeploymentTestRun"
+            - type: "null"
+        draining:
+          type: boolean
+        alreadyRunning:
+          type: boolean
+    DeploymentTestRun:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - state
+        - profile
+        - settings
+        - activeCeiling
+        - runtimes
+        - progress
+        - probes
+        - concurrencyResults
+        - errors
+        - startedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum: [queued, running, completed, failed, interrupted]
+        overallOutcome:
+          type: string
+          enum: [passed, warning, failed, interrupted]
+        profile:
+          $ref: "#/components/schemas/DeploymentTestProfile"
+        settings:
+          $ref: "#/components/schemas/SettingsSnapshot"
+        activeCeiling:
+          type: integer
+          minimum: 1
+          maximum: 64
+        runtimes:
+          type: array
+          items:
+            $ref: "#/components/schemas/RuntimeSnapshot"
+        progress:
+          $ref: "#/components/schemas/Progress"
+        probes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProbeResult"
+        concurrencyResults:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConcurrencyResult"
+        errors:
+          type: array
+          items:
+            type: string
+            maxLength: 5000
+        startedAt:
+          type: integer
+        finishedAt:
+          type: integer
+        interruptionReason:
+          type: string
+          enum: [exam_started, deadline_exceeded, process_restart, orchestration_failure]
+    SettingsSnapshot:
+      type: object
+      additionalProperties: false
+      required: [compileTimeout, compileMemoryLimit, maxConcurrentJobs, maxSystemRetries, runTimeLimit, runMemoryLimit]
+      properties:
+        compileTimeout: { $ref: "#/components/schemas/EffectiveNumber" }
+        compileMemoryLimit: { $ref: "#/components/schemas/EffectiveNumber" }
+        maxConcurrentJobs: { $ref: "#/components/schemas/EffectiveNumber" }
+        maxSystemRetries: { $ref: "#/components/schemas/EffectiveNumber" }
+        runTimeLimit: { type: integer, minimum: 1 }
+        runMemoryLimit: { type: integer, minimum: 1 }
+    EffectiveNumber:
+      type: object
+      additionalProperties: false
+      required: [value, origin]
+      properties:
+        value: { type: number }
+        origin:
+          type: string
+          enum: [config, env, default, clamped]
+    RuntimeSnapshot:
+      type: object
+      additionalProperties: false
+      required: [semanticLanguage, available, aliases, checkedAt]
+      properties:
+        semanticLanguage: { type: string, enum: [c, cpp, python] }
+        available: { type: boolean }
+        language: { type: string }
+        version: { type: string }
+        aliases:
+          type: array
+          items: { type: string }
+        checkedAt: { type: integer }
+    Progress:
+      type: object
+      additionalProperties: false
+      required: [phase, completed, total, updatedAt]
+      properties:
+        phase:
+          type: string
+          enum: [readiness, smoke, verdict, concurrency, post-check, finalizing]
+        completed: { type: integer, minimum: 0 }
+        total: { type: integer, minimum: 0 }
+        updatedAt: { type: integer }
+    ProbeResult:
+      type: object
+      additionalProperties: false
+      required: [probeId, phase, semanticLanguage, scenario, expectedStatus, expectedAttribution, status, attempts, diagnostic]
+      properties:
+        probeId: { type: string }
+        phase: { type: string, enum: [smoke, verdict] }
+        semanticLanguage: { type: string, enum: [c, cpp, python] }
+        scenario: { type: string, enum: [ac, ce, re, tle, mle, ole] }
+        expectedStatus: { $ref: "#/components/schemas/Verdict" }
+        expectedAttribution: { $ref: "#/components/schemas/Attribution" }
+        observedStatus: { $ref: "#/components/schemas/Verdict" }
+        observedAttribution: { $ref: "#/components/schemas/Attribution" }
+        runtime: { $ref: "#/components/schemas/RuntimeRef" }
+        status: { type: string, enum: [passed, failed, blocked] }
+        attempts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attempt"
+        diagnostic: { type: string, maxLength: 5000 }
+    RuntimeRef:
+      type: object
+      additionalProperties: false
+      required: [language, version]
+      properties:
+        language: { type: string }
+        version: { type: string }
+    Attempt:
+      type: object
+      additionalProperties: false
+      required: [attempt, status, attribution, stage, enqueuedAt, slotAcquiredAt, finishedAt, queueMs, executionMs, totalMs, diagnostic]
+      properties:
+        attempt: { type: integer, minimum: 1 }
+        status: { $ref: "#/components/schemas/Verdict" }
+        attribution: { $ref: "#/components/schemas/Attribution" }
+        stage: { type: string, enum: [compile, run, none] }
+        enqueuedAt: { type: integer }
+        slotAcquiredAt: { type: integer }
+        finishedAt: { type: integer }
+        queueMs: { type: number, minimum: 0 }
+        executionMs: { type: number, minimum: 0 }
+        totalMs: { type: number, minimum: 0 }
+        diagnostic: { type: string, maxLength: 5000 }
+    ConcurrencyResult:
+      type: object
+      additionalProperties: false
+      required:
+        - submittedConcurrency
+        - activeCeiling
+        - observedPeakExecutionConcurrency
+        - requested
+        - completed
+        - expectedFailures
+        - infrastructureFailures
+        - timedOut
+        - missing
+        - interrupted
+        - throughputPerSecond
+        - warnings
+        - sampleErrors
+      properties:
+        submittedConcurrency: { type: integer, minimum: 1, maximum: 64 }
+        activeCeiling: { type: integer, minimum: 1, maximum: 64 }
+        observedPeakExecutionConcurrency: { type: integer, minimum: 0, maximum: 64 }
+        requested: { type: integer, minimum: 0 }
+        completed: { type: integer, minimum: 0 }
+        expectedFailures: { type: integer, minimum: 0 }
+        infrastructureFailures: { type: integer, minimum: 0 }
+        timedOut: { type: integer, minimum: 0 }
+        missing: { type: integer, minimum: 0 }
+        interrupted: { type: integer, minimum: 0 }
+        throughputPerSecond: { type: number, minimum: 0 }
+        endToEndLatencyMs: { $ref: "#/components/schemas/Distribution" }
+        queueLatencyMs: { $ref: "#/components/schemas/Distribution" }
+        executionLatencyMs: { $ref: "#/components/schemas/Distribution" }
+        warnings:
+          type: array
+          items: { type: string, maxLength: 5000 }
+        sampleErrors:
+          type: array
+          maxItems: 10
+          items: { type: string, maxLength: 5000 }
+    Distribution:
+      type: object
+      additionalProperties: false
+      required: [p50, p95, p99, max]
+      properties:
+        p50: { type: number, minimum: 0 }
+        p95: { type: number, minimum: 0 }
+        p99: { type: number, minimum: 0 }
+        max: { type: number, minimum: 0 }
+    Verdict:
+      type: string
+      enum: [AC, WA, TLE, MLE, OLE, RE, CE, CTLE, SE]
+    Attribution:
+      type: string
+      enum: [submission, system]
+    Conflict:
+      type: object
+      required: [error, reason]
+      properties:
+        error: { type: string }
+        reason:
+          type: string
+          enum: [exam_in_progress, student_judging_active, deploy_test_draining]
+        run:
+          oneOf:
+            - $ref: "#/components/schemas/DeploymentTestRun"
+            - type: "null"
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }

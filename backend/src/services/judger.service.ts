@@ -11,18 +11,12 @@ import {
   StatusCode,
   type JudgeResult,
 } from "piston-judger";
-import { withExecutionSlot, applyJudgeSettings } from "./judge-limiter";
+import { applyJudgeSettings } from "./judge-limiter";
 import { valuesOf, type JudgeSettings } from "../config/judge.config";
 import logger from "../utils/logger.util";
 import { ExamConfig, Puzzle } from "../schemas/config.schema";
-
-const MAX_OUTPUT_LENGTH = 5000;
-
-/** Truncate untrusted output before it is stored or returned. */
-const truncate = (value: unknown, limit: number = MAX_OUTPUT_LENGTH): string => {
-  if (typeof value !== "string") return "";
-  return value.length <= limit ? value : value.substring(0, limit) + "\n...[Output Truncated]";
-};
+import { JudgeExecutionService } from "./judge-execution.service";
+import { truncateJudgerOutput } from "../utils/judger-output.util";
 
 export interface TestCaseResult {
   status: string;
@@ -139,39 +133,25 @@ export class JudgerService {
     code: string,
     testCase: { input: string; output: string },
   ): Promise<JudgeResult> {
-    let attempt = 0;
-
-    for (;;) {
-      const outcome = await withExecutionSlot(() =>
-        judger.execute(options.language, code, {
+    const execution = new JudgeExecutionService(judger);
+    const { verdict } = await execution.executeAndJudge({
+      language: options.language,
+      code,
+      execute: {
           stdin: testCase.input,
           run_timeout: options.timeLimit,
           run_memory_limit: options.memoryLimit,
           compile_timeout: settings.compileTimeout,
           compile_memory_limit: settings.compileMemoryLimit,
-        }),
-      );
-
-      /* No pre-check before judging.
-       *
-       * judge() accepts the failure arm, so the guard that used to sit here —
-       * inspecting the raw response for success/error/run before daring to
-       * judge it — is gone. That guard was the visible sign that the old
-       * contract could not express what the caller needed. */
-      const verdict = judger.judge(outcome, {
+      },
+      judge: {
         expectedOutput: testCase.output,
         memoryLimit: options.memoryLimit,
         compareMode: options.compareMode,
-      });
-
-      if (verdict.attribution !== FaultAttribution.SYSTEM) return verdict;
-      if (attempt >= settings.maxSystemRetries) return verdict;
-
-      attempt += 1;
-      logger.warn(
-        `[Judger] System-attributed verdict (${verdict.status}); retry ${attempt}/${settings.maxSystemRetries}`,
-      );
-    }
+      },
+      maxSystemRetries: settings.maxSystemRetries,
+    });
+    return verdict;
   }
 
   /**
@@ -216,8 +196,8 @@ export class JudgerService {
     };
     const mappedLanguage = languageMap[submission.language] || submission.language.toLowerCase();
 
-    let resolvedTimeLimit = puzzle.timeLimit ?? examConfig.judgerSettings?.timeLimit ?? 10000;
-    let resolvedMemoryLimit = puzzle.memoryLimit ?? examConfig.judgerSettings?.memoryLimit ?? 256;
+    const resolvedTimeLimit = puzzle.timeLimit ?? examConfig.judgerSettings?.timeLimit ?? 10000;
+    const resolvedMemoryLimit = puzzle.memoryLimit ?? examConfig.judgerSettings?.memoryLimit ?? 256;
 
     // Auto-detect if memory limit was entered in bytes instead of MB
     // If it's > 10240 (10 GB), it's highly likely they meant bytes.
@@ -281,8 +261,8 @@ export class JudgerService {
           sink.push({
             status: verdict.status,
             attribution: verdict.attribution,
-            message: truncate(verdict.message),
-            userOutput: truncate(verdict.actualOutput ?? ""),
+            message: truncateJudgerOutput(verdict.message),
+            userOutput: truncateJudgerOutput(verdict.actualOutput ?? ""),
             expectedOutput: tc.output,
             time: verdict.details?.run?.wall_time?.toString() ?? "0",
           });

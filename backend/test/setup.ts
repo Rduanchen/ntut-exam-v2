@@ -64,6 +64,14 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  const { JudgeQueueService } = await import('../src/services/judge-queue.service');
+  const { DeployTestService } = await import('../src/services/deploy-test.service');
+  const { JudgingWorkCoordinator } = await import('../src/services/judging-work-coordinator');
+  await Promise.all([JudgeQueueService.settle(), DeployTestService.settle()]);
+  JudgeQueueService.reset();
+  DeployTestService.reset();
+  JudgingWorkCoordinator.reset();
+
   // Clear tables between tests to ensure isolation
   const { sequelize } = await import('../src/config/database.config');
   await sequelize.sync({ force: true });

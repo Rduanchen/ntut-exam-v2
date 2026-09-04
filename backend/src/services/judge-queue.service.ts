@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
 import logger from "../utils/logger.util";
+import { JudgingWorkCoordinator, type WorkLease } from "./judging-work-coordinator";
+
+export class JudgingWorkConflictError extends Error {}
 
 export type JudgingJobState = "waiting" | "running" | "finished" | "failed";
 
@@ -36,11 +39,13 @@ export class JudgeQueueService {
   private static inFlight = new Set<Promise<void>>();
   /** testId -> job id, for jobs that have not reached a terminal state. */
   private static live = new Map<string, string>();
+  private static leases = new Map<string, WorkLease>();
 
   /** Visible for tests; a process restart does this implicitly. */
   static reset(): void {
     JudgeQueueService.jobs.clear();
     JudgeQueueService.live.clear();
+    JudgeQueueService.leases.clear();
   }
 
   /**
@@ -83,6 +88,9 @@ export class JudgeQueueService {
       return { job: existing, alreadyRunning: true };
     }
 
+    const lease = JudgingWorkCoordinator.acquireStudent();
+    if (!lease) throw new JudgingWorkConflictError("Deployment test is active or draining");
+
     const job: JudgingJob = {
       id: randomUUID(),
       testId,
@@ -91,6 +99,7 @@ export class JudgeQueueService {
     };
     JudgeQueueService.jobs.set(job.id, job);
     JudgeQueueService.live.set(testId, job.id);
+    JudgeQueueService.leases.set(job.id, lease);
 
     /* Deliberately not awaited: the caller returns immediately. Errors are
      * captured onto the job so a broken run reports `failed` rather than
@@ -122,6 +131,8 @@ export class JudgeQueueService {
     } finally {
       job.finishedAt = Date.now();
       JudgeQueueService.live.delete(job.testId);
+      JudgeQueueService.leases.get(job.id)?.release();
+      JudgeQueueService.leases.delete(job.id);
     }
   }
 }

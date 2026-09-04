@@ -79,3 +79,21 @@ GET /admin/judger/settings
 回報每一個生效的設定值，**以及它的來源**（`config` / `env` / `default` / `clamped`）。來源欄位的存在是為了區分「10 秒是因為有人量過」與「10 秒是因為沒人選過」——正是後者讓最初那個靜默的編譯時限一直隱形，直到它開始扣學生的分數。
 
 `clamped` 表示設定值超出有效範圍而未被採用。無效的併發上限一律會被夾回範圍內，**絕不會被當成「無上限」**。
+
+## 部署後 Judger 自我測試
+
+管理員可直接在 `http://<host>:5173/judge` 內切換到 **Deploy Test** 分頁；執行、進度、各 probe 結果、併發統計與 JSON 匯出都留在同一個 `/judge` 頁面。預設測試會：
+
+- 實際編譯並執行 C、C++、Python；缺少的 runtime 會明確標成 blocked。
+- 驗證 CE、RE、TLE、MLE、OLE 的 verdict 與 `submission` 歸因，並在 OLE 後再做一次健康執行。
+- 將 100 筆工作分配到由實際全域上限推導的併發層級，顯示 submitted/observed concurrency、完整 accounting、throughput，以及 queue/execution/total latency 的 p50、p95、p99、max。
+
+按下 **執行測試** 前會再次確認。考試進行中、學生評測仍在執行、另一個部署測試正在執行或 draining 時，系統會拒絕開始；部署測試和學生工作共用同一個全域 limiter，不會繞過正式執行路徑，也不會建立 Submission、改寫 ScoreBoard 或發送學生分數事件。
+
+報告的 lifecycle 與結果要分開解讀：`completed` 只代表測試流程正常收尾；`passed` 才是全數成功，`warning` 代表例如送入的併發高於生效 ceiling、但已安全排隊，`failed` 代表 probe 或基礎設施證據不符，`interrupted` 則會附上 deadline、考試開始或 process restart 原因。所有診斷最多保留 5,000 字元、每個併發層級最多 10 筆錯誤樣本。
+
+部署時必須設定 `ADMIN_TOKEN`；Compose 仍接受既有 `ADMIN_SECRET` 作為相容 fallback，但新部署應使用前者。Piston 的 `PISTON_COMPILE_TIMEOUT` 必須不小於後端實際使用的 compile timeout；本專案 Compose 預設為 30 秒。若連到 stock Piston（上限通常為 10 秒），請同步將 Judger Settings 的 compile timeout 調到 10 秒或提高 Piston 上限，否則健康的編譯會被 Piston 拒絕。
+
+profile 的伺服器端安全範圍為：併發 1–64、最多 8 個遞增且不重複的層級、工作數 1–500、deadline 60–1,800 秒。deadline 到達後報告立即凍結，尚未完成的工作列入 `interrupted`，但目前 Piston client 沒有 transport abort；已送出的 HTTP 工作仍會 draining 到真正結束，這段期間不會虛假釋放 limiter，也不能開始下一次部署測試。最新報告由後端保存，重新整理 `/judge` 後會恢復，瀏覽器 localStorage 不作為結果真相。
+
+Deploy Test 的 profile 表單在欄位失焦時，會把 phases、concurrency levels、job count 與 deadline 草稿保存在目前瀏覽器；重新整理後會先取得伺服器最新 bounds，再恢復仍然合法的草稿。這份瀏覽器草稿只提供操作便利，執行狀態與報告仍完全以後端資料為準。

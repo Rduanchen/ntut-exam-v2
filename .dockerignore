@@ -4,8 +4,10 @@ backend/node_modules
 frontend/dist
 backend/dist
 .git
-.env
+.env*
 backend/.env
 frontend/.env
 backend/database.sqlite
 database.sqlite
+coverage/
+*.log*
