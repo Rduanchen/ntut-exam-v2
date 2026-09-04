@@ -125,8 +125,8 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 ### Tests for User Story 2 (MANDATORY) ⚠️
 
 - [ ] T044 [P] [US2] 在 `host/backend/test/unit/services/exam-config-crypto.service.test.ts` 測試 `config.meta` 序列化後不含 `"input"`、`"output"`、`puzzles[].title`、`puzzles[].score`、`subtasks`、`specialRules`、`startPassword`（contracts/ G8）
-- [ ] T045 [P] [US2] 在同檔測試 `config.cipher` 以 `K_exam` AES-256-GCM 加密、每次使用新 IV，且竄改一位元組後解密拋錯（contracts/ G28）
-- [ ] T046 [P] [US2] 在 `host/backend/test/integration/controllers/user/user-exam.controller.test.ts` 測試 `POST /user/exam/key` 僅 `IN_PROGRESS` 回應，其餘階段回 `409` 且不透露金鑰是否存在（contracts/ G9）
+- [X] T045 [P] [US2] 在同檔測試 `config.cipher` 以 `K_exam` AES-256-GCM 加密、每次使用新 IV，且竄改一位元組後解密拋錯（contracts/ G28）
+- [X] T046 [P] [US2] 在 `host/backend/test/integration/controllers/user/user-exam.controller.test.ts` 測試 `POST /user/exam/key` 僅 `IN_PROGRESS` 回應，其餘階段回 `409` 且不透露金鑰是否存在（contracts/ G9）
 - [ ] T047 [P] [US2] 在同檔測試 `POST /user/exam/config` 免除 session token、僅需已註冊裝置即可取得 `{ meta, cipher }`（contracts/ G7）
 - [ ] T048 [P] [US2] 在 `host/backend/test/unit/schemas/config.schema.test.ts` 以 `host/backend/test/fixtures/exam-config-payload.fixture.json` 驗證 `meta`／`secret`／`wrappedExamKey` schema
 - [ ] T049 [P] [US2] 在 `desktop/test/service/examConfig.schema.test.ts` 以 `desktop/test/fixtures/exam-config-payload.fixture.json` 驗證桌面版對應 schema（zod ^4 行為差異在此暴露）
@@ -136,10 +136,10 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 ### Implementation for User Story 2
 
 - [ ] T052 [US2] 在 `host/backend/src/schemas/config.schema.ts` 新增 `examConfigMetaSchema`、`examConfigSecretSchema`、`wrappedExamKeySchema`（data-model.md §3/§4）
-- [ ] T053 [US2] 在 `host/backend/src/schemas/config.schema.ts` 的 `judgerSettings` 之外新增 `submitGraceSeconds`，預設 60（research.md R1）
-- [ ] T054 [US2] 建立 `host/backend/src/services/exam-config-crypto.service.ts`：產生 `K_exam`、切分 meta/cipher、AES-256-GCM 加密、PBKDF2 600,000 迭代包裝 `wrappedExamKey`（research.md R2/R6）
-- [ ] T055 [US2] 在 `host/backend/src/services/exam-config-crypto.service.ts` 加入口令長度警告：少於 6 字元時回報需二次確認的旗標（research.md R4）
-- [ ] T056 [US2] 在 `host/backend/src/services/init.service.ts` 的初始化流程呼叫 `exam-config-crypto.service.ts`，將三項產出存入 `SystemSettings`
+- [X] T053 [US2] 在 `host/backend/src/schemas/config.schema.ts` 的 `judgerSettings` 之外新增 `submitGraceSeconds`，預設 60（research.md R1）
+- [X] T054 [US2] 建立 `host/backend/src/services/exam-config-crypto.service.ts`：產生 `K_exam`、切分 meta/cipher、AES-256-GCM 加密、PBKDF2 600,000 迭代包裝 `wrappedExamKey`（research.md R2/R6）
+- [X] T055 [US2] 在 `host/backend/src/services/exam-config-crypto.service.ts` 加入口令長度警告：少於 6 字元時回報需二次確認的旗標（research.md R4）
+- [X] T056 [US2] 在 `host/backend/src/services/init.service.ts` 的初始化流程呼叫 `exam-config-crypto.service.ts`，將三項產出存入 `SystemSettings`
 - [ ] T057 [US2] 在 `host/backend/src/services/exam-state.service.ts` 的 `UNINITIALIZED → INITIALIZED` 前置檢查加入「`K_exam`、`cipher`、`meta` 皆已產生」（contracts/ G5）
 - [ ] T058 [US2] 改寫 `host/backend/src/services/exam.service.ts` 的 `getSecureConfig`：驗證層級放寬為已註冊裝置，回傳 `{ meta, cipher }`
 - [ ] T059 [US2] 在 `host/backend/src/controllers/user/user.controller.ts` 與 `host/backend/src/routes/user/user-exam.route.ts` 新增 `POST /user/exam/key`，僅 `IN_PROGRESS` 回應且冪等（contracts/ G9/G11）
