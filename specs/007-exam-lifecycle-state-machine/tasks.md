@@ -173,7 +173,7 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 - [X] T074 [P] [US3] 在同檔測試同一 `deviceUuid` 連送三次註冊只產生一筆 `PENDING` 申請（contracts/ G14）
 - [X] T075 [P] [US3] 在同檔測試三種申請分類的判別：`NEW_DEVICE` / `REBIND` / `UNBOUND_DEVICE`（research.md R3）
 - [X] T076 [P] [US3] 在 `host/backend/test/integration/controllers/admin/connection.controller.test.ts` 測試 `POST /admin/device/:uuid/re-entry` 清除裝置身分但**不觸及** `Submission` 與 `ScoreBoard`（contracts/ G18）
-- [ ] T077 [P] [US3] 在 `desktop/test/ipc/auth.ipc.test.ts` 測試重啟後（無 `cryptoState`）走註冊申請路徑，而非直接失敗
+- [X] T077 [P] [US3] 在 `desktop/test/ipc/auth.ipc.test.ts` 測試重啟後（無 `cryptoState`）走註冊申請路徑，而非直接失敗
 
 ### Implementation for User Story 3
 
@@ -183,10 +183,10 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 - [X] T081 [US3] 在 `host/backend/src/services/device.service.ts` 的申請建立加入去重檢查（contracts/ G14）
 - [X] T082 [US3] 在 `host/backend/src/services/binding.service.ts` 新增 `reEntry(deviceUuid)`：`forceLogoutDevice` 加 `unregisterDevice`，明確不觸及成果層
 - [X] T083 [US3] 在 `host/backend/src/controllers/admin/connection.controller.ts` 與 `host/backend/src/routes/admin/connection.route.ts` 新增 `POST /admin/device/:deviceUuid/re-entry`
-- [ ] T084 [US3] 在 `desktop/src/main/ipc/auth.ipc.ts` 讓註冊失敗回 `entry_pending` 時進入待審畫面，而非清空 `cryptoState` 後失敗
-- [ ] T085 [US3] 建立 `desktop/src/renderer/pages/PendingApprovalPage.vue`（待審畫面），輪詢核准狀態
-- [ ] T086 [US3] 在 `desktop/src/renderer/router/index.ts` 將待審畫面納入推導表
-- [ ] T087 [US3] 確認 `desktop/src/main/ipc/auth.ipc.ts` 登入後的 `getSubmissions` 復原流程在重來路徑上同樣執行（spec.md US3-2）
+- [X] T084 [US3] 在 `desktop/src/main/ipc/auth.ipc.ts` 讓註冊失敗回 `entry_pending` 時進入待審畫面，而非清空 `cryptoState` 後失敗
+- [X] T085 [US3] 建立 `desktop/src/renderer/pages/PendingApprovalPage.vue`（待審畫面），輪詢核准狀態
+- [X] T086 [US3] 在 `desktop/src/renderer/router/index.ts` 將待審畫面納入推導表
+- [X] T087 [US3] 確認 `desktop/src/main/ipc/auth.ipc.ts` 登入後的 `getSubmissions` 復原流程在重來路徑上同樣執行（spec.md US3-2）
 
 **Checkpoint**: 目前 100% 重現的重啟死路已修復（SC-002）。
 
