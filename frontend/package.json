@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "start": "vite preview",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "vue-tsc -b --force"
   },
   "dependencies": {
@@ -21,6 +22,7 @@
     "vuetify": "^3.7.1"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "4.1.8",
     "@types/node": "^24.12.3",
     "@vitejs/plugin-vue": "^6.0.6",
     "@vue/test-utils": "^2.4.11",

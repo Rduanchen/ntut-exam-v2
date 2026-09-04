@@ -1,6 +1,6 @@
 import axios from 'axios';
+import { BACKEND_URL } from './backend-url';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 export type JudgingJobState = 'waiting' | 'running' | 'finished' | 'failed';
 

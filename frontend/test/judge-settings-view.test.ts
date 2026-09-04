@@ -7,6 +7,8 @@ import * as directives from 'vuetify/directives';
 import JudgeSettingsView from '../src/views/judge/JudgeSettingsView.vue';
 import ContainerPanel from '../src/views/judge/components/ContainerPanel.vue';
 import * as api from '../src/api/judge-settings';
+import * as deployApi from '../src/api/deploy-test';
+import { descriptor, envelope } from './fixtures/deploy-test.fixture';
 import { C_ONLY_RUNTIMES, FULL_RUNTIMES, examRequiring, reachable } from './fixtures/judge.fixture';
 import type { EffectiveSetting } from '../src/types/judge-settings';
 
@@ -31,6 +33,8 @@ beforeEach(() => {
   vi.spyOn(api, 'fetchJudgeSettings').mockResolvedValue({ settings: SETTINGS, activeCeiling: 64 });
   vi.spyOn(api, 'fetchBackendHealth').mockResolvedValue(reachable(C_ONLY_RUNTIMES));
   vi.spyOn(api, 'fetchExamConfig').mockResolvedValue(examRequiring('Python', 'Cpp'));
+  vi.spyOn(deployApi, 'fetchDeployTestProfile').mockResolvedValue(descriptor);
+  vi.spyOn(deployApi, 'fetchLatestDeployTest').mockResolvedValue(envelope(null));
 });
 
 describe('US1 - the page warns before an exam', () => {

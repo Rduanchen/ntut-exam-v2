@@ -7,7 +7,18 @@ export default defineConfig({
     setupFiles: ['./test/setup.ts'],
     coverage: {
       provider: 'v8',
-      include: ['src/services/**', 'src/controllers/**'],
+      reporter: ['text', 'json', 'json-summary'],
+      include: [
+        'src/config/deploy-test*.ts',
+        'src/schemas/deploy-test.schema.ts',
+        'src/types/deploy-test.type.ts',
+        'src/utils/judger-output.util.ts',
+        'src/services/deploy-test*.ts',
+        'src/services/judge-execution.service.ts',
+        'src/services/judging-work-coordinator.ts',
+        'src/controllers/admin/admin-deploy-test.controller.ts',
+      ],
+      thresholds: { lines: 100 },
     }
   },
 });
