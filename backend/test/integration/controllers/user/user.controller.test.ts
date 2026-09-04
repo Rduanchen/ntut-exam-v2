@@ -12,12 +12,18 @@ import { DeviceKeyMap } from "../../../../src/models/device-key-map.model";
 import { SystemSettings } from "../../../../src/models/system-settings.model";
 import { CryptoService } from "../../../../src/services/crypto.service";
 import { DeviceService } from "../../../../src/services/device.service";
+import { ExamState } from "../../../../src/services/exam-state.service";
+import { seedExamPhase } from "../../../helpers/exam-phase";
 
 describe("UserController (integration)", () => {
   let app: express.Express;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     app = createApp();
+    /* Student endpoints are phase-gated. Seed a running exam so these tests
+     * exercise the endpoint rather than the gate; the gate has its own tests
+     * in test/unit/middlewares/exam-phase.middleware.test.ts. */
+    await seedExamPhase(ExamState.IN_PROGRESS);
   });
 
   const seedConfig = async () =>

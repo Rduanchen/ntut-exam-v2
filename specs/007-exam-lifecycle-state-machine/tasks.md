@@ -54,21 +54,21 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 ### Tests
 
-- [ ] T006 [P] 在 `host/backend/test/unit/services/exam-state.service.test.ts` 撰寫轉移表測試，涵蓋 data-model.md §1 的全部 5×5 = 25 種組合（4 種合法、21 種必須拒絕）
-- [ ] T007 [P] 在 `host/backend/test/unit/middlewares/exam-phase.middleware.test.ts` 撰寫權限矩陣測試，涵蓋 contracts/ §2 的 13 端點 × 5 階段
-- [ ] T008 [P] 在 `desktop/test/ui/phase-derivation.test.ts` 撰寫畫面推導測試，涵蓋 EXAM-LIFECYCLE.md §4.2 的 5 階段 × 3 裝置狀態
+- [X] T006 [P] 在 `host/backend/test/unit/services/exam-state.service.test.ts` 撰寫轉移表測試，涵蓋 data-model.md §1 的全部 5×5 = 25 種組合（4 種合法、21 種必須拒絕）
+- [X] T007 [P] 在 `host/backend/test/unit/middlewares/exam-phase.middleware.test.ts` 撰寫權限矩陣測試，涵蓋 contracts/ §2 的 13 端點 × 5 階段
+- [X] T008 [P] 在 `desktop/test/ui/phase-derivation.test.ts` 撰寫畫面推導測試，涵蓋 EXAM-LIFECYCLE.md §4.2 的 5 階段 × 3 裝置狀態
 
 ### Implementation
 
-- [ ] T009 在 `host/backend/src/services/exam-state.service.ts` 將 `ExamState` enum 改為 `UNINITIALIZED / INITIALIZED / SETUP_FINISHED / IN_PROGRESS / FINISHED`
-- [ ] T010 在 `host/backend/src/services/exam-state.service.ts` 加入轉移表並於 `changeState` 前驗證，拒絕跳階、回退與 `from === to`
-- [ ] T011 在 `host/backend/src/services/exam-state.service.ts` 新增 `getAllowedNext()`，回傳至多一個元素（contracts/ §3）
-- [ ] T012 建立 `host/backend/src/middlewares/exam-phase.middleware.ts`，以宣告式路由對階段表實作，未列出的 `/user/*` 端點預設拒絕（contracts/ G3）
-- [ ] T013 在 `host/backend/src/routes/user/index.ts` 掛載 `exam-phase.middleware.ts`，位於 `loadTestIpMockMiddleware` 之後、各子路由之前
-- [ ] T014 [P] 在 `host/backend/src/services/system-settings.service.ts` 將 `exam_key`、`exam_config_cipher`、`exam_config_meta` 加入 `PROTECTED_SETTINGS_KEYS`
-- [ ] T015 [P] 在 `desktop/src/common/types.ts` 將 `ExamState` type 改為五個新值
-- [ ] T016 在 `desktop/src/renderer/router/index.ts` 改為 EXAM-LIFECYCLE.md §4.2 的推導式守衛，移除既有的散落條件判斷
-- [ ] T017 在 `desktop/src/renderer/router/index.ts` 於 `SETUP_FINISHED` 之後禁止進入 Settings 頁（spec.md FR-008）
+- [X] T009 在 `host/backend/src/services/exam-state.service.ts` 將 `ExamState` enum 改為 `UNINITIALIZED / INITIALIZED / SETUP_FINISHED / IN_PROGRESS / FINISHED`
+- [X] T010 在 `host/backend/src/services/exam-state.service.ts` 加入轉移表並於 `changeState` 前驗證，拒絕跳階、回退與 `from === to`
+- [X] T011 在 `host/backend/src/services/exam-state.service.ts` 新增 `getAllowedNext()`，回傳至多一個元素（contracts/ §3）
+- [X] T012 建立 `host/backend/src/middlewares/exam-phase.middleware.ts`，以宣告式路由對階段表實作，未列出的 `/user/*` 端點預設拒絕（contracts/ G3）
+- [X] T013 在 `host/backend/src/routes/user/index.ts` 掛載 `exam-phase.middleware.ts`，位於 `loadTestIpMockMiddleware` 之後、各子路由之前
+- [X] T014 [P] 在 `host/backend/src/services/system-settings.service.ts` 將 `exam_key`、`exam_config_cipher`、`exam_config_meta` 加入 `PROTECTED_SETTINGS_KEYS`
+- [X] T015 [P] 在 `desktop/src/common/types.ts` 將 `ExamState` type 改為五個新值
+- [X] T016 在 `desktop/src/renderer/router/index.ts` 改為 EXAM-LIFECYCLE.md §4.2 的推導式守衛，移除既有的散落條件判斷
+- [X] T017 在 `desktop/src/renderer/router/index.ts` 於 `SETUP_FINISHED` 之後禁止進入 Settings 頁（spec.md FR-008）
 
 **Checkpoint**: 階段骨架就位，user story 可開始
 
@@ -326,28 +326,28 @@ Phase 1 (Setup)
 ### Phase 2
 
 ```
-T005, T006, T007  ── 三份測試檔互不相干
-T013, T014        ── 分屬兩個 repo
+T006, T007, T008  ── 三份測試檔互不相干
+T014, T015        ── 分屬兩個 repo
 ```
 
 ### Phase 3 (US1)
 
 ```
-T017 ~ T022  ── 六份測試檔可同時撰寫
-T025, T031, T033  ── model、store、api 三處互不相干
+T018 ~ T024  ── 七份測試檔可同時撰寫
+T031, T033, T038  ── model、store、api 三處互不相干
 ```
 
 ### Phase 4 (US2)
 
 ```
-T039 ~ T045  ── 七份測試檔可同時撰寫（T043/T044 分屬兩 repo，但共用 T001/T002 的 fixture）
+T045 ~ T052  ── 八份測試檔可同時撰寫（分屬三處，但共用同一份 fixture）
 ```
 
 ### Phase 5 (US3)
 
 ```
-T062 ~ T066  ── 五份測試檔
-T067 可與 T068 ~ T070 平行（model 變更 vs service 邏輯）
+T073 ~ T077  ── 五份測試檔
+T078 可與 T079 ~ T081 平行（model 變更 vs service 邏輯）
 ```
 
 ### 跨 story 平行

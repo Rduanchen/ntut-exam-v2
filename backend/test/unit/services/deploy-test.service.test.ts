@@ -16,7 +16,7 @@ const profile = (overrides: Partial<DeploymentTestProfile> = {}): DeploymentTest
 
 beforeEach(() => {
   vi.clearAllMocks();
-  DeployTestService.configureForTests({ examState: async () => ExamState.NOT_STARTED, health: async () => ({ reachable: true, url: 'piston', runtimes }), client: () => client });
+  DeployTestService.configureForTests({ examState: async () => ExamState.SETUP_FINISHED, health: async () => ({ reachable: true, url: 'piston', runtimes }), client: () => client });
 });
 
 describe('deployment test lifecycle', () => {
@@ -39,7 +39,7 @@ describe('deployment test lifecycle', () => {
   it('refuses active exams and unreachable Piston before creating a run', async () => {
     DeployTestService.configureForTests({ examState: async () => ExamState.IN_PROGRESS });
     await expect(DeployTestService.start(profile())).rejects.toMatchObject({ status: 409, reason: 'exam_in_progress' });
-    DeployTestService.configureForTests({ examState: async () => ExamState.NOT_STARTED, health: async () => ({ reachable: false, url: 'piston', runtimes: [], error: 'down' }) });
+    DeployTestService.configureForTests({ examState: async () => ExamState.SETUP_FINISHED, health: async () => ({ reachable: false, url: 'piston', runtimes: [], error: 'down' }) });
     await expect(DeployTestService.start(profile())).rejects.toMatchObject({ status: 503, reason: 'piston_unreachable' });
     expect(await DeployTestRepository.read()).toBeNull();
   });

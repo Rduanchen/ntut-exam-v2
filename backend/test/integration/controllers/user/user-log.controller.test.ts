@@ -9,6 +9,8 @@ import { UserActionLog } from '../../../../src/models/user-action-log.model';
 import { ViolationLog } from '../../../../src/models/violation-log.model';
 import { AntiCheatService } from '../../../../src/services/anti-cheat.service';
 import { SocketService } from '../../../../src/sockets/socket.service';
+import { ExamState } from '../../../../src/services/exam-state.service';
+import { seedExamPhase } from '../../../helpers/exam-phase';
 
 /**
  * The controller logs fire-and-forget inside setImmediate and awaits two async
@@ -29,6 +31,10 @@ describe('UserLogController (integration)', () => {
   const studentId = '112590010';
 
   beforeEach(async () => {
+    /* Student endpoints are phase-gated. Seed a running exam so these
+     * tests exercise the endpoint rather than the gate; the gate has its
+     * own tests in test/unit/middlewares/exam-phase.middleware.test.ts. */
+    await seedExamPhase(ExamState.IN_PROGRESS);
     app = createApp();
     vi.restoreAllMocks();
     vi.spyOn(SocketService, 'triggerAlertEvent').mockImplementation(() => {});

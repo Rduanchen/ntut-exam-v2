@@ -12,7 +12,7 @@ const healthy = async () => ({ reachable: true, url: 'piston', runtimes: cRuntim
 const profile = { phases: ['smoke'] as const, languages: ['c'] as const, concurrencyLevels: [1], jobCount: 1, deadlineMs: 60_000 };
 const client = (execute: PistonJudger['execute'] = vi.fn(async () => executionOk()), judge: PistonJudger['judge'] = vi.fn(() => accepted())): PistonJudger => ({ runtimes: vi.fn(async () => cRuntime), execute, judge });
 
-beforeEach(() => DeployTestService.configureForTests({ examState: async () => ExamState.NOT_STARTED, health: healthy, client: () => client() }));
+beforeEach(() => DeployTestService.configureForTests({ examState: async () => ExamState.SETUP_FINISHED, health: healthy, client: () => client() }));
 
 describe('deploy test admission and interruption boundaries', () => {
   it.each([
@@ -36,7 +36,7 @@ describe('deploy test admission and interruption boundaries', () => {
     await expect(DeployTestService.start(profile)).rejects.toMatchObject({ reason: 'student_judging_active' });
     student?.release();
     let checks = 0;
-    DeployTestService.configureForTests({ examState: async () => ++checks === 1 ? ExamState.NOT_STARTED : ExamState.IN_PROGRESS });
+    DeployTestService.configureForTests({ examState: async () => ++checks === 1 ? ExamState.SETUP_FINISHED : ExamState.IN_PROGRESS });
     await expect(DeployTestService.start(profile)).rejects.toMatchObject({ reason: 'exam_in_progress' });
   });
 
@@ -48,7 +48,7 @@ describe('deploy test admission and interruption boundaries', () => {
 
   it('interrupts on an exam flip and keeps partial evidence non-successful', async () => {
     let checks = 0;
-    DeployTestService.configureForTests({ examState: async () => ++checks <= 2 ? ExamState.NOT_STARTED : ExamState.IN_PROGRESS });
+    DeployTestService.configureForTests({ examState: async () => ++checks <= 2 ? ExamState.SETUP_FINISHED : ExamState.IN_PROGRESS });
     await DeployTestService.start(profile); await DeployTestService.settle();
     expect(await DeployTestRepository.read()).toMatchObject({ state: 'interrupted', overallOutcome: 'interrupted', interruptionReason: 'exam_started' });
   });

@@ -77,7 +77,7 @@ export class InitService {
     }
 
     // Update exam state
-    await ExamStateService.changeState(ExamState.NOT_STARTED);
+    await ExamStateService.changeState(ExamState.INITIALIZED);
 
     // Ensure device registration is allowed by default
     await SystemSettingsService.setAllowDeviceRegistration(true);
@@ -110,7 +110,9 @@ export class InitService {
       throw error;
     }
 
-    // Update exam state
-    await ExamStateService.changeState(ExamState.UNINITIALIZED);
+    /* Reset is not a phase transition — it is the one channel that may move
+     * backwards, and it must work from FINISHED, which the table treats as
+     * terminal. */
+    await ExamStateService.resetToUninitialized();
   }
 }

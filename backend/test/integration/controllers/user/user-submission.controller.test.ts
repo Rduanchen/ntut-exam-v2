@@ -9,6 +9,8 @@ import { User } from '../../../../src/models/user.model';
 import { SystemSettings } from '../../../../src/models/system-settings.model';
 import { CodeStorageService } from '../../../../src/services/code-storage.service';
 import { SocketService } from '../../../../src/sockets/socket.service';
+import { ExamState } from '../../../../src/services/exam-state.service';
+import { seedExamPhase } from '../../../helpers/exam-phase';
 
 describe('UserSubmissionController (integration)', () => {
   let app: express.Express;
@@ -16,6 +18,10 @@ describe('UserSubmissionController (integration)', () => {
   const studentId = '112590020';
 
   beforeEach(async () => {
+    /* Student endpoints are phase-gated. Seed a running exam so these
+     * tests exercise the endpoint rather than the gate; the gate has its
+     * own tests in test/unit/middlewares/exam-phase.middleware.test.ts. */
+    await seedExamPhase(ExamState.IN_PROGRESS);
     app = createApp();
     vi.restoreAllMocks();
     vi.spyOn(SocketService, 'triggerScoreUpdateEvent').mockImplementation(() => {});

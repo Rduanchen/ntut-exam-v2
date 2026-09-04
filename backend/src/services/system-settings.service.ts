@@ -3,7 +3,16 @@ import { HttpError } from "../utils/http-error";
 import logger from "../utils/logger.util";
 
 export type SystemSettingKey = string;
-export const PROTECTED_SETTINGS_KEYS: SystemSettingKey[] = ["exam_config", "allow_device_registration", "judger_deploy_test_latest"];
+export const PROTECTED_SETTINGS_KEYS: SystemSettingKey[] = [
+  "exam_config",
+  "allow_device_registration",
+  "judger_deploy_test_latest",
+  /* Feature 007. Deleting any of these mid-exam would leave every machine
+   * holding a paper it can never decrypt, with no way to re-derive the key. */
+  "exam_key",
+  "exam_config_cipher",
+  "exam_config_meta"
+];
 
 export class SystemSettingsService {
   static async createSetting(key: SystemSettingKey, value: any): Promise<void> {

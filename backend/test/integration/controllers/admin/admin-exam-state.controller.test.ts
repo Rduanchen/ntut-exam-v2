@@ -33,18 +33,44 @@ describe('AdminExamStateController (integration)', () => {
   });
 
   describe('POST /admin/exam-state', () => {
-    it('transitions the exam state', async () => {
+    it('advances one phase', async () => {
       const res = await adminRequest(app)
         .post('/admin/exam-state')
-        .send({ state: ExamState.NOT_STARTED });
+        .send({ state: ExamState.INITIALIZED });
 
       expect(res.status).toBe(200);
 
       const after = await adminRequest(app).get('/admin/exam-state');
-      expect(after.body.state).toBe(ExamState.NOT_STARTED);
+      expect(after.body.state).toBe(ExamState.INITIALIZED);
+    });
+
+    it('refuses to skip a phase', async () => {
+      const res = await adminRequest(app)
+        .post('/admin/exam-state')
+        .send({ state: ExamState.IN_PROGRESS });
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('invalid_transition');
+
+      const after = await adminRequest(app).get('/admin/exam-state');
+      expect(after.body.state).toBe(ExamState.UNINITIALIZED);
+    });
+
+    it('refuses to move backwards', async () => {
+      await adminRequest(app).post('/admin/exam-state').send({ state: ExamState.INITIALIZED });
+      await adminRequest(app).post('/admin/exam-state').send({ state: ExamState.SETUP_FINISHED });
+
+      const res = await adminRequest(app)
+        .post('/admin/exam-state')
+        .send({ state: ExamState.INITIALIZED });
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('invalid_transition');
     });
 
     it('closes device registration when the exam starts', async () => {
+      await adminRequest(app).post('/admin/exam-state').send({ state: ExamState.INITIALIZED });
+      await adminRequest(app).post('/admin/exam-state').send({ state: ExamState.SETUP_FINISHED });
       await SystemSettingsService.setAllowDeviceRegistration(true);
 
       await adminRequest(app).post('/admin/exam-state').send({ state: ExamState.IN_PROGRESS });

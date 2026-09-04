@@ -20,7 +20,7 @@ const client: PistonJudger = {
   }),
 };
 
-beforeEach(() => DeployTestService.configureForTests({ examState: async () => ExamState.NOT_STARTED, health: async () => ({ reachable: true, url: 'piston', runtimes: [{ language: 'c', version: '10', aliases: ['gcc'] }] }), client: () => client }));
+beforeEach(() => DeployTestService.configureForTests({ examState: async () => ExamState.SETUP_FINISHED, health: async () => ({ reachable: true, url: 'piston', runtimes: [{ language: 'c', version: '10', aliases: ['gcc'] }] }), client: () => client }));
 describe('controlled verdict suite', () => {
   it('matches CE/RE/TLE/MLE/OLE attribution, bounds evidence, and performs a health probe', async () => {
     await DeployTestService.start({ phases: ['verdict'], languages: ['c'], concurrencyLevels: [1], jobCount: 1, deadlineMs: 60_000 });
