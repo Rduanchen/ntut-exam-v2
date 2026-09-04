@@ -200,23 +200,23 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 ### Tests for User Story 4 (MANDATORY) ⚠️
 
-- [ ] T088 [P] [US4] 在 `host/backend/test/unit/services/exam-config-crypto.service.test.ts` 測試兩條路徑導出的金鑰**逐位元組相同**（contracts/ G27）
-- [ ] T089 [P] [US4] 在 `desktop/test/service/crypto.service.test.ts` 測試錯誤口令解不開 `wrappedExamKey`，且考卷維持不可讀
-- [ ] T090 [P] [US4] 在 `desktop/test/service/connection.service.test.ts` 測試待送佇列：斷線期間累積、恢復後依序重送、失敗放回佇列不丟棄（data-model.md §9）
-- [ ] T091 [P] [US4] 在 `desktop/test/service/connection.service.test.ts` 測試同一題目重複提交以最後一筆為準，佇列不無限成長
-- [ ] T092 [P] [US4] 在 `desktop/test/service/config.service.test.ts` 測試離線佈署檔與線上回應共用同一套解析（contracts/ G22）
+- [X] T088 [P] [US4] 在 `host/backend/test/unit/services/exam-config-crypto.service.test.ts` 測試兩條路徑導出的金鑰**逐位元組相同**（contracts/ G27）
+- [X] T089 [P] [US4] 在 `desktop/test/service/crypto.service.test.ts` 測試錯誤口令解不開 `wrappedExamKey`，且考卷維持不可讀
+- [X] T090 [P] [US4] 在 `desktop/test/service/connection.service.test.ts` 測試待送佇列：斷線期間累積、恢復後依序重送、失敗放回佇列不丟棄（data-model.md §9）
+- [X] T091 [P] [US4] 在 `desktop/test/service/connection.service.test.ts` 測試同一題目重複提交以最後一筆為準，佇列不無限成長
+- [X] T092 [P] [US4] 在 `desktop/test/service/config.service.test.ts` 測試離線佈署檔與線上回應共用同一套解析（contracts/ G22）
 
 ### Implementation for User Story 4
 
-- [ ] T093 [US4] 在 `desktop/src/main/services/crypto.service.ts` 實作 PBKDF2-HMAC-SHA256 600,000 迭代導出並解開 `wrappedExamKey`（research.md R2）
-- [ ] T094 [US4] 改寫 `desktop/src/renderer/pages/WaitingForExamPage.vue`：口令由「與 config 明文比對」改為「導出金鑰並解密考卷」，成功才進入考試
-- [ ] T095 [US4] 在 `desktop/src/main/services/connection.service.ts` 以 `pendingSubmissions` 與 `pendingScores` 佇列取代 `pendingTestResult` / `pendingProgramFile` 旗標（data-model.md §9）
-- [ ] T096 [US4] 在 `desktop/src/main/services/connection.service.ts` 的 `onConnectionRestored` 依 data-model.md §9 的順序重送，失敗項目放回佇列
-- [ ] T097 [US4] 在 `desktop/src/main/services/judge-manager.service.ts` 將評測結果與程式碼提交在斷線時推入佇列而非只設旗標
-- [ ] T098 [P] [US4] 在 `host/backend/src/controllers/admin/exam-config.controller.ts` 新增離線佈署檔匯出端點，輸出 `{ meta, cipher }`（contracts/ §8）
-- [ ] T099 [P] [US4] 在 `host/frontend/src/views/config/ConfigView.vue` 加入匯出按鈕與口令保管提示
-- [ ] T100 [US4] 在 `desktop/src/main/services/config.service.ts` 將 `setConfigFromFile` 改為接受 `{ meta, cipher }` 佈署檔，**移除明文完整考卷的載入路徑**（contracts/ G24）
-- [ ] T101 [US4] 在 `desktop/src/main/services/ramStore.service.ts` 將 `isOfflineMode` 的判定改為「是否曾成功完成裝置註冊」（spec.md FR-028、data-model.md §8）
+- [X] T093 [US4] 在 `desktop/src/main/services/crypto.service.ts` 實作 PBKDF2-HMAC-SHA256 600,000 迭代導出並解開 `wrappedExamKey`（research.md R2）
+- [X] T094 [US4] 改寫 `desktop/src/renderer/pages/WaitingForExamPage.vue`：口令由「與 config 明文比對」改為「導出金鑰並解密考卷」，成功才進入考試
+- [X] T095 [US4] 在 `desktop/src/main/services/connection.service.ts` 以 `pendingSubmissions` 與 `pendingScores` 佇列取代 `pendingTestResult` / `pendingProgramFile` 旗標（data-model.md §9）
+- [X] T096 [US4] 在 `desktop/src/main/services/connection.service.ts` 的 `onConnectionRestored` 依 data-model.md §9 的順序重送，失敗項目放回佇列
+- [X] T097 [US4] 在 `desktop/src/main/services/judge-manager.service.ts` 將評測結果與程式碼提交在斷線時推入佇列而非只設旗標
+- [X] T098 [P] [US4] 在 `host/backend/src/controllers/admin/exam-config.controller.ts` 新增離線佈署檔匯出端點，輸出 `{ meta, cipher }`（contracts/ §8）
+- [X] T099 [P] [US4] 在 `host/frontend/src/views/config/ConfigView.vue` 加入匯出按鈕與口令保管提示
+- [X] T100 [US4] 在 `desktop/src/main/services/config.service.ts` 將 `setConfigFromFile` 改為接受 `{ meta, cipher }` 佈署檔，**移除明文完整考卷的載入路徑**（contracts/ G24）
+- [X] T101 [US4] 在 `desktop/src/main/services/ramStore.service.ts` 將 `isOfflineMode` 的判定改為「是否曾成功完成裝置註冊」（spec.md FR-028、data-model.md §8）
 
 **Checkpoint**: 後端完全不可用時仍有 100% 機器能開考（SC-003）。
 
