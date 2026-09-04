@@ -17,7 +17,10 @@ import { ExamConfigCryptoService } from '../../src/services/exam-config-crypto.s
  * Also stamps the change time, so phases with a time-dependent meaning
  * (FINISHED and its submit grace window) behave as they would in a real run.
  */
-export async function seedExamPhase(phase: ExamState): Promise<void> {
+export async function seedExamPhase(
+  phase: ExamState,
+  options: { allowRegistration?: boolean } = {},
+): Promise<void> {
   await SystemSettings.destroy({ where: { name: 'exam_state' } });
   await SystemSettings.destroy({ where: { name: 'exam_state_changed_at' } });
   await SystemSettings.create({ name: 'exam_state', value: JSON.stringify(phase) });
@@ -25,6 +28,12 @@ export async function seedExamPhase(phase: ExamState): Promise<void> {
     name: 'exam_state_changed_at',
     value: JSON.stringify(new Date().toISOString()),
   });
+
+  /* Most tests need a registered device as a precondition, not as the thing
+   * under test — so self-service is open unless a test says otherwise. Tests
+   * about the entry gate itself pass `allowRegistration: false`, which is what
+   * every phase after INITIALIZED sets in a real run. */
+  await SystemSettingsService.setAllowDeviceRegistration(options.allowRegistration ?? true);
 }
 
 /**

@@ -12,6 +12,7 @@ import { DeviceKeyMap } from "../../../../src/models/device-key-map.model";
 import { SystemSettings } from "../../../../src/models/system-settings.model";
 import { CryptoService } from "../../../../src/services/crypto.service";
 import { DeviceService } from "../../../../src/services/device.service";
+import { SystemSettingsService } from "../../../../src/services/system-settings.service";
 import { ExamState } from "../../../../src/services/exam-state.service";
 import { seedExamPhase, satisfyInitializePreconditions } from "../../../helpers/exam-phase";
 
@@ -58,9 +59,32 @@ describe("UserController (integration)", () => {
       expect(res.body.error).toContain("Bad Request");
     });
 
-    it("registers a device and blocks a duplicate registration with 403", async () => {
+    it("registers a machine while self-service is open", async () => {
+      await SystemSettingsService.setAllowDeviceRegistration(true);
       const client = new TestClient(app);
-      await client.registerDevice("device-macbook-pro");
+
+      await expect(client.registerDevice("device-macbook-pro")).resolves.toMatchObject({
+        deviceUuid: "device-macbook-pro",
+      });
+    });
+
+    it("lets the same machine re-key itself while self-service is open", async () => {
+      /* A restart arrives as an unregistered machine with a new key, because
+       * the key only ever lived in memory. During the phase where machines set
+       * themselves up, that needs no ceremony — refusing it is what used to
+       * make a crash unrecoverable. */
+      await SystemSettingsService.setAllowDeviceRegistration(true);
+      await new TestClient(app).registerDevice("device-macbook-pro");
+
+      const again = await new TestClient(app).registerDevice("device-macbook-pro");
+
+      expect(again.deviceUuid).toBe("device-macbook-pro");
+    });
+
+    it("sends a machine to the TA once self-service has closed", async () => {
+      await SystemSettingsService.setAllowDeviceRegistration(true);
+      await new TestClient(app).registerDevice("device-macbook-pro");
+      await SystemSettingsService.setAllowDeviceRegistration(false);
 
       const keyRes = await request(app).get("/user/auth/rsa-public-key");
       const encrypted = crypto
@@ -74,11 +98,12 @@ describe("UserController (integration)", () => {
         )
         .toString("base64");
 
-      const duplicate = await request(app)
+      const refused = await request(app)
         .post("/user/auth/register-device")
         .send({ device_uuid: "device-macbook-pro", encrypted_aes_key: encrypted });
 
-      expect(duplicate.status).toBe(403);
+      expect(refused.status).toBe(403);
+      expect(refused.body.code).toBe("entry_pending");
     });
   });
 

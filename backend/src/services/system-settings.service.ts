@@ -117,8 +117,11 @@ export class SystemSettingsService {
 
   static async getAllowDeviceRegistration(): Promise<boolean> {
     const value = await this.getSetting<boolean>("allow_device_registration");
-    // Default to true if not set
-    return value === null ? true : value;
+    /* Closed when unset. Every phase sets this explicitly, so an unset value
+     * means no phase has run — and an exam that has not been set up should not
+     * be accepting machines. Defaulting open made "nobody has decided yet" and
+     * "the operator opened it" indistinguishable. */
+    return value === null ? false : value;
   }
 
   static async setAllowDeviceRegistration(value: boolean): Promise<void> {

@@ -84,6 +84,29 @@ export class ConnectionController {
   }
 
   /**
+   * POST /admin/connection/device/:deviceUuid/re-entry
+   *
+   * Send one machine back through the entry gate, leaving its student's work
+   * untouched. For a seat that has to be re-signed-in — a swapped machine, a
+   * student logged in as someone else — without waiting for it to restart on
+   * its own.
+   */
+  static async reEntryDevice(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { deviceUuid } = req.params;
+      if (!deviceUuid) {
+        throw new HttpError(400, "Bad Request: Missing deviceUuid parameter");
+      }
+
+      await BindingService.reEntry(deviceUuid);
+
+      res.status(200).json({ success: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /admin/connection/requests
    * Get pending login requests
    */

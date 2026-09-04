@@ -121,6 +121,28 @@ export class BindingService {
   }
 
   /**
+   * Send a machine back through the entry gate.
+   *
+   * Clears everything keyed by the device — its key, its registration, its
+   * binding — and touches nothing keyed by the student. Submissions and scores
+   * belong to a test ID, not to a machine, so a student who re-enters on the
+   * same seat or a different one finds their work where they left it.
+   *
+   * This is the same path a restart takes on its own. There is no separate
+   * recovery procedure to keep working: the machine comes back as an
+   * unregistered one and asks to be let in, exactly like any other.
+   */
+  static async reEntry(deviceUuid: string): Promise<void> {
+    const device = await DeviceKeyMap.findOne({ where: { deviceUuid } });
+    if (!device) {
+      throw new HttpError(404, `Device ${deviceUuid} not found`);
+    }
+
+    await this.forceLogoutDevice(deviceUuid, "This machine has been sent back to sign in again.");
+    await this.unregisterDevice(deviceUuid);
+  }
+
+  /**
    * Force logout a device by sending a socket event
    */
   static async forceLogoutDevice(deviceUuid: string, reason: string): Promise<void> {
