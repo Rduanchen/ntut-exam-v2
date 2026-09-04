@@ -76,4 +76,6 @@ export interface ExamConfig {
     accessibleUsers: AccessUser[];
     globalSpecialRules?: SpecialRule[];
     sections: Section[];
+    /** How long submissions stay accepted after the exam is declared over. */
+    submitGraceSeconds?: number;
 }

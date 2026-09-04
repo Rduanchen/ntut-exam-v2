@@ -27,6 +27,7 @@ export const useConfigStore = defineStore('config', () => {
             memoryLimit: 256,
             compareMode: "strict",
           },
+          submitGraceSeconds: 60,
           accessibleUsers: [],
           sections: []
         };

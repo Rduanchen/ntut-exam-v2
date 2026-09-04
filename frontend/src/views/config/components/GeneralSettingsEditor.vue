@@ -113,21 +113,55 @@ const checkMemoryLimit = (val: any) => {
     </v-row>
 
     <v-row>
+      <v-col cols="12" md="4">
+        <v-text-field
+          v-model.number="config.submitGraceSeconds"
+          label="收卷緩衝 (秒)"
+          type="number"
+          outlined
+          data-test="submit-grace-seconds"
+          hint="宣布結束後仍接受提交的秒數，讓正在上傳的作答完成。留空為預設 60 秒。"
+          persistent-hint
+        ></v-text-field>
+      </v-col>
+    </v-row>
+
+    <v-row>
       <v-col cols="12">
         <h3 class="text-h6 mb-2 d-flex align-center">
           Environment Variables
           <v-btn v-if="!props.disabled" icon="mdi-plus" size="small" color="primary" class="ml-2" @click="addEnvVar"></v-btn>
         </h3>
         <v-card variant="outlined" class="pa-2" v-if="config.environmentVariables">
+          <v-alert
+            type="warning"
+            variant="tonal"
+            density="comfortable"
+            class="mb-3"
+            data-test="start-password-notice"
+          >
+            <div class="font-weight-bold mb-1">開考口令現在是考卷的解密金鑰</div>
+            <div class="text-body-2">
+              考卷會在考試開始前就送到每台機器，但以此口令保護、無法閱讀。監考現場宣讀口令後才解得開 ——
+              因此<strong>開考前考卷的保護強度等同於這組口令</strong>。它不會下發到學生機器，請以紙本或口頭保管，勿寫在交給學生的任何檔案裡。
+            </div>
+          </v-alert>
           <v-row class="align-center mt-2">
             <v-col cols="5">
               <v-text-field model-value="startPassword" label="Key" density="compact" hide-details readonly disabled></v-text-field>
             </v-col>
             <v-col cols="6">
-              <v-text-field v-model="config.environmentVariables.startPassword" label="Value (Required Password)" density="compact" hide-details :readonly="props.disabled"></v-text-field>
+              <v-text-field
+                v-model="config.environmentVariables.startPassword"
+                label="開考口令（考卷解密金鑰）"
+                density="compact"
+                hide-details
+                :readonly="props.disabled"
+                data-test="start-password"
+              ></v-text-field>
             </v-col>
             <v-col cols="1">
-              <v-btn icon="mdi-lock" size="small" color="grey" variant="text" disabled></v-btn>
+              <v-btn icon="mdi-key" size="small" color="grey" variant="text" disabled></v-btn>
             </v-col>
           </v-row>
           <template v-for="(_, key) in config.environmentVariables" :key="key">

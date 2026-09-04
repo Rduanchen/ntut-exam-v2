@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { useConfigStore } from "../../../stores/config.store";
+
+/** Below this, the operator is asked to confirm. Mirrors the backend's check. */
+const WEAK_PASSWORD_LENGTH = 6;
 import type { ExamConfig } from "../../../types/config";
 import GeneralSettingsEditor from "./GeneralSettingsEditor.vue";
 import SectionListEditor from "./SectionListEditor.vue";
@@ -61,9 +64,27 @@ const submitForm = async (): Promise<boolean> => {
   const sectionIds = new Set<string>();
   const puzzleIds = new Set<string>();
 
-  if (!localForm.value.environmentVariables?.startPassword?.trim()) {
-    alert("Start Password is required and cannot be empty.");
+  const startPassword = localForm.value.environmentVariables?.startPassword?.trim();
+  if (!startPassword) {
+    alert("開考口令是必填的，且不能為空。");
     return false;
+  }
+
+  /* The password stopped being a screen prompt and became the key that unwraps
+   * the exam key. Before the exam starts, the paper's protection is exactly
+   * this string's strength — and a short one can be guessed offline on the
+   * machine that already holds the ciphertext.
+   *
+   * A short password is a decision the operator is allowed to make. Making it
+   * without knowing what it now protects is not. */
+  if (startPassword.length < WEAK_PASSWORD_LENGTH) {
+    const proceed = confirm(
+      `開考口令只有 ${startPassword.length} 個字元。\n\n` +
+        "這組口令現在是考卷的解密金鑰：考卷會在開考前就送到每台學生機器上（以密文保存），" +
+        "口令太短的話，學生有可能在開考前就把它試出來並讀到題目與測資。\n\n" +
+        "確定要用這組口令嗎？"
+    );
+    if (!proceed) return false;
   }
 
   // Validate uniqueness and scores
