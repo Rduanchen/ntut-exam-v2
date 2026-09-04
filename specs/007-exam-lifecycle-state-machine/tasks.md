@@ -86,8 +86,8 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 - [X] T019 [P] [US1] 在 `host/backend/test/unit/services/device.service.test.ts` 測試註冊在 `INITIALIZED` 開放、`SETUP_FINISHED` 起關閉（spec.md FR-006）
 - [X] T020 [P] [US1] 在 `host/backend/test/integration/controllers/user/user-exam.controller.test.ts` 測試 `POST /user/exam/environment-report` 在未登入狀態下可用
 - [X] T021 [P] [US1] 在 `host/backend/test/unit/services/exam-state.service.test.ts` 測試收卷緩衝：`FINISHED` 後 `submitGraceSeconds` 內接受提交、之後拒絕（spec.md FR-033/034）
-- [ ] T022 [P] [US1] 在 `desktop/test/ipc/auth.ipc.test.ts` 測試裝置註冊已自登入流程拆出，可獨立呼叫
-- [ ] T023 [P] [US1] 在 `desktop/test/ui/standby-page.test.ts` 測試 `INITIALIZED` 待命畫面**不提供登入入口**
+- [X] T022 [P] [US1] 在 `desktop/test/ipc/auth.ipc.test.ts` 測試裝置註冊已自登入流程拆出，可獨立呼叫
+- [X] T023 [P] [US1] 在 `desktop/test/ui/standby-page.test.ts` 測試 `INITIALIZED` 待命畫面**不提供登入入口**
 - [X] T024 [P] [US1] 在 `host/frontend/test/exam-state-controls.test.ts` 測試管理端只呈現「下一階段」與 reset 兩個動作，且五個階段名稱正確
 
 ### Implementation for User Story 1
@@ -107,10 +107,10 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 - [X] T037 [US1] 在 `host/frontend/src/views/config/components/DbInitPanel.vue` 顯示後端回傳的 `preconditions_not_met` 缺項清單，取代目前只有成功／失敗的提示
 - [X] T038 [P] [US1] 建立 `host/frontend/src/api/readiness.ts` 與 `host/frontend/src/stores/readiness.store.ts`
 - [X] T039 [US1] 建立 `host/frontend/src/views/manage/components/StudentReadiness.vue`，依 EXAM-LIFECYCLE.md §4.3 的四項條件呈現就緒狀態
-- [ ] T040 [US1] 在 `desktop/src/main/ipc/auth.ipc.ts` 將裝置註冊自 `auth:login` 拆出為獨立的 `auth:register` 流程，供 `INITIALIZED` 階段呼叫
-- [ ] T041 [US1] 建立 `desktop/src/renderer/pages/StandbyPage.vue`（`INITIALIZED` 待命畫面），顯示註冊與環境檢查進度，**不提供登入入口**
-- [ ] T042 [US1] 在 `desktop/src/renderer/router/index.ts` 加入 `/standby` 路由並納入推導表
-- [ ] T043 [US1] 在 `desktop/src/main/services/environment-check.service.ts` 於檢查完成時呼叫 `POST /user/exam/environment-report` 上報結果
+- [X] T040 [US1] 在 `desktop/src/main/ipc/auth.ipc.ts` 將裝置註冊自 `auth:login` 拆出為獨立的 `auth:register` 流程，供 `INITIALIZED` 階段呼叫
+- [X] T041 [US1] 建立 `desktop/src/renderer/pages/StandbyPage.vue`（`INITIALIZED` 待命畫面），顯示註冊與環境檢查進度，**不提供登入入口**
+- [X] T042 [US1] 在 `desktop/src/renderer/router/index.ts` 加入 `/standby` 路由並納入推導表
+- [X] T043 [US1] 在 `desktop/src/main/services/environment-check.service.ts` 於檢查完成時呼叫 `POST /user/exam/environment-report` 上報結果
 
 **Checkpoint**: 五階段依序運作，監考端看得到準備狀況。此時考卷仍走舊的整份下發。
 
