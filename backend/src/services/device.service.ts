@@ -112,6 +112,34 @@ export class DeviceService {
   }
 
   /**
+   * Record a machine's environment-check verdict.
+   *
+   * Stores the verdict and the failing language names, nothing more. The full
+   * report stays on the machine: an invigilator needs to know whether a seat is
+   * usable, and the compiler output that would explain why is unbounded — this
+   * system has frozen before on exactly that kind of untruncated text.
+   */
+  static async recordEnvironmentReport(
+    deviceUuid: string,
+    status: string,
+    failedLanguages: string[]
+  ): Promise<void> {
+    const device = await DeviceKeyMap.findOne({ where: { deviceUuid } });
+    if (!device) {
+      throw new HttpError(401, `Unauthorized: Device UUID "${deviceUuid}" is not registered`);
+    }
+
+    device.envCheckStatus = status;
+    device.envCheckFailedLanguages = failedLanguages.length
+      ? JSON.stringify(failedLanguages)
+      : null;
+    device.envCheckReportedAt = new Date();
+    await device.save();
+
+    SocketService.triggerDataUpdateEvent("student");
+  }
+
+  /**
    * Retrieve the client AES Key for a specific device uuid as a Buffer.
    * Throws 401 Unauthorized if not registered.
    */

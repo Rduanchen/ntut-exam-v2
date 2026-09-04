@@ -68,14 +68,30 @@ describe('AdminExamStateController (integration)', () => {
       expect(res.body.code).toBe('invalid_transition');
     });
 
-    it('closes device registration when the exam starts', async () => {
+    it('opens registration at INITIALIZED and closes it at SETUP_FINISHED', async () => {
       await adminRequest(app).post('/admin/exam-state').send({ state: ExamState.INITIALIZED });
+      expect(await SystemSettingsService.getAllowDeviceRegistration()).toBe(true);
+
       await adminRequest(app).post('/admin/exam-state').send({ state: ExamState.SETUP_FINISHED });
-      await SystemSettingsService.setAllowDeviceRegistration(true);
-
-      await adminRequest(app).post('/admin/exam-state').send({ state: ExamState.IN_PROGRESS });
-
       expect(await SystemSettingsService.getAllowDeviceRegistration()).toBe(false);
+    });
+
+    it('reports the one phase an operator may move to', async () => {
+      const start = await adminRequest(app).get('/admin/exam-state');
+      expect(start.body.allowedNext).toEqual([ExamState.INITIALIZED]);
+
+      for (const state of [
+        ExamState.INITIALIZED,
+        ExamState.SETUP_FINISHED,
+        ExamState.IN_PROGRESS,
+        ExamState.FINISHED,
+      ]) {
+        await adminRequest(app).post('/admin/exam-state').send({ state });
+      }
+
+      const end = await adminRequest(app).get('/admin/exam-state');
+      expect(end.body.state).toBe(ExamState.FINISHED);
+      expect(end.body.allowedNext).toEqual([]);
     });
 
     it('returns 400 for a state outside the enum', async () => {

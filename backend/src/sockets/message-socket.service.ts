@@ -81,6 +81,10 @@ export class MessageSocketService {
           if (device) {
             device.isOnline = false;
             device.socketId = ""; // Or null, but string is safer if typings require string
+            /* Stamped so a TA reviewing a re-entry request can tell a machine
+             * that dropped seconds ago from one that has been gone for ten
+             * minutes — the difference between a restart and a swapped seat. */
+            device.lastDisconnectedAt = new Date();
             await device.save();
 
             const user = await User.findOne({ where: { deviceUuid: device.deviceUuid } });

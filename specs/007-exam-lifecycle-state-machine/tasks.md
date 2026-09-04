@@ -82,24 +82,24 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 ### Tests for User Story 1 (MANDATORY) ⚠️
 
-- [ ] T018 [P] [US1] 在 `host/backend/test/integration/controllers/admin/admin-exam-state.controller.test.ts` 測試 `GET /admin/exam-state` 回傳 `allowedNext`，且 `FINISHED` 時為空陣列
-- [ ] T019 [P] [US1] 在 `host/backend/test/unit/services/device.service.test.ts` 測試註冊在 `INITIALIZED` 開放、`SETUP_FINISHED` 起關閉（spec.md FR-006）
-- [ ] T020 [P] [US1] 在 `host/backend/test/integration/controllers/user/user-exam.controller.test.ts` 測試 `POST /user/exam/environment-report` 在未登入狀態下可用
-- [ ] T021 [P] [US1] 在 `host/backend/test/unit/services/exam-state.service.test.ts` 測試收卷緩衝：`FINISHED` 後 `submitGraceSeconds` 內接受提交、之後拒絕（spec.md FR-033/034）
+- [X] T018 [P] [US1] 在 `host/backend/test/integration/controllers/admin/admin-exam-state.controller.test.ts` 測試 `GET /admin/exam-state` 回傳 `allowedNext`，且 `FINISHED` 時為空陣列
+- [X] T019 [P] [US1] 在 `host/backend/test/unit/services/device.service.test.ts` 測試註冊在 `INITIALIZED` 開放、`SETUP_FINISHED` 起關閉（spec.md FR-006）
+- [X] T020 [P] [US1] 在 `host/backend/test/integration/controllers/user/user-exam.controller.test.ts` 測試 `POST /user/exam/environment-report` 在未登入狀態下可用
+- [X] T021 [P] [US1] 在 `host/backend/test/unit/services/exam-state.service.test.ts` 測試收卷緩衝：`FINISHED` 後 `submitGraceSeconds` 內接受提交、之後拒絕（spec.md FR-033/034）
 - [ ] T022 [P] [US1] 在 `desktop/test/ipc/auth.ipc.test.ts` 測試裝置註冊已自登入流程拆出，可獨立呼叫
 - [ ] T023 [P] [US1] 在 `desktop/test/ui/standby-page.test.ts` 測試 `INITIALIZED` 待命畫面**不提供登入入口**
 - [ ] T024 [P] [US1] 在 `host/frontend/test/exam-state-controls.test.ts` 測試管理端只呈現「下一階段」與 reset 兩個動作，且五個階段名稱正確
 
 ### Implementation for User Story 1
 
-- [ ] T025 [US1] 在 `host/backend/src/services/exam-state.service.ts` 將 `setAllowDeviceRegistration(false)` 的觸發點從 `IN_PROGRESS` 移到 `SETUP_FINISHED`，並在 `INITIALIZED` 設為 `true`
-- [ ] T026 [US1] 在 `host/backend/src/services/init.service.ts` 移除初始化時的 `setAllowDeviceRegistration(true)`，改由 `exam-state.service.ts` 的階段副作用負責
-- [ ] T027 [P] [US1] 在 `host/backend/src/models/device-key-map.model.ts` 新增 `envCheckStatus`、`envCheckFailedLanguages`、`envCheckReportedAt`、`lastDisconnectedAt` 欄位（data-model.md §6）
-- [ ] T028 [US1] 在 `host/backend/src/controllers/user/user.controller.ts` 新增 `POST /user/exam/environment-report` 處理，驗證層級為「已註冊裝置」，payload 僅接受 `status` 與 `failedLanguages`（contracts/ G12）
-- [ ] T029 [US1] 在 `host/backend/src/routes/user/user-exam.route.ts` 掛載 `POST /user/exam/environment-report` 路由
-- [ ] T030 [US1] 在 `host/backend/src/sockets/message-socket.service.ts` 的 disconnect handler 寫入 `lastDisconnectedAt`
-- [ ] T031 [US1] 在 `host/backend/src/controllers/admin/admin-exam-state.controller.ts` 的 `getState` 加入 `allowedNext`，`changeState` 回傳 `invalid_transition` 與 `preconditions_not_met` 兩種錯誤（contracts/ G4/G5）
-- [ ] T032 [US1] 在 `host/backend/src/middlewares/exam-phase.middleware.ts` 實作收卷緩衝：`FINISHED` 後依 `submitGraceSeconds` 判定提交端點的允許與否
+- [X] T025 [US1] 在 `host/backend/src/services/exam-state.service.ts` 將 `setAllowDeviceRegistration(false)` 的觸發點從 `IN_PROGRESS` 移到 `SETUP_FINISHED`，並在 `INITIALIZED` 設為 `true`
+- [X] T026 [US1] 在 `host/backend/src/services/init.service.ts` 移除初始化時的 `setAllowDeviceRegistration(true)`，改由 `exam-state.service.ts` 的階段副作用負責
+- [X] T027 [P] [US1] 在 `host/backend/src/models/device-key-map.model.ts` 新增 `envCheckStatus`、`envCheckFailedLanguages`、`envCheckReportedAt`、`lastDisconnectedAt` 欄位（data-model.md §6）
+- [X] T028 [US1] 在 `host/backend/src/controllers/user/user.controller.ts` 新增 `POST /user/exam/environment-report` 處理，驗證層級為「已註冊裝置」，payload 僅接受 `status` 與 `failedLanguages`（contracts/ G12）
+- [X] T029 [US1] 在 `host/backend/src/routes/user/user-exam.route.ts` 掛載 `POST /user/exam/environment-report` 路由
+- [X] T030 [US1] 在 `host/backend/src/sockets/message-socket.service.ts` 的 disconnect handler 寫入 `lastDisconnectedAt`
+- [X] T031 [US1] 在 `host/backend/src/controllers/admin/admin-exam-state.controller.ts` 的 `getState` 加入 `allowedNext`，`changeState` 回傳 `invalid_transition` 與 `preconditions_not_met` 兩種錯誤（contracts/ G4/G5）
+- [X] T032 [US1] 在 `host/backend/src/middlewares/exam-phase.middleware.ts` 實作收卷緩衝：`FINISHED` 後依 `submitGraceSeconds` 判定提交端點的允許與否
 - [ ] T033 [P] [US1] 在 `host/frontend/src/stores/manage.store.ts` 加入 `allowedNext` 狀態
 - [ ] T034 [US1] 改寫 `host/frontend/src/views/manage/components/ExamStateControls.vue` 為「下一階段」單一按鈕加 reset，移除四顆任選按鈕
 - [ ] T035 [US1] 在 `host/frontend/src/stores/config.store.ts` 將初始化後硬編的 `examState = 'NOT_STARTED'` 改為 `'INITIALIZED'`，並改為向後端重新查詢而非硬編

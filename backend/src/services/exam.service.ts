@@ -8,6 +8,39 @@ import { AesEncryptedPayload } from "../types/crypto.type";
 import logger from "../utils/logger.util";
 
 export class ExamService {
+  /**
+   * Decrypt a payload authenticated by device registration alone.
+   *
+   * The same envelope as every other student request, minus the session token:
+   * some endpoints are reached before any student has logged in, so demanding
+   * a session would make them unreachable exactly when they are needed. The
+   * device key, nonce and timestamp still have to be right.
+   */
+  static async decryptDevicePayload(payload: AesEncryptedPayload): Promise<any> {
+    const { device_uuid: deviceUuid } = payload;
+
+    if (process.env.LOAD_TEST_MODE === "pure") {
+      return payload as unknown as any;
+    }
+
+    const aesKey = await DeviceService.getAesKey(deviceUuid);
+
+    let decrypted: any;
+    try {
+      decrypted = JSON.parse(CryptoService.decryptAESGCM(payload, aesKey));
+    } catch (error: any) {
+      throw new HttpError(400, `Failed to decrypt request: ${error.message}`);
+    }
+
+    const { timestamp, nonce } = decrypted;
+    if (timestamp === undefined || nonce === undefined) {
+      throw new HttpError(400, "Missing timestamp or nonce in encrypted payload");
+    }
+    ReplayProtectionService.verifyAndSaveNonce(nonce, timestamp);
+
+    return decrypted;
+  }
+
   static async getSecureConfig(payload: AesEncryptedPayload, decryptedBody?: any): Promise<AesEncryptedPayload> {
     const { device_uuid: deviceUuid } = payload;
     let aesKey: any = null;

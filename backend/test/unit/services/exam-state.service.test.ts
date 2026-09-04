@@ -138,9 +138,29 @@ describe('ExamStateService', () => {
       expect(at!.getTime()).toBeGreaterThanOrEqual(before - 1000);
     });
 
-    it('closes device registration when the exam starts', async () => {
-      await seedPhase(ExamState.SETUP_FINISHED);
+    it('opens device registration when the machines are set up', async () => {
+      await SystemSettingsService.setAllowDeviceRegistration(false);
+
+      await ExamStateService.changeState(ExamState.INITIALIZED);
+
+      expect(await SystemSettingsService.getAllowDeviceRegistration()).toBe(true);
+    });
+
+    it('closes device registration before students arrive, not when the exam starts', async () => {
+      /* The window this closes is the one students walk in during. Leaving it
+       * open until IN_PROGRESS — as it used to be — meant an unattended machine
+       * could register itself with nobody watching. */
+      await seedPhase(ExamState.INITIALIZED);
       await SystemSettingsService.setAllowDeviceRegistration(true);
+
+      await ExamStateService.changeState(ExamState.SETUP_FINISHED);
+
+      expect(await SystemSettingsService.getAllowDeviceRegistration()).toBe(false);
+    });
+
+    it('leaves registration closed when the exam starts', async () => {
+      await seedPhase(ExamState.SETUP_FINISHED);
+      await SystemSettingsService.setAllowDeviceRegistration(false);
 
       await ExamStateService.changeState(ExamState.IN_PROGRESS);
 

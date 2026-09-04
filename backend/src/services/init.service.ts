@@ -79,8 +79,9 @@ export class InitService {
     // Update exam state
     await ExamStateService.changeState(ExamState.INITIALIZED);
 
-    // Ensure device registration is allowed by default
-    await SystemSettingsService.setAllowDeviceRegistration(true);
+    /* Registration is opened by the INITIALIZED transition above, not here.
+     * One owner for that switch means it cannot be left open by a path that
+     * forgot to close it. */
   }
 
   /**

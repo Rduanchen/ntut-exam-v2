@@ -100,9 +100,14 @@ export class ExamStateService {
 
     await this.persistState(newState);
 
-    // Registration currently closes when the exam starts. Feature 007 moves
-    // that to SETUP_FINISHED; until then this preserves existing behaviour.
-    if (newState === ExamState.IN_PROGRESS) {
+    /* Registration is open for exactly one phase: INITIALIZED, when machines
+     * are in the room and students are not. It used to stay open until the
+     * exam itself began — which is the window students walk in during, and the
+     * one where an unattended machine registering is hardest to notice. */
+    if (newState === ExamState.INITIALIZED) {
+      await SystemSettingsService.setAllowDeviceRegistration(true);
+    }
+    if (newState === ExamState.SETUP_FINISHED) {
       await SystemSettingsService.setAllowDeviceRegistration(false);
     }
 
