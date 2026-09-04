@@ -1,6 +1,8 @@
 import { SystemSettings } from '../../src/models/system-settings.model';
 import { User } from '../../src/models/user.model';
 import { ExamState } from '../../src/services/exam-state.service';
+import { SystemSettingsService } from '../../src/services/system-settings.service';
+import { ExamConfigCryptoService } from '../../src/services/exam-config-crypto.service';
 
 /**
  * Put the stored exam phase directly, without going through the transition
@@ -35,5 +37,18 @@ export async function seedExamPhase(phase: ExamState): Promise<void> {
 export async function satisfyInitializePreconditions(): Promise<void> {
   if ((await User.count()) === 0) {
     await User.create({ testId: 'precondition-student', name: 'Precondition', ipAddress: null });
+  }
+
+  /* The split paper and its key. Without them a machine could be handed
+   * something readable, which is what the phase exists to prevent — so the
+   * transition refuses until they exist. */
+  if (!(await SystemSettingsService.getSetting('exam_key'))) {
+    const config = await SystemSettingsService.getExamConfig();
+    if (config) {
+      const prepared = ExamConfigCryptoService.prepare(config as any);
+      await SystemSettingsService.upsertSetting('exam_key', prepared.examKey);
+      await SystemSettingsService.upsertSetting('exam_config_meta', prepared.meta);
+      await SystemSettingsService.upsertSetting('exam_config_cipher', prepared.cipher);
+    }
   }
 }

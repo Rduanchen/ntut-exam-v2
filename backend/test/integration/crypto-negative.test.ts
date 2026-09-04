@@ -11,7 +11,7 @@ import { DeviceKeyMap } from '../../src/models/device-key-map.model';
 import { SystemSettings } from '../../src/models/system-settings.model';
 import { buildExamConfig } from '../fixtures/exam-config.fixture';
 import { ExamState } from '../../src/services/exam-state.service';
-import { seedExamPhase } from '../helpers/exam-phase';
+import { seedExamPhase, satisfyInitializePreconditions } from '../helpers/exam-phase';
 
 /**
  * The security surface the `LOAD_TEST_MODE=pure` bypass would have skipped
@@ -26,6 +26,7 @@ describe('Crypto middleware negative cases (integration)', () => {
     /* Student endpoints are phase-gated; seed a running exam so these tests
      * reach the crypto layer they are about. */
     await seedExamPhase(ExamState.IN_PROGRESS);
+    await satisfyInitializePreconditions();
     app = createApp();
     await SystemSettings.upsert({ name: 'exam_config', value: JSON.stringify(buildExamConfig()) });
     await User.create({ testId: studentId, name: 'Target', ipAddress: null });

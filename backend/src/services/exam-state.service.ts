@@ -98,6 +98,12 @@ export class ExamStateService {
 
     if ((await User.count()) === 0) missing.push("students");
 
+    /* Without these a machine could be handed a paper before there is a key to
+     * lock it with, which is the one thing this phase exists to prevent. */
+    if (!(await SystemSettingsService.getSetting("exam_key"))) missing.push("exam_key");
+    if (!(await SystemSettingsService.getSetting("exam_config_meta"))) missing.push("exam_config_meta");
+    if (!(await SystemSettingsService.getSetting("exam_config_cipher"))) missing.push("exam_config_cipher");
+
     return missing;
   }
 

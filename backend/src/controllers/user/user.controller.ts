@@ -106,6 +106,25 @@ export class UserController {
   }
 
   /**
+   * POST /user/exam/key
+   *
+   * Release the exam key. Reachable only in IN_PROGRESS — the phase matrix
+   * refuses it earlier, and the service refuses to look the key up.
+   *
+   * Never broadcast. The socket announces that the exam has started and
+   * nothing else; a broadcast reaches every listener without proving who any
+   * of them are, which is not a channel a key can travel on.
+   */
+  static async getExamKey(req: Request, res: Response, next: NextFunction) {
+    try {
+      const encrypted = await ExamService.getExamKey(req.body);
+      res.status(200).json(encrypted);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * POST /user/exam/environment-report
    *
    * Report this machine's environment-check verdict.

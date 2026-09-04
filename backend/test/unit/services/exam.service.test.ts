@@ -3,6 +3,8 @@ import crypto from 'crypto';
 
 import { ExamService } from '../../../src/services/exam.service';
 import { CryptoService } from '../../../src/services/crypto.service';
+import { ExamConfigCryptoService } from '../../../src/services/exam-config-crypto.service';
+import { SystemSettingsService } from '../../../src/services/system-settings.service';
 import { DeviceKeyMap } from '../../../src/models/device-key-map.model';
 import { SystemSettings } from '../../../src/models/system-settings.model';
 import { HttpError } from '../../../src/utils/http-error';
@@ -23,33 +25,76 @@ const envelope = (aesKey: Buffer, body: Record<string, unknown>, deviceUuid = DE
   device_uuid: deviceUuid,
 });
 
-const validBody = (aesKey: Buffer, deviceUuid = DEVICE) => ({
-  session_token: CryptoService.generateSessionToken({ testId: 's-1', deviceUuid }, aesKey),
+/** What every request carries. The exam key endpoint also needs a session. */
+const baseBody = () => ({
   timestamp: Date.now(),
   nonce: crypto.randomBytes(16).toString('hex'),
 });
 
-describe('ExamService.getSecureConfig', () => {
-  it('returns the exam config encrypted to the device key', async () => {
-    const aesKey = await seedDevice();
-    await SystemSettings.upsert({
-      name: 'exam_config',
-      value: JSON.stringify(buildExamConfig({ testTitle: 'Secure Exam' })),
-    });
+const sessionBody = (aesKey: Buffer, deviceUuid = DEVICE) => ({
+  ...baseBody(),
+  session_token: CryptoService.generateSessionToken({ testId: 's-1', deviceUuid }, aesKey),
+});
 
-    const body = validBody(aesKey);
-    const result = await ExamService.getSecureConfig(envelope(aesKey, body) as any);
+/** Prepare and store a split paper, as initialisation does. */
+const seedPreparedPaper = async (overrides = {}) => {
+  const config = buildExamConfig({ testTitle: 'Secure Exam', ...overrides });
+  await SystemSettings.upsert({ name: 'exam_config', value: JSON.stringify(config) });
+
+  const prepared = ExamConfigCryptoService.prepare(config);
+  await SystemSettingsService.upsertSetting('exam_key', prepared.examKey);
+  await SystemSettingsService.upsertSetting('exam_config_meta', prepared.meta);
+  await SystemSettingsService.upsertSetting('exam_config_cipher', prepared.cipher);
+  return { config, prepared };
+};
+
+describe('ExamService.getSecureConfig', () => {
+  it('hands back the split paper, not the paper', async () => {
+    const aesKey = await seedDevice();
+    await seedPreparedPaper();
+
+    const result = await ExamService.getSecureConfig(envelope(aesKey, baseBody()) as any);
 
     expect(result.device_uuid).toBe(DEVICE);
     const decrypted = JSON.parse(CryptoService.decryptAESGCM(result, aesKey));
-    expect(decrypted.testTitle).toBe('Secure Exam');
+    expect(decrypted.meta.testTitle).toBe('Secure Exam');
+    expect(decrypted.cipher).toEqual({
+      iv: expect.any(String),
+      ciphertext: expect.any(String),
+      tag: expect.any(String),
+    });
+  });
+
+  it('carries nothing a student could read before the exam starts', async () => {
+    /* The point of the whole split. This is the payload that reaches a machine
+     * in INITIALIZED, with students not yet in the room. */
+    const aesKey = await seedDevice();
+    await seedPreparedPaper();
+
+    const result = await ExamService.getSecureConfig(envelope(aesKey, baseBody()) as any);
+    const decrypted = CryptoService.decryptAESGCM(result, aesKey);
+
+    for (const needle of ['Two Sum', 'subtasks', 'startPassword', '"input"', '"output"']) {
+      expect(decrypted).not.toContain(needle);
+    }
+  });
+
+  it('does not require a session token', async () => {
+    /* Delivery happens before anyone has logged in — that is the whole reason
+     * to deliver early. Demanding a session would make it impossible then. */
+    const aesKey = await seedDevice();
+    await seedPreparedPaper();
+
+    const result = await ExamService.getSecureConfig(envelope(aesKey, baseBody()) as any);
+
+    expect(result.device_uuid).toBe(DEVICE);
   });
 
   it('throws 401 for a device that was never registered', async () => {
     const aesKey = crypto.randomBytes(32);
 
     await expect(
-      ExamService.getSecureConfig(envelope(aesKey, validBody(aesKey), 'ghost') as any),
+      ExamService.getSecureConfig(envelope(aesKey, baseBody(), 'ghost') as any),
     ).rejects.toThrowError(HttpError);
   });
 
@@ -58,7 +103,7 @@ describe('ExamService.getSecureConfig', () => {
     const wrongKey = crypto.randomBytes(32);
 
     try {
-      await ExamService.getSecureConfig(envelope(wrongKey, validBody(wrongKey)) as any);
+      await ExamService.getSecureConfig(envelope(wrongKey, baseBody()) as any);
       expect.unreachable('expected decryption to fail');
     } catch (err: any) {
       expect(err).toBeInstanceOf(HttpError);
@@ -68,10 +113,9 @@ describe('ExamService.getSecureConfig', () => {
 
   it('throws 400 when timestamp or nonce is missing', async () => {
     const aesKey = await seedDevice();
-    const body = { session_token: CryptoService.generateSessionToken({ testId: 's-1', deviceUuid: DEVICE }, aesKey) };
 
     try {
-      await ExamService.getSecureConfig(envelope(aesKey, body) as any);
+      await ExamService.getSecureConfig(envelope(aesKey, {}) as any);
       expect.unreachable('expected a 400');
     } catch (err: any) {
       expect(err.statusCode).toBe(400);
@@ -79,12 +123,77 @@ describe('ExamService.getSecureConfig', () => {
     }
   });
 
-  it('throws 400 when the session token is missing', async () => {
+  it('rejects a replayed nonce on the second call', async () => {
     const aesKey = await seedDevice();
-    const body = { timestamp: Date.now(), nonce: crypto.randomBytes(16).toString('hex') };
+    await seedPreparedPaper();
+
+    const body = baseBody();
+    await ExamService.getSecureConfig(envelope(aesKey, body) as any);
+
+    await expect(
+      ExamService.getSecureConfig(envelope(aesKey, body) as any),
+    ).rejects.toThrowError(HttpError);
+  });
+
+  it('refuses when the paper has not been prepared', async () => {
+    /* Better to say so than to hand back an empty paper, which a machine would
+     * treat as a real exam with no questions. */
+    const aesKey = await seedDevice();
+    await SystemSettings.destroy({ where: { name: 'exam_config_meta' } });
+    await SystemSettings.destroy({ where: { name: 'exam_config_cipher' } });
 
     try {
-      await ExamService.getSecureConfig(envelope(aesKey, body) as any);
+      await ExamService.getSecureConfig(envelope(aesKey, baseBody()) as any);
+      expect.unreachable('expected a 409');
+    } catch (err: any) {
+      expect(err.statusCode).toBe(409);
+    }
+  });
+
+  it('skips decryption when a pre-decrypted body is supplied by the middleware', async () => {
+    const aesKey = await seedDevice();
+    await seedPreparedPaper();
+
+    const result = await ExamService.getSecureConfig({ device_uuid: DEVICE } as any, baseBody());
+
+    expect(JSON.parse(CryptoService.decryptAESGCM(result, aesKey)).meta).toBeDefined();
+  });
+});
+
+describe('ExamService.getExamKey', () => {
+  it('returns the key that opens the delivered paper', async () => {
+    const aesKey = await seedDevice();
+    const { prepared } = await seedPreparedPaper();
+
+    const result = await ExamService.getExamKey(envelope(aesKey, sessionBody(aesKey)) as any);
+
+    const { examKey } = JSON.parse(CryptoService.decryptAESGCM(result, aesKey));
+    expect(examKey).toBe(prepared.examKey);
+    expect(ExamConfigCryptoService.decryptSecret(prepared.cipher, examKey).puzzles[0].title).toBe(
+      'Two Sum',
+    );
+  });
+
+  it('is idempotent — a retry after a dropped connection gets the same key', async () => {
+    const aesKey = await seedDevice();
+    await seedPreparedPaper();
+
+    const first = await ExamService.getExamKey(envelope(aesKey, sessionBody(aesKey)) as any);
+    const second = await ExamService.getExamKey(envelope(aesKey, sessionBody(aesKey)) as any);
+
+    expect(JSON.parse(CryptoService.decryptAESGCM(first, aesKey))).toEqual(
+      JSON.parse(CryptoService.decryptAESGCM(second, aesKey)),
+    );
+  });
+
+  it('requires a session token, unlike paper delivery', async () => {
+    /* The paper can be delivered to a machine; the key belongs to a student
+     * who has proved who they are. */
+    const aesKey = await seedDevice();
+    await seedPreparedPaper();
+
+    try {
+      await ExamService.getExamKey(envelope(aesKey, baseBody()) as any);
       expect.unreachable('expected a 400');
     } catch (err: any) {
       expect(err.statusCode).toBe(400);
@@ -94,14 +203,10 @@ describe('ExamService.getSecureConfig', () => {
 
   it('throws 401 when the session token was signed for a different device', async () => {
     const aesKey = await seedDevice();
-    const body = {
-      session_token: CryptoService.generateSessionToken({ testId: 's-1', deviceUuid: 'other-device' }, aesKey),
-      timestamp: Date.now(),
-      nonce: crypto.randomBytes(16).toString('hex'),
-    };
+    await seedPreparedPaper();
 
     try {
-      await ExamService.getSecureConfig(envelope(aesKey, body) as any);
+      await ExamService.getExamKey(envelope(aesKey, sessionBody(aesKey, 'other-device')) as any);
       expect.unreachable('expected a 401');
     } catch (err: any) {
       expect(err.statusCode).toBe(401);
@@ -109,34 +214,25 @@ describe('ExamService.getSecureConfig', () => {
     }
   });
 
-  it('rejects a replayed nonce on the second call', async () => {
+  it('refuses when no key exists rather than inventing one', async () => {
     const aesKey = await seedDevice();
-    await SystemSettings.upsert({ name: 'exam_config', value: JSON.stringify(buildExamConfig()) });
+    await seedPreparedPaper();
+    await SystemSettings.destroy({ where: { name: 'exam_key' } });
 
-    const body = validBody(aesKey);
-    await ExamService.getSecureConfig(envelope(aesKey, body) as any);
+    try {
+      await ExamService.getExamKey(envelope(aesKey, sessionBody(aesKey)) as any);
+      expect.unreachable('expected a 409');
+    } catch (err: any) {
+      expect(err.statusCode).toBe(409);
+    }
+  });
+
+  it('throws 401 for a device that was never registered', async () => {
+    const aesKey = crypto.randomBytes(32);
+    await seedPreparedPaper();
 
     await expect(
-      ExamService.getSecureConfig(envelope(aesKey, body) as any),
+      ExamService.getExamKey(envelope(aesKey, sessionBody(aesKey, 'ghost'), 'ghost') as any),
     ).rejects.toThrowError(HttpError);
-  });
-
-  it('returns an encrypted empty object when no config is stored', async () => {
-    const aesKey = await seedDevice();
-    await SystemSettings.destroy({ where: { name: 'exam_config' } });
-
-    const result = await ExamService.getSecureConfig(envelope(aesKey, validBody(aesKey)) as any);
-
-    expect(JSON.parse(CryptoService.decryptAESGCM(result, aesKey))).toEqual({});
-  });
-
-  it('skips decryption when a pre-decrypted body is supplied by the middleware', async () => {
-    const aesKey = await seedDevice();
-    await SystemSettings.upsert({ name: 'exam_config', value: JSON.stringify(buildExamConfig()) });
-
-    const body = validBody(aesKey);
-    const result = await ExamService.getSecureConfig({ device_uuid: DEVICE } as any, body);
-
-    expect(JSON.parse(CryptoService.decryptAESGCM(result, aesKey)).sections).toBeDefined();
   });
 });

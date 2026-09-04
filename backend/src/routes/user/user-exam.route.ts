@@ -10,6 +10,9 @@ userExamRouter.get("/status", UserController.getExamStatus);
 // Secure exam config retrieval, protected by GCM encryption and session tokens
 userExamRouter.post("/config", decryptAndVerifyDeviceSession, UserController.getConfig);
 
+// Exam key release. Phase-gated to IN_PROGRESS by exam-phase.middleware.
+userExamRouter.post("/key", UserController.getExamKey);
+
 // Environment-check report. Registration-only: it happens before any login.
 userExamRouter.post("/environment-report", UserController.reportEnvironmentCheck);
 

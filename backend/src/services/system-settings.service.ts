@@ -67,6 +67,28 @@ export class SystemSettingsService {
     await SystemSettings.update({ value: stringifiedValue }, { where: { name: key } });
   }
 
+  /** Create or replace, whichever applies. */
+  static async upsertSetting(key: SystemSettingKey, value: any): Promise<void> {
+    const existing = await SystemSettings.findOne({ where: { name: key } });
+    if (existing) {
+      await this.updateSetting(key, value);
+    } else {
+      await this.createSetting(key, value);
+    }
+  }
+
+  /**
+   * Remove a setting even if it is protected, and say nothing if it is absent.
+   *
+   * Only for the reset channel. Protection exists to stop an operator deleting
+   * the exam key mid-exam, leaving every machine holding a paper it can never
+   * open — but reset is precisely the operation that must remove it, since
+   * nothing may survive that could decrypt the previous paper.
+   */
+  static async purgeSetting(key: SystemSettingKey): Promise<void> {
+    await SystemSettings.destroy({ where: { name: key } });
+  }
+
   static async deleteSetting(key: SystemSettingKey): Promise<void> {
     if (PROTECTED_SETTINGS_KEYS.includes(key)) {
       throw new HttpError(403, "Forbidden: 系統核心設定禁止刪除");

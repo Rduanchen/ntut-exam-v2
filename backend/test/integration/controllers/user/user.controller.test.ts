@@ -13,7 +13,7 @@ import { SystemSettings } from "../../../../src/models/system-settings.model";
 import { CryptoService } from "../../../../src/services/crypto.service";
 import { DeviceService } from "../../../../src/services/device.service";
 import { ExamState } from "../../../../src/services/exam-state.service";
-import { seedExamPhase } from "../../../helpers/exam-phase";
+import { seedExamPhase, satisfyInitializePreconditions } from "../../../helpers/exam-phase";
 
 describe("UserController (integration)", () => {
   let app: express.Express;
@@ -145,8 +145,9 @@ describe("UserController (integration)", () => {
   });
 
   describe("POST /user/exam/config", () => {
-    it("returns the exam config encrypted to the session key", async () => {
+    it("returns the split paper encrypted to the device key", async () => {
       await seedConfig();
+      await satisfyInitializePreconditions();
       const studentId = "112590004";
       await User.create({ testId: studentId, name: "Dora", ipAddress: null });
 
@@ -159,9 +160,11 @@ describe("UserController (integration)", () => {
       expect(res.status).toBe(200);
       expect(res.body.ciphertext).toBeDefined();
 
-      const config = client.decrypt(res.body);
-      expect(config.sections).toBeDefined();
-      expect(config.sections[0].puzzles[0].id).toBe("Q1");
+      const payload = client.decrypt(res.body);
+      expect(payload.meta.sections[0].puzzles[0].id).toBe("Q1");
+      expect(payload.cipher.ciphertext).toBeDefined();
+      // The half that would tell a student what the exam is about stays shut.
+      expect(JSON.stringify(payload.meta)).not.toContain("subtasks");
     });
 
     it("returns 401 for a device that was never registered", async () => {
