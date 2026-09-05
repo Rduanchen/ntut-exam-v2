@@ -11,6 +11,7 @@ import { LoginRequest } from "../models/login-request.model";
 import { UnblockedDevice } from "../models/unblocked-device.model";
 import { SystemSettingsService } from "./system-settings.service";
 import { ExamStateService, ExamState } from "./exam-state.service";
+import MessageSocketService from "../sockets/message-socket.service";
 import { ExamConfigCryptoService } from "./exam-config-crypto.service";
 import { HttpError } from "../utils/http-error";
 import { getDefaultScoreboard } from "../utils/init-db.util";
@@ -136,7 +137,15 @@ export class InitService {
 
     /* Reset is not a phase transition — it is the one channel that may move
      * backwards, and it must work from FINISHED, which the table treats as
-     * terminal. */
+     * terminal. It broadcasts nothing itself, so the announcement below is the
+     * only one machines receive. */
     await ExamStateService.resetToUninitialized();
+
+    /* Announced on its own channel. A machine has to forget its identity, its
+     * key and its paper — none of which a phase change asks of it, and all of
+     * which the backend has just deleted. Leaving a client holding a key the
+     * server no longer knows is what made the previous reset unusable: every
+     * request afterwards was refused, with no path back. */
+    MessageSocketService.sendExamReset();
   }
 }

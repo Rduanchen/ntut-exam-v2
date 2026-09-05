@@ -163,6 +163,30 @@ export class MessageSocketService {
     }
   }
 
+  /**
+   * Tell every machine the exam has been wiped.
+   *
+   * Its own event, not another status broadcast. What a client must do here is
+   * nothing like a phase change — it has to forget its identity, its key and
+   * its paper, all of which the backend has just deleted. Carrying that on the
+   * status channel would put a destructive operation inside ordinary message
+   * handling, one flag away from being triggered by accident.
+   *
+   * Nothing is written to the message table: reset empties it first, so a row
+   * describing the reset would be deleted by the reset.
+   */
+  public static sendExamReset(reason?: string): void {
+    try {
+      const instance = MessageSocketService.getInstance();
+      instance.emitEvent("exam-reset", {
+        resetAt: new Date().toISOString(),
+        reason: reason ?? "The exam has been reset."
+      });
+    } catch (err: any) {
+      logger.warn(`Failed to broadcast exam reset: ${err.message}`);
+    }
+  }
+
   public static sendForceLogout(socketId: string, reason: string): void {
     try {
       const instance = MessageSocketService.getInstance();

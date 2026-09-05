@@ -230,17 +230,17 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 ### Tests for User Story 5 (MANDATORY) ⚠️
 
-- [ ] T102 [P] [US5] 在 `host/backend/test/integration/controllers/admin/exam-config.controller.test.ts` 測試 reset 清除 `exam_key`、`exam_config_cipher`、`exam_config_meta`
-- [ ] T103 [P] [US5] 在同檔測試 reset 廣播 `exam-reset` 獨立事件，且**不寫入** `Message` 表（contracts/ G20/G21）
-- [ ] T104 [P] [US5] 在 `desktop/test/service/message-sync.service.test.ts` 測試收到 `exam-reset` 後 data-model.md §8 標示為「清」的欄位全數清空
+- [X] T102 [P] [US5] 在 `host/backend/test/integration/controllers/admin/exam-config.controller.test.ts` 測試 reset 清除 `exam_key`、`exam_config_cipher`、`exam_config_meta`
+- [X] T103 [P] [US5] 在同檔測試 reset 廣播 `exam-reset` 獨立事件，且**不寫入** `Message` 表（contracts/ G20/G21）
+- [X] T104 [P] [US5] 在 `desktop/test/service/message-sync.service.test.ts` 測試收到 `exam-reset` 後 data-model.md §8 標示為「清」的欄位全數清空
 
 ### Implementation for User Story 5
 
-- [ ] T105 [US5] 在 `host/backend/src/sockets/message-socket.service.ts` 新增 `sendExamReset()`，發送獨立的 `exam-reset` 事件
-- [ ] T106 [US5] 在 `host/backend/src/services/init.service.ts` 的 `wipeAllData` 加入清除三個新 `SystemSettings` 鍵，並改為呼叫 `sendExamReset()` 而非一般階段廣播
-- [ ] T107 [US5] 在 `host/backend/src/services/init.service.ts` 將 reset 的階段設定與 `changeState` 的程式路徑分離（contracts/ G6）
-- [ ] T108 [US5] 在 `desktop/src/main/services/ramStore.service.ts` 新增 `clearForReset()`，依 data-model.md §8 清除全部標示項目，含 `localProgramStore` 暫存目錄
-- [ ] T109 [US5] 在 `desktop/src/main/services/message-sync.service.ts` 監聽 `exam-reset` 並呼叫 `ramStore.clearForReset()`，隨後導向等待畫面
+- [X] T105 [US5] 在 `host/backend/src/sockets/message-socket.service.ts` 新增 `sendExamReset()`，發送獨立的 `exam-reset` 事件
+- [X] T106 [US5] 在 `host/backend/src/services/init.service.ts` 的 `wipeAllData` 加入清除三個新 `SystemSettings` 鍵，並改為呼叫 `sendExamReset()` 而非一般階段廣播
+- [X] T107 [US5] 在 `host/backend/src/services/init.service.ts` 將 reset 的階段設定與 `changeState` 的程式路徑分離（contracts/ G6）
+- [X] T108 [US5] 在 `desktop/src/main/services/ramStore.service.ts` 新增 `clearForReset()`，依 data-model.md §8 清除全部標示項目，含 `localProgramStore` 暫存目錄
+- [X] T109 [US5] 在 `desktop/src/main/services/message-sync.service.ts` 監聽 `exam-reset` 並呼叫 `ramStore.clearForReset()`，隨後導向等待畫面
 
 **Checkpoint**: reset 後重新註冊成功率 100%（SC-005）。
 
