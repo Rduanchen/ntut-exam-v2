@@ -65,10 +65,24 @@ export const useConnectionStore = defineStore('connection', () => {
     }
   }
 
-  async function approveRequest(id: number, action: string) {
+  /**
+   * Let a machine in, optionally handing the seat to a different student.
+   *
+   * `targetTestId` releases both bindings in one call: this machine's old one
+   * and the incoming student's hold on whatever machine they were using.
+   * Without it a swapped seat took two approvals — the student would fail to
+   * log in, still held by their own broken machine, and the TA would have to
+   * start over.
+   */
+  async function approveRequest(id: number, action: string, targetTestId?: string) {
     try {
-      await axios.post(`${BACKEND_URL}/admin/connection/requests/${id}/approve`, { action }, { headers: getHeaders() });
+      await axios.post(
+        `${BACKEND_URL}/admin/connection/requests/${id}/approve`,
+        { action, targetTestId },
+        { headers: getHeaders() }
+      );
       await fetchLoginRequests();
+      await fetchDevices();
     } catch (err: any) {
       error.value = err.response?.data?.error || err.message || 'Failed to approve request';
     }

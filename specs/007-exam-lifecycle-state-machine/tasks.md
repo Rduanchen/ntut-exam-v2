@@ -254,16 +254,16 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 ### Tests for User Story 6 (MANDATORY) ⚠️
 
-- [ ] T110 [P] [US6] 在 `host/backend/test/integration/controllers/admin/connection.controller.test.ts` 測試 `GET /admin/connection/requests` 回傳 contracts/ §6 的全部判斷欄位
-- [ ] T111 [P] [US6] 在同檔測試 `approve` 帶 `targetTestId` 時**同一次呼叫**解除兩邊綁定（contracts/ G17）
-- [ ] T112 [P] [US6] 在同檔測試 `reject` 後裝置與學生狀態完全不變（spec.md US6-3）
+- [X] T110 [P] [US6] 在 `host/backend/test/integration/controllers/admin/connection.controller.test.ts` 測試 `GET /admin/connection/requests` 回傳 contracts/ §6 的全部判斷欄位
+- [X] T111 [P] [US6] 在同檔測試 `approve` 帶 `targetTestId` 時**同一次呼叫**解除兩邊綁定（contracts/ G17）
+- [X] T112 [P] [US6] 在同檔測試 `reject` 後裝置與學生狀態完全不變（spec.md US6-3）
 
 ### Implementation for User Story 6
 
-- [ ] T113 [US6] 在 `host/backend/src/controllers/admin/connection.controller.ts` 的 `getRequests` join 出原綁學生姓名、是否他機在線、`lastDisconnectedAt`、IP 是否與名單相符
-- [ ] T114 [US6] 在 `host/backend/src/controllers/admin/connection.controller.ts` 的 `approveRequest` 接受 `targetTestId`，依 contracts/ G17 解除兩邊綁定並回傳 `unbound`
-- [ ] T115 [P] [US6] 在 `host/frontend/src/views/connection/ConnectionView.vue` 依三種情境分組呈現待審清單並顯示判斷資訊
-- [ ] T116 [US6] 在 `host/frontend/src/views/connection/ConnectionView.vue` 的核准對話框加入「這台機器接下來給哪個學號」的選擇
+- [X] T113 [US6] 在 `host/backend/src/controllers/admin/connection.controller.ts` 的 `getRequests` join 出原綁學生姓名、是否他機在線、`lastDisconnectedAt`、IP 是否與名單相符
+- [X] T114 [US6] 在 `host/backend/src/controllers/admin/connection.controller.ts` 的 `approveRequest` 接受 `targetTestId`，依 contracts/ G17 解除兩邊綁定並回傳 `unbound`
+- [X] T115 [P] [US6] 在 `host/frontend/src/views/connection/ConnectionView.vue` 依三種情境分組呈現待審清單並顯示判斷資訊
+- [X] T116 [US6] 在 `host/frontend/src/views/connection/ConnectionView.vue` 的核准對話框加入「這台機器接下來給哪個學號」的選擇
 
 **Checkpoint**: 助教不需查詢其他畫面即可判斷（SC-007）。
 
