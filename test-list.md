@@ -4,6 +4,7 @@
 
 - 適用範圍：`backend/src/` 全部 routes / controllers / services / middlewares / sockets / config。
 - 與 `test-checklist.md` 的差異：那份是「Host + Desktop 端到端操作」的部署清單；**這份是後端功能面的完整盤點**，每一項都對應到實際存在的程式進入點。
+- **最後更新：feature 007（考試生命週期與考卷加密）**。第 2、4、14、14b、14c 章為該功能新增或整段改寫；規格見 `specs/007-exam-lifecycle-state-machine/`，兩端行為說明見 `EXAM-LIFECYCLE.md`。
 - 驗證方式代號：`API` = 直接打 HTTP 端點（curl / Postman）、`UI` = 透過管理前端、`CLI` = 觀察終端機/log、`DB` = 檢查 SQLite 內容、`E2E` = 需搭配 Desktop 客戶端。
 - 所有 `/admin/*` 端點都需帶 `Authorization: Bearer <ADMIN_TOKEN>` 或 `x-admin-token`。
 
@@ -24,8 +25,9 @@
 `admin-init.route.ts` / `admin-config.route.ts` / `exam-config.service.ts` / `schemas/config.schema.ts`
 
 - [ ] `API` `GET /admin/init/init-status` — 未初始化時回報未初始化，初始化後狀態改變。
-- [ ] `API` `POST /admin/init` — 執行 `InitService.performInitialization()`，依考卷 `accessibleUsers` 建立使用者。
-- [ ] `API` `POST /admin/init/reset` — `wipeAllData()` 清空全部資料（提交、分數、log、綁定），且系統仍可再次初始化。
+- [ ] `API` `POST /admin/init` — 依考卷 `accessibleUsers` 建立使用者，**並產生 `K_exam`、切分 meta/cipher、以口令包裝金鑰**，隨後推進到 `INITIALIZED`。
+- [ ] `UI` 口令少於 6 字元時，管理端在產生前提出警告並要求二次確認（口令即考卷的解密金鑰）。
+- [ ] `API` `POST /admin/init/reset` — 清空全部資料且系統仍可再次初始化（**完整項目見 §14c**）。
 - [ ] `API` `POST /admin/config` — 上傳完整考卷 JSON，確認是**整份覆寫而非合併**（對應 knowledge/history「考卷即機器完整設定」）。
 - [ ] `API` `GET /admin/config` — 讀回的設定與上傳內容一致。
 - [ ] `API` `PUT /admin/config` — `restrictedUpdate()` 只允許受限欄位更新，非法欄位被拒。
@@ -36,18 +38,43 @@
 
 ---
 
-## 2. 考試狀態機 (Exam State)
+## 2. 考試階段 (Exam Phases) — feature 007
 
-`admin-exam-state.route.ts` / `exam-state.service.ts`
+`admin-exam-state.route.ts` / `exam-state.service.ts` / `exam-phase.middleware.ts`
 
-- [ ] `API` `GET /admin/exam-state` — 未設定時回 `UNINITIALIZED`。
-- [ ] `API` `POST /admin/exam-state` 依序切換 `NOT_STARTED → IN_PROGRESS → FINISHED`，每次都成功寫入。
-- [ ] `API` 重複送出相同狀態 → 不重複廣播、不產生多餘 message 紀錄。
-- [ ] `API` 切到 `IN_PROGRESS` 時，**裝置註冊自動關閉**（`allowDeviceRegistration` 變 false）—— 這是防作弊關鍵，務必確認。
-- [ ] `E2E` 每次狀態變更都會產生一筆 `EXAM` 類型 message 並經 `/user` socket 廣播，Desktop 端即時反應。
-- [ ] `API` `GET /user/exam/status` — 學生端可查得目前狀態。
+五個階段語意互斥、**單向不可逆**，唯一的退回通道是全域 reset。
 
----
+### 2.1 階段推進
+
+- [ ] `API` `GET /admin/exam-state` — 未設定時回 `UNINITIALIZED`，並回 `allowedNext: ["INITIALIZED"]`。
+- [ ] `API` 依序推進 `UNINITIALIZED → INITIALIZED → SETUP_FINISHED → IN_PROGRESS → FINISHED`，每一步都成功。
+- [ ] `API` `FINISHED` 時 `allowedNext` 為**空陣列**（沒有下一步）。
+- [ ] `API` **跳階**（如 `UNINITIALIZED → IN_PROGRESS`）→ 400 `invalid_transition`，且階段不變。
+- [ ] `API` **回退**（如 `SETUP_FINISHED → INITIALIZED`）→ 400 `invalid_transition`。
+- [ ] `API` **原地轉移**（送出目前的階段）→ 400 `invalid_transition`（不再是靜默 no-op）。
+- [ ] `API` 未初始化就送 `INITIALIZED` → 409 `preconditions_not_met`，`missing` 逐項列出缺什麼（`exam_config` / `students` / `exam_key` / `exam_config_meta` / `exam_config_cipher`）。
+- [ ] `UI` 管理端只呈現「推進到下一階段」單一按鈕與 reset，**沒有**四顆任選階段的按鈕。
+- [ ] `UI` 推進前的確認對話框說明該階段會發生什麼，並提醒階段不可逆。
+
+### 2.2 註冊開關的時機（防作弊關鍵）
+
+- [ ] `API` 進入 `INITIALIZED` → `allowDeviceRegistration` 自動變 **true**。
+- [ ] `API` 進入 `SETUP_FINISHED` → 自動變 **false**。⚠️ 這是學生入場的時刻，務必確認在此關閉而非等到開考。
+- [ ] `API` 進入 `IN_PROGRESS` → 仍為 false（不是在這裡才關）。
+- [ ] `DB` `allow_device_registration` 未設定時讀回 **false**（未經任何階段 = 不接受機器）。
+
+### 2.3 階段權限矩陣
+
+對照 `specs/007-exam-lifecycle-state-machine/contracts/exam-phase-api.md` §2 逐格確認。不被允許的組合一律回 **409 `phase_not_allowed`**（附當前 phase）。
+
+- [ ] `API` `UNINITIALIZED`：除 `GET /user/exam/status` 外，所有 `/user/*` 皆被拒。
+- [ ] `API` `INITIALIZED`：可註冊、可取考卷、可回報環境檢查；**不可登入**、**不可取金鑰**、不可提交。
+- [ ] `API` `SETUP_FINISHED`：可登入；**仍不可取金鑰**。
+- [ ] `API` `IN_PROGRESS`：可取金鑰、可提交。
+- [ ] `API` `FINISHED`：收卷緩衝期內仍可提交，緩衝結束後被拒（**由後端執行，不只是前端擋**）。
+- [ ] `API` 未列在矩陣中的 `/user/*` 路徑 → 預設拒絕（fail closed）。
+- [ ] `E2E` 每次階段變更都經 `/user` socket 廣播，Desktop 端即時反應。
+- [ ] `API` `GET /user/exam/status` — 任何階段皆可查詢。
 
 ## 3. 加密握手與登入 (Crypto Handshake & Auth)
 
@@ -55,7 +82,9 @@
 
 - [ ] `API` `GET /user/auth/rsa-public-key` — 回傳合法 RSA public key，且**私鑰絕不外洩於任何回應**。
 - [ ] `API` `POST /user/auth/register-device` — 以 RSA 加密的 AES key 註冊裝置，回應成功並存下 device key。
-- [ ] `API` 當 `allowDeviceRegistration = false` 時再次註冊新裝置 → 被拒絕。
+- [ ] `API` **註冊開放時**，已存在的裝置送出新 AES key → **成功換金鑰**（重開機必經此路，舊版一律拒絕造成死路）。
+- [ ] `API` **註冊關閉時**任何註冊（新機或換金鑰）→ 403 `entry_pending`，並建立待審記錄。
+- [ ] `API` 未註冊的裝置嘗試登入 → 明確回報未註冊，**不會順手幫它註冊**（註冊已從登入流程拆出）。
 - [ ] `API` `POST /user/auth/login` — AES-GCM 加密的憑證登入成功，回傳 session token。
 - [ ] `API` 錯誤密碼 / 不存在學號 → 登入失敗且不洩漏帳號是否存在的差異訊息。
 - [ ] `API` `GET /user/auth/student-id` — 依來源 IP 回傳對應學號（auto-login 輔助），IP 未綁定時回空。
@@ -67,15 +96,50 @@
 
 ---
 
-## 4. 裝置綁定與 TA 審核 (Device Binding & Approval)
+## 4. 入場閘門與 TA 審核 (Entry Gate & Approval) — feature 007 大幅改寫
 
-`binding.service.ts` / `connection.route.ts` / `admin-security.route.ts`
+`binding.service.ts` / `device.service.ts` / `connection.route.ts` / `admin-security.route.ts`
+
+### 4.1 三種入場情境
+
+註冊關閉後每一筆申請都要能被助教分辨。分類依「機器是什麼」，不是「發生了什麼」——後端分不出重開機與換座位（兩者送出的請求完全相同）。
+
+- [ ] `API` 從未見過的機器 → `type: NEW_DEVICE`，`previousTestId: null`。
+- [ ] `API` 已綁學生的機器 → `type: REBIND`，`previousTestId` 為原學號。
+- [ ] `API` 註冊過但未綁人的機器 → `type: UNBOUND_DEVICE`。
+- [ ] `API` 同一台機器連送多次註冊（含不同 IP）→ **只產生一筆 PENDING**，不會灌爆待審清單。
+
+### 4.2 被拒絕的申請不得有副作用 ⚠️
+
+`device_uuid` 在每個請求中都是明文，任何人都能送別人的。
+
+- [ ] `API` 用一位**正在考試中**學生的 `device_uuid` 送出註冊 → 被拒，且該裝置的 `status` / `isOnline` / 綁定**完全不變**（舊版會把他降級成 `AWAITING_LOGIN`，助教畫面看起來像掉線）。
+- [ ] `API` `POST /admin/connection/requests/:id/reject` → 裝置與學生狀態完全不變，只有申請本身變 `REJECTED`。
+
+### 4.3 助教判斷所需的資訊
+
+- [ ] `API` `GET /admin/connection/requests` 每一筆都帶：`type`、`previousTestId`、`previousStudentName`、`previousStudentOnlineElsewhere`、`lastDisconnectedAt`、`ipMatchesRoster`。
+- [ ] `API` 原綁學生正在**另一台機器上線** → `previousStudentOnlineElsewhere: true`（「有人搶用中的座位」vs「他重開機了」需要相反的判斷）。
+- [ ] `API` 來源 IP 與名單不符 → `ipMatchesRoster: false`。
+- [ ] `UI` 待審清單依三種情境分組呈現，並顯示上述判斷依據，**助教不需開別的畫面就能決定**。
+
+### 4.4 核准與換機
+
+- [ ] `API` `POST /admin/connection/requests/:id/approve` 帶 `targetTestId` 與原綁學號**相同** → 不解除任何綁定，`unbound: []`。
+- [ ] `API` 帶 `targetTestId` 與原綁學號**不同** → **同一次呼叫**解除兩邊：這台機器與原學生、以及新學生與其原機器。`unbound` 回報兩者。
+- [ ] `E2E` 換機情境**只需核准一次**學生就能登入（舊版只解一邊，學生仍被自己那台壞掉的機器綁著，助教得重跑一次）。
+- [ ] `E2E` 核准後兩位學生**已提交的作答與分數皆不受影響**。
+
+### 4.5 重來 (Re-entry)
+
+- [ ] `API` `POST /admin/connection/devices/:deviceUuid/re-entry` → 刪除該裝置的註冊與綁定、強制登出。
+- [ ] `DB` 重來後 `Submission` 與 `ScoreBoard` **完全未被觸及**（成果以學號為 key，不隨機器消失）。
+- [ ] `API` 重來後該機器再次註冊，走的是與一般入場**完全相同**的路徑（沒有第二套復原程序）。
+- [ ] `API` 對不存在的裝置執行 → 404。
+
+### 4.6 既有的綁定管理
 
 - [ ] `API` 學生首次登入 → 裝置與 IP 綁定成功（`bindDeviceToUser`）。
-- [ ] `API` **同帳號換裝置登入** → 進入「需審核 (approval required)」狀態，登入被拒（spec 001 US3 驗收 1）。
-- [ ] `API` `GET /admin/connection/requests` — 上述請求出現在待審清單。
-- [ ] `API` `POST /admin/connection/requests/:id/approve` — 核准後學生可登入，且**舊 IP 被清除**（spec 001 US3 驗收 2）。
-- [ ] `API` `POST /admin/connection/requests/:id/reject` — 拒絕後學生仍無法登入。
 - [ ] `API` `POST /admin/connection/unblock` — 手動解除封鎖生效。
 - [ ] `API` `GET /admin/connection/devices` — 列出所有裝置與其連線狀態。
 - [ ] `API` `POST /admin/connection/devices/:uuid/unbind` — 解除綁定後該裝置可重新綁定。
@@ -85,8 +149,6 @@
 - [ ] `API` `DELETE /admin/device/:deviceUuid` — 需 `RESET_DEVICE` 權限；刪除金鑰後該裝置無法再解密。
 - [ ] `API` `PUT /admin/users/:testId/reset-device` — 需 `RESET_BINDING` 權限；重設後學生可在新機登入。
 - [ ] `E2E` `forceLogoutDevice()` — 被強制登出的裝置端有收到通知並回到登入畫面。
-
----
 
 ## 5. 管理端授權 (Admin Authorization)
 
@@ -275,15 +337,84 @@
 
 ---
 
-## 14. 安全考卷傳遞 (Secure Config Delivery)
+## 14. 考卷的兩層加密與下發 (Paper Delivery & Exam Key) — feature 007
 
-`user-exam.route.ts` / `exam.service.ts`
+`user-exam.route.ts` / `exam.service.ts` / `exam-config-crypto.service.ts`
 
-- [ ] `API` `POST /user/exam/config` — 回應是 **AES-GCM 加密**的考卷，明文不出現在網路上。
-- [ ] `API` 回傳的考卷**不含 hidden 測資的答案**（若設計如此，需明確確認學生端拿不到隱藏測資）。
-- [ ] `API` 未通過 `decryptAndVerifyDeviceSession` 的請求無法取得考卷。
-- [ ] `API` 未登入 / 未綁定的裝置請求考卷 → 拒絕。
-- [ ] `API` 考試尚未開始時請求考卷 → 依設計拒絕或回傳受限內容（確認行為一致）。
+裝置 AES 金鑰保護傳輸；**考卷金鑰 `K_exam` 保護內容**，由後端扣留至開考。考卷提前送到機器上，但在開考前讀不出來。
+
+### 14.1 考卷交付（`POST /user/exam/config`）
+
+- [ ] `API` 回應是 AES-GCM 加密的 `{ meta, cipher }`，明文不出現在網路上。
+- [ ] `API` **不需要 session token** — 一台從未登入過的機器就能取得（交付發生在沒人登入的階段，這是提前交付的全部理由）。
+- [ ] `API` 未註冊的裝置請求 → 401。
+- [ ] `API` 竄改 GCM tag / 重放 nonce / timestamp 漂移 → 依然被拒（service 自行做解密與重放檢查）。
+- [ ] `API` 考卷尚未準備好（`exam_config_meta` / `cipher` 不存在）→ 409，**不是**回一份空考卷。
+
+### 14.2 meta 半邊不得洩漏任何東西 ⚠️
+
+這是學生機器在開考前握有的東西，逐項確認。
+
+- [ ] `API` `meta` 序列化後**不含**題目標題（「最短路徑」這種標題洩漏的資訊與題目敘述相當）。
+- [ ] `API` **不含** `subtasks`、`specialRules`、任何 `input` / `output` 測資。
+- [ ] `API` **不含** `startPassword`。
+- [ ] `API` `meta.sections[].puzzles[]` 只有 `id` / `language` / `timeLimit` / `memoryLimit` 四欄 —— 剛好夠跑環境檢查，不多不少。
+- [ ] `API` `meta` 含 `accessibleUsers`、`judgerSettings`、`submitGraceSeconds`、`wrappedExamKey`。
+
+### 14.3 考卷金鑰（`POST /user/exam/key`）
+
+- [ ] `API` `IN_PROGRESS` 時回傳 `K_exam`，且該金鑰能解開先前交付的 `cipher`。
+- [ ] `API` **需要 session token**（考卷可以交給機器，金鑰屬於已證明身分的學生）。
+- [ ] `API` 其餘四個階段一律 409 `phase_not_allowed`。⚠️ 特別確認 `SETUP_FINISHED`：**已登入的學生仍拿不到金鑰**。
+- [ ] `API` 金鑰不存在與階段不允許的回應**完全相同**（不洩漏金鑰是否已產生）。
+- [ ] `API` 重複呼叫回傳同一把金鑰、無副作用（斷線重試不該被懲罰）。
+- [ ] `E2E` **開考廣播不含金鑰**、不含 `examKey` / `wrappedExamKey` 字樣 —— 廣播送達所有連線者而不驗證身分，不是金鑰能走的通道。
+
+### 14.4 離線路徑（不依賴後端）
+
+- [ ] `E2E` 監考宣讀口令 → 桌面版經 PBKDF2 解開 `wrappedExamKey` → 導出的金鑰與端點回傳的**逐位元組相同**。
+- [ ] `E2E` 錯誤口令 → 解不開，考卷維持不可讀（authenticated encryption，不會產生半開的考卷）。
+- [ ] `E2E` **關掉後端**，僅以口令開考，能完整作答到底。這是上線的底線。
+- [ ] `API` `GET /admin/config/offline-bundle` — 匯出 `{ meta, cipher }`，內容與線上交付相同。
+- [ ] `API` 佈署檔**不含** `K_exam`、不含口令明文（隨身碟遺失 ≠ 考卷外洩）。
+- [ ] `UI` 匯出頁面提醒：口令必須以紙本／口頭另外帶到考場，與檔案放在一起等同沒有加密。
+- [ ] `E2E` 桌面版載入佈署檔與線上取得**共用同一套解析**（不是第二條路徑）。
+
+### 14.5 考卷更新
+
+- [ ] `API` 考試中更新考卷 → meta / cipher 重新產生，**`K_exam` 不變**（機器已持有它，口令已宣讀過，換金鑰會讓全場報廢）。
+- [ ] `E2E` 更新後機器以手上既有的金鑰即可解開新考卷。
+
+---
+
+## 14b. 環境檢查回報與準備狀況 (Readiness) — feature 007
+
+`user-exam.route.ts` / `admin-readiness.route.ts` / `device-key-map.model.ts`
+
+- [ ] `API` `POST /user/exam/environment-report` — **未登入即可回報**（檢查發生在 `INITIALIZED`，那時還沒有人登入）。
+- [ ] `API` payload 只接受 `status` 與 `failedLanguages`；失敗語言清單**有數量上限**，不儲存編譯器輸出（未截斷的輸出曾讓系統凍結）。
+- [ ] `API` 非 `RUNNING` / `PASSED` / `FAILED` 的狀態 → 400。
+- [ ] `API` 重複回報**覆寫**而非累積。
+- [ ] `API` `GET /admin/readiness` — 每位學生的 `ready` 由四項推導：已登入 ∧ 裝置在線 ∧ 已綁定 ∧ 環境檢查 PASSED。
+- [ ] `API` 學生已登入但機器環境檢查失敗 → `ready: false`，並列出失敗語言。⚠️ 這是舊版看不到的狀況：助教只知道「登入了沒」，不知道那台機器跑不跑得動。
+- [ ] `UI` 準備狀況頁依「哪裡壞了」排序，環境檢查失敗排最前（考試中助教的注意力是稀缺資源）。
+
+## 14c. 全域 reset (Global Reset) — feature 007
+
+`admin-init.route.ts` / `init.service.ts` / `message-socket.service.ts` / `ramStore.service.ts`
+
+reset 是**唯一**能讓階段倒退的通道，而且它必須從 `FINISHED` 也能用（轉移表視為終點）。
+
+- [ ] `API` `POST /admin/init/reset` 需 `confirm: "RESET"`，否則 400 且**資料完全不變**。
+- [ ] `API` 從 `FINISHED` 執行 reset → 階段回到 `UNINITIALIZED`。
+- [ ] `DB` `exam_key` / `exam_config_meta` / `exam_config_cipher` **全部清除** —— 不能留下任何能解開上一份考卷的東西。
+- [ ] `DB` 提交、分數、log、綁定、待審申請全部清空。
+- [ ] `API` reset 後 `allowDeviceRegistration` 為 false。
+- [ ] `E2E` reset 走**獨立的 `exam-reset` socket 事件**，不是一般階段廣播（客戶端要做的事完全不同）。
+- [ ] `DB` reset **不寫入**任何描述自己的 message（它第一件事就是清空訊息表）。
+- [ ] `E2E` 桌面版收到後清除：身分、金鑰、考卷兩半、已解密考卷、環境檢查報告、評測結果、作答暫存、同步進度。⚠️ 舊版只更新階段字串，機器繼續握著伺服器已刪除的金鑰，之後每個請求都被拒且無路可回。
+- [ ] `E2E` 桌面版**不需重開**即可用於下一場（socket 與後端 URL 保留）。
+- [ ] `E2E` reset → 重新初始化 → **同一台機器、同一位學生**能再跑完一場完整考試。
 
 ---
 
@@ -335,6 +466,18 @@
 | spec 006 | C/C++/Python 實際跑得起來（不只是被 advertise） | [ ] |
 | spec 006 | CE/RE/TLE/MLE/OLE 分類正確，且區分學生失敗與基礎設施失敗 | [ ] |
 | spec 006 | 壓測不動到 submissions / scores / 評測歷史 | [ ] |
+| spec 007 | 開考前學生機器上**讀不到任何測資**（已登入也不行） | [ ] |
+| spec 007 | 階段單向不可逆，跳階與回退都被後端拒絕（不只是 UI 不給按） | [ ] |
+| spec 007 | 註冊在學生入場前就關閉，不是等到開考 | [ ] |
+| spec 007 | 機器重開機後經一次助教核准即可回到考試，已提交作答完整復原 | [ ] |
+| spec 007 | **後端關掉也能開考**（監考口令導出同一把金鑰） | [ ] |
+| spec 007 | 斷線期間的作答與分數會補送，不需學生重跑評測 | [ ] |
+| spec 007 | reset 後同一批機器不需人工介入即可再跑一場 | [ ] |
+| spec 007 | 助教不需開別的畫面就能判斷入場申請；換機只需核准一次 | [ ] |
+| spec 007 | 合併還原的考卷通過既有 schema，judger／畫面／規則引擎 0 處修改 | [ ] |
+| spec 007 | ⚠️ **已接受的風險**：口令即金鑰，簡短口令可離線暴力破解（攻擊窗口為就座至開考之間） | [ ] 確認此取捨仍被接受 |
+| spec 007 | ⚠️ **已知限制**：後端不可用期間重開的機器無法救回（密文與金鑰皆為 RAM-only） | [ ] 確認 |
+| spec 007 | ⚠️ **已知限制**：後端不可用時無系統層級的結束訊號，需人工逐台收卷 | [ ] 確認 |
 | vision | 高併發下系統穩定不崩潰（併發 20 CE 率 0%） | [ ] |
 | vision | ⚠️ **已知未達成**：測資重複編譯尚未消除，評測速度未改善（僅負載變可承受） | [ ] 確認此限制仍被接受 |
 
@@ -342,9 +485,20 @@
 
 ## 18. 尚未納入自動測試的區塊（人工驗證權重最高）
 
-vision 明確指出以下區塊沒有測試覆蓋，因此**只能靠人工確認**：
+以下區塊沒有（或只有部分）自動測試覆蓋，因此**只能靠人工確認**：
 
-- [ ] `backend/src/sockets/` — 全部 socket 行為。
-- [ ] `backend/src/middlewares/` — 加密、admin 授權、action log、load-test IP mock。
+- [ ] `backend/src/sockets/` — socket 行為。feature 007 只補了「開考廣播不含金鑰」與「reset 走獨立事件」兩點，其餘仍未覆蓋。
+- [ ] `backend/src/middlewares/` — 加密、admin 授權、action log、load-test IP mock。（`exam-phase.middleware` 已有 65 格矩陣測試。）
 - [ ] `backend/src/utils/` — `ip.util`、`judger-output.util`、`logger.util`、`init-db.util`。
-- [ ] 前端除「評測設定頁」以外的所有頁面與後端的整合。
+- [ ] 管理前端：評測設定頁、部署壓測頁、考試階段控制、學生準備狀況、入場核准對話框已有測試；**其餘頁面**與後端的整合仍未覆蓋。
+- [ ] 桌面版：main process 的 services 與 ipc 已有測試；**渲染層的實際畫面**（Vue 元件掛載）多數未覆蓋。
+
+### 只能在真實環境確認的（feature 007 的核心承諾都在這裡）⚠️
+
+自動測試證明不了這些 —— 它們需要真的拔網路線、關後端、重開機器、現場念口令：
+
+- [ ] 關掉後端，僅以監考口令開考，完整考完一場。
+- [ ] 考試中拔掉網路，作答與評測不受影響；接回後結果自動補送。
+- [ ] 考試中重開桌面版，經助教核准後回到考試，已提交作答復原。
+- [ ] 教室跳電後全班同時重啟（⚠️ 已知：會同時湧入待審佇列，規模問題尚未處理）。
+- [ ] 監考以隨身碟佈署 `{meta, cipher}`，全程未連線的機器完整考完。
