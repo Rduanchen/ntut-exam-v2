@@ -17,6 +17,10 @@ import { seedExamPhase, satisfyInitializePreconditions } from '../helpers/exam-p
  * The security surface the `LOAD_TEST_MODE=pure` bypass would have skipped
  * entirely. Each case corrupts exactly one element of the envelope.
  */
+/* Driven through /user/exam/messages, which still carries the session-token
+ * middleware. Paper delivery used to serve this purpose, but it now runs
+ * before anyone has logged in and so cannot require a session — these cases
+ * are about the middleware, not about that endpoint. */
 describe('Crypto middleware negative cases (integration)', () => {
   let app: express.Express;
   let client: TestClient;
@@ -37,14 +41,14 @@ describe('Crypto middleware negative cases (integration)', () => {
   });
 
   it('returns 400 when the envelope is missing cryptographic fields', async () => {
-    const res = await request(app).post('/user/exam/config').send({ device_uuid: 'device-neg-1' });
+    const res = await request(app).post('/user/exam/messages').send({ device_uuid: 'device-neg-1' });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('Missing required cryptographic fields');
   });
 
   it('returns 401 when the GCM auth tag is tampered', async () => {
-    const res = await client.withTamperedTag().post('/user/exam/config');
+    const res = await client.withTamperedTag().post('/user/exam/messages');
 
     expect(res.status).toBe(401);
   });
@@ -52,15 +56,15 @@ describe('Crypto middleware negative cases (integration)', () => {
   it('returns 401 when a nonce is replayed', async () => {
     const nonce = crypto.randomBytes(16).toString('hex');
 
-    const first = await client.useNonce(nonce).post('/user/exam/config');
+    const first = await client.useNonce(nonce).post('/user/exam/messages');
     expect(first.status).toBe(200);
 
-    const replay = await client.useNonce(nonce).post('/user/exam/config');
+    const replay = await client.useNonce(nonce).post('/user/exam/messages');
     expect(replay.status).toBe(401);
   });
 
   it('returns 401 when the timestamp has drifted beyond the allowed window', async () => {
-    const res = await client.withSkewedTimestamp(-30).post('/user/exam/config');
+    const res = await client.withSkewedTimestamp(-30).post('/user/exam/messages');
 
     expect(res.status).toBe(401);
   });
@@ -78,7 +82,7 @@ describe('Crypto middleware negative cases (integration)', () => {
       socketId: null,
     });
 
-    const res = await client.withMismatchedDeviceUuid('device-neg-2').post('/user/exam/config');
+    const res = await client.withMismatchedDeviceUuid('device-neg-2').post('/user/exam/messages');
 
     expect(res.status).toBe(401);
     expect(res.body.error).toContain('does not match device UUID');
@@ -92,7 +96,7 @@ describe('Crypto middleware negative cases (integration)', () => {
     );
 
     const res = await request(app)
-      .post('/user/exam/config')
+      .post('/user/exam/messages')
       .send({ ...envelope, device_uuid: 'never-registered' });
 
     expect(res.status).toBe(401);
@@ -102,7 +106,7 @@ describe('Crypto middleware negative cases (integration)', () => {
     const envelope = CryptoService.encryptAESGCM(JSON.stringify({ hello: 'world' }), client.key);
 
     const res = await request(app)
-      .post('/user/exam/config')
+      .post('/user/exam/messages')
       .send({ ...envelope, device_uuid: client.uuid });
 
     expect(res.status).toBe(400);

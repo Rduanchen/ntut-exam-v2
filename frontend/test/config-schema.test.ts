@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
+import fixture from './fixtures/exam-config-payload.fixture.json';
 import type { ExamConfig } from '../src/types/config';
 
 /**
@@ -16,15 +15,15 @@ import type { ExamConfig } from '../src/types/config';
  * This file is the binding. It is a type-level check, not a parse — the console
  * has no runtime schema — so the assertions that matter here are the ones the
  * compiler makes when the fixture is assigned to `ExamConfig`.
+ *
+ * Loaded as a JSON import rather than read from disk: this project's tests are
+ * type-checked with the DOM lib and no node types, and the build checks them.
  */
-const fixture = JSON.parse(
-  readFileSync(resolve(__dirname, './fixtures/exam-config-payload.fixture.json'), 'utf-8'),
-);
 
 /** The paper as the settings form edits it: both halves, back together. */
 function assembled(variant: 'full' | 'minimal'): ExamConfig {
-  const { meta } = fixture[variant].payload;
-  const secret = fixture[variant].secret;
+  const { meta } = fixture[variant].payload as any;
+  const secret = fixture[variant].secret as any;
   const byId = new Map<string, any>(secret.puzzles.map((p: any) => [p.id, p]));
 
   return {

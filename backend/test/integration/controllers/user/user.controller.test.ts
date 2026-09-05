@@ -170,6 +170,24 @@ describe("UserController (integration)", () => {
   });
 
   describe("POST /user/exam/config", () => {
+    it("is reachable by a machine that has never logged in", async () => {
+      /* The case the service test could not see: it calls getSecureConfig
+       * directly, and the integration test above signs in first, so both
+       * carried a session token without needing one. The route still demanded
+       * it — which made delivery impossible in the phase it is meant for,
+       * where no student has logged in yet. Found by running the thing. */
+      await seedConfig();
+      await satisfyInitializePreconditions();
+
+      const machine = new TestClient(app);
+      await machine.registerDevice("device-never-logged-in");
+
+      const res = await machine.post("/user/exam/config");
+
+      expect(res.status).toBe(200);
+      expect(machine.decrypt(res.body).meta).toBeDefined();
+    });
+
     it("returns the split paper encrypted to the device key", async () => {
       await seedConfig();
       await satisfyInitializePreconditions();
