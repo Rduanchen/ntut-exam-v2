@@ -13,6 +13,7 @@ import adminScoreRouter from "./admin-score.route";
 import adminConnectionRouter from "./connection.route";
 import adminSystemInfoRouter from "./admin-system-info.route";
 import adminReadinessRouter from "./admin-readiness.route";
+import adminRehearsalRouter from "./admin-rehearsal.route";
 
 const adminRouter = Router();
 
@@ -35,5 +36,6 @@ adminRouter.use("/scores", adminScoreRouter);
 adminRouter.use("/connection", adminConnectionRouter);
 adminRouter.use("/system-info", adminSystemInfoRouter);
 adminRouter.use("/readiness", adminReadinessRouter);
+adminRouter.use("/rehearsal", adminRehearsalRouter);
 
 export default adminRouter;

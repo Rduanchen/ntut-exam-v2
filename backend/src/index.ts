@@ -15,6 +15,7 @@ import { JudgeStartupService } from "./services/judge-startup.service";
 import { applyJudgeSettings } from "./services/judge-limiter";
 import { SystemSettingsService } from "./services/system-settings.service";
 import { DeployTestStartupService } from "./services/deploy-test-startup.service";
+import { RehearsalStartupService } from "./services/rehearsal-startup.service";
 
 dotenv.config();
 
@@ -36,6 +37,9 @@ async function startServer() {
      * system ever revisits them. */
     await JudgeStartupService.run();
     await DeployTestStartupService.run();
+    /* Erases the half-built exam a killed rehearsal leaves behind. Safe only
+     * because the run record claims ownership before the first mutation. */
+    await RehearsalStartupService.run();
 
     /* Apply the stored concurrency ceiling now, so the first judging run of
      * the day is bounded rather than the second. */

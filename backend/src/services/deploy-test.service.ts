@@ -63,6 +63,7 @@ export class DeployTestService {
     const examActive = await this.dependencies.examState() === ExamState.IN_PROGRESS;
     let blockedReason: ProfileDescriptor["blockedReason"];
     if (examActive) blockedReason = "exam_in_progress";
+    else if (JudgingWorkCoordinator.hasRehearsalWork()) blockedReason = "rehearsal_active";
     else if (JudgingWorkCoordinator.hasStudentWork()) blockedReason = "student_judging_active";
     else if (JudgingWorkCoordinator.hasDeployWork()) blockedReason = "deploy_test_active";
     else if (JudgingWorkCoordinator.isDraining()) blockedReason = "deploy_test_draining";

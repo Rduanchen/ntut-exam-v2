@@ -17,6 +17,11 @@ export default defineConfig({
         'src/services/judge-execution.service.ts',
         'src/services/judging-work-coordinator.ts',
         'src/controllers/admin/admin-deploy-test.controller.ts',
+        'src/config/rehearsal*.ts',
+        'src/schemas/rehearsal.schema.ts',
+        'src/types/rehearsal.type.ts',
+        'src/services/rehearsal*.ts',
+        'src/controllers/admin/admin-rehearsal.controller.ts',
       ],
       thresholds: { lines: 100 },
     }

@@ -116,7 +116,7 @@ export interface ProfileDescriptor {
   bounds: typeof import("../config/deploy-test.config").DEPLOY_TEST_BOUNDS;
   activeCeiling: number;
   canStart: boolean;
-  blockedReason?: "exam_in_progress" | "student_judging_active" | "deploy_test_active" | "deploy_test_draining" | "piston_unreachable";
+  blockedReason?: "exam_in_progress" | "student_judging_active" | "deploy_test_active" | "deploy_test_draining" | "rehearsal_active" | "piston_unreachable";
 }
 
 export function isTerminalDeployTestState(state: DeployTestState): boolean {

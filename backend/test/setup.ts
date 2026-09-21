@@ -66,10 +66,12 @@ beforeAll(async () => {
 beforeEach(async () => {
   const { JudgeQueueService } = await import('../src/services/judge-queue.service');
   const { DeployTestService } = await import('../src/services/deploy-test.service');
+  const { RehearsalService } = await import('../src/services/rehearsal.service');
   const { JudgingWorkCoordinator } = await import('../src/services/judging-work-coordinator');
-  await Promise.all([JudgeQueueService.settle(), DeployTestService.settle()]);
+  await Promise.all([JudgeQueueService.settle(), DeployTestService.settle(), RehearsalService.settle()]);
   JudgeQueueService.reset();
   DeployTestService.reset();
+  RehearsalService.reset();
   JudgingWorkCoordinator.reset();
 
   // Clear tables between tests to ensure isolation

@@ -21,7 +21,9 @@ export default mergeConfig(
         reporter: ['text', 'json-summary'],
         include: [
           'src/api/deploy-test.ts',
+          'src/api/rehearsal.ts',
           'src/stores/deploy-test.store.ts',
+          'src/stores/rehearsal.store.ts',
           'src/utils/download-json.ts',
         ],
         thresholds: { lines: 100 },
