@@ -2,6 +2,26 @@ import { SystemSettingsService } from "./system-settings.service";
 import { ExamConfigParserService } from "./exam-config-parser.service";
 import { verifyExamConfig, ExamConfig } from "../schemas/config.schema";
 import { HttpError } from "../utils/http-error";
+import { ExamConfigCryptoService } from "./exam-config-crypto.service";
+
+
+/**
+ * Re-encrypt an amended paper without changing the key.
+ *
+ * The key stays as it is. Machines are already holding it, and the password
+ * that unwraps it has already been read out in the room — issuing a new one
+ * mid-exam would strand every seat. Nothing happens before initialisation,
+ * when there is no key to reissue under.
+ */
+async function reissuePreparedPaper(config: ExamConfig): Promise<void> {
+  const examKey = await SystemSettingsService.getSetting<string>("exam_key");
+  const meta = await SystemSettingsService.getSetting<any>("exam_config_meta");
+  if (!examKey || !meta?.wrappedExamKey) return;
+
+  const reissued = ExamConfigCryptoService.reissue(config, examKey, meta.wrappedExamKey);
+  await SystemSettingsService.upsertSetting("exam_config_meta", reissued.meta);
+  await SystemSettingsService.upsertSetting("exam_config_cipher", reissued.cipher);
+}
 
 export class ExamConfigService {
   /**
@@ -15,6 +35,7 @@ export class ExamConfigService {
     }
 
     await SystemSettingsService.saveExamConfig(examConfig);
+    await reissuePreparedPaper(examConfig);
     return examConfig;
   }
 
@@ -93,6 +114,7 @@ export class ExamConfigService {
     }
 
     await SystemSettingsService.saveExamConfig(mergedConfig);
+    await reissuePreparedPaper(mergedConfig);
     return mergedConfig;
   }
 }

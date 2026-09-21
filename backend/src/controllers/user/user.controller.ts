@@ -106,6 +106,64 @@ export class UserController {
   }
 
   /**
+   * POST /user/exam/key
+   *
+   * Release the exam key. Reachable only in IN_PROGRESS — the phase matrix
+   * refuses it earlier, and the service refuses to look the key up.
+   *
+   * Never broadcast. The socket announces that the exam has started and
+   * nothing else; a broadcast reaches every listener without proving who any
+   * of them are, which is not a channel a key can travel on.
+   */
+  static async getExamKey(req: Request, res: Response, next: NextFunction) {
+    try {
+      const encrypted = await ExamService.getExamKey(req.body);
+      res.status(200).json(encrypted);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /user/exam/environment-report
+   *
+   * Report this machine's environment-check verdict.
+   *
+   * Authenticated by device registration alone, not by a session token: the
+   * check runs in INITIALIZED, before any student has logged in, so requiring
+   * a session would make the report impossible exactly when it is wanted.
+   *
+   * The payload is deliberately thin — a status and the languages that failed.
+   * The full diagnostic stays on the machine. Compiler output is unbounded and
+   * has frozen this system before when it was stored unbounded.
+   */
+  static async reportEnvironmentCheck(req: Request, res: Response, next: NextFunction) {
+    try {
+      const payload = req.body;
+      const deviceUuid = payload?.device_uuid;
+      if (!deviceUuid) {
+        throw new HttpError(400, "Bad Request: Missing device_uuid");
+      }
+
+      const decrypted = await ExamService.decryptDevicePayload(payload);
+      const status = decrypted?.status;
+      if (!["RUNNING", "PASSED", "FAILED"].includes(status)) {
+        throw new HttpError(400, "Bad Request: status must be RUNNING, PASSED or FAILED");
+      }
+
+      const failed = Array.isArray(decrypted?.failedLanguages)
+        ? decrypted.failedLanguages.filter((l: unknown) => typeof l === "string").slice(0, 20)
+        : [];
+
+      await DeviceService.recordEnvironmentReport(deviceUuid, status, failed);
+
+      res.status(200).json({ success: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * POST /user/exam/messages
    * Securely retrieve missed messages after a given message ID.
    */

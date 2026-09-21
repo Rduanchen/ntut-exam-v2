@@ -12,7 +12,7 @@ const client: PistonJudger = { runtimes: vi.fn(async () => runtimes), execute: v
 const profile = { phases: ['smoke'], languages: ['c', 'cpp', 'python'], concurrencyLevels: [1], jobCount: 1, deadlineMs: 60_000 };
 const admin = () => request(app).post('/admin/judger/deploy-tests').set('x-admin-token', process.env.ADMIN_TOKEN!);
 
-beforeEach(() => DeployTestService.configureForTests({ examState: async () => ExamState.NOT_STARTED, health: async () => ({ reachable: true, url: 'piston', runtimes }), client: () => client }));
+beforeEach(() => DeployTestService.configureForTests({ examState: async () => ExamState.SETUP_FINISHED, health: async () => ({ reachable: true, url: 'piston', runtimes }), client: () => client }));
 describe('admin deployment-test contract', () => {
   it('inherits admin authentication', async () => expect((await request(app).get('/admin/judger/deploy-tests/profile')).status).toBe(401));
   it('returns the authoritative profile and strict validation errors', async () => {

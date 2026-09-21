@@ -84,8 +84,39 @@ export class ConnectionController {
   }
 
   /**
+   * POST /admin/connection/device/:deviceUuid/re-entry
+   *
+   * Send one machine back through the entry gate, leaving its student's work
+   * untouched. For a seat that has to be re-signed-in — a swapped machine, a
+   * student logged in as someone else — without waiting for it to restart on
+   * its own.
+   */
+  static async reEntryDevice(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { deviceUuid } = req.params;
+      if (!deviceUuid) {
+        throw new HttpError(400, "Bad Request: Missing deviceUuid parameter");
+      }
+
+      await BindingService.reEntry(deviceUuid);
+
+      res.status(200).json({ success: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /admin/connection/requests
-   * Get pending login requests
+   *
+   * Machines waiting to be let in, with what a TA needs to decide.
+   *
+   * The bare row said only which device and which IP. Deciding meant opening
+   * other screens to ask: who was this machine bound to, is that student
+   * already sitting somewhere else, did it drop a moment ago or ten minutes
+   * ago, is it in the seat the roster expects. Under time pressure a TA who
+   * cannot answer those approves everything, and the gate stops meaning
+   * anything.
    */
   static async getRequests(req: Request, res: Response, next: NextFunction) {
     try {
@@ -93,7 +124,54 @@ export class ConnectionController {
         where: { status: "PENDING" },
         order: [["created_at", "DESC"]],
       });
-      res.status(200).json(requests);
+
+      const detailed = await Promise.all(
+        requests.map(async (request) => {
+          const previousTestId = request.previousTestId ?? null;
+
+          const previousStudent = previousTestId
+            ? await User.findOne({ where: { testId: previousTestId } })
+            : null;
+
+          /* Whether that student is answering somewhere else right now. The
+           * difference between "their machine restarted" and "someone is
+           * claiming a seat that is already in use". */
+          const otherDevice = previousTestId
+            ? await DeviceKeyMap.findOne({ where: { testId: previousTestId } })
+            : null;
+          const previousStudentOnlineElsewhere =
+            !!otherDevice && otherDevice.deviceUuid !== request.deviceUuid && otherDevice.isOnline;
+
+          const existing = await DeviceKeyMap.findOne({
+            where: { deviceUuid: request.deviceUuid }
+          });
+
+          /* Whether this request comes from the seat the roster assigns. A
+           * machine asking from its own seat is the ordinary case; one asking
+           * from elsewhere is the one worth a second look. */
+          const rosterMatch = previousTestId
+            ? await User.findOne({ where: { testId: previousTestId } })
+            : await User.findOne({ where: { ipAddress: request.ipAddress } });
+          const ipMatchesRoster =
+            !!rosterMatch?.ipAddress && rosterMatch.ipAddress === request.ipAddress;
+
+          return {
+            id: request.id,
+            deviceUuid: request.deviceUuid,
+            ipAddress: request.ipAddress,
+            createdAt: request.createdAt,
+            type: request.type,
+            testId: request.testId,
+            previousTestId,
+            previousStudentName: previousStudent?.name ?? null,
+            previousStudentOnlineElsewhere,
+            lastDisconnectedAt: existing?.lastDisconnectedAt ?? null,
+            ipMatchesRoster
+          };
+        })
+      );
+
+      res.status(200).json(detailed);
     } catch (error) {
       next(error);
     }
@@ -101,23 +179,48 @@ export class ConnectionController {
 
   /**
    * POST /admin/connection/requests/:id/approve
-   * Approve a login request
+   *
+   * Let a machine in, optionally handing it to a different student.
+   *
+   * `targetTestId` names who will sit here. When it differs from whoever the
+   * machine was bound to, both bindings have to go: this machine's old one and
+   * the new student's hold on whatever machine they were using. Undoing only
+   * the first — which is all this used to do — leaves the student blocked on
+   * their own previous seat, so the TA has to run the whole approval again
+   * after the student fails to log in. Twice, for one swapped machine.
    */
   static async approveRequest(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const { action } = req.body; // "KEEP_USER" | "UNBIND_USER"
+      const { action, targetTestId } = req.body;
       const request = await LoginRequest.findByPk(id);
       if (!request) {
         throw new HttpError(404, "Login request not found");
       }
 
       request.status = "ALLOWED";
+      /* Who the seat was handed to, kept on the request itself. Without it the
+       * console can show that a machine was approved but not for whom, which is
+       * the one thing a second TA looking at the same queue needs to know. */
+      if (targetTestId) request.testId = targetTestId;
       await request.save();
 
-      if (action === "UNBIND_USER") {
-        if (request.testId) {
-          await BindingService.unbindUser(request.testId);
+      const unbound: string[] = [];
+      const previousTestId = request.previousTestId ?? request.testId ?? null;
+
+      /* Reassigning the seat. Both sides are released in this one call so the
+       * student can simply log in. */
+      if (targetTestId && targetTestId !== previousTestId) {
+        if (previousTestId) {
+          await BindingService.unbindUser(previousTestId);
+          unbound.push(previousTestId);
+        }
+        await BindingService.unbindUser(targetTestId);
+        unbound.push(targetTestId);
+      } else if (action === "UNBIND_USER") {
+        if (previousTestId) {
+          await BindingService.unbindUser(previousTestId);
+          unbound.push(previousTestId);
         } else {
           await BindingService.unregisterDevice(request.deviceUuid);
         }
@@ -129,10 +232,33 @@ export class ConnectionController {
         targetValue: request.deviceUuid,
       });
 
+      /* A one-shot pass for the address this request came from.
+       *
+       * The roster pins each student to a seat, and login refuses an address
+       * that is not theirs. Approving a machine used to work around that by
+       * clearing the student's seat outright, which disarmed the check for the
+       * rest of the exam — one approval and that ID could sign in anywhere.
+       * The pass lets exactly this entry through instead, and is consumed by
+       * the login that uses it. */
+      if (request.ipAddress) {
+        const existingIpPass = await UnblockedDevice.findOne({
+          where: { targetType: "IP", targetValue: request.ipAddress }
+        });
+        if (!existingIpPass) {
+          await UnblockedDevice.create({
+            targetType: "IP",
+            targetValue: request.ipAddress
+          });
+        }
+      }
+
       SocketService.triggerDataUpdateEvent("connection");
       SocketService.triggerDataUpdateEvent("student");
 
-      res.status(200).json({ message: "Request approved and device unblocked" });
+      res.status(200).json({
+        message: "Request approved and device unblocked",
+        unbound
+      });
     } catch (error) {
       next(error);
     }

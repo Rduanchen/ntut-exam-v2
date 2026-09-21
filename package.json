@@ -11,7 +11,8 @@
     "start:frontend": "pnpm --filter frontend start",
     "start": "pnpm --parallel --filter backend --filter frontend start",
     "production": "pnpm build && pnpm start",
-    "test": "pnpm --filter backend test"
+    "test": "bash scripts/check-contract-fixture.sh && pnpm --filter backend test",
+    "test:contract-fixture": "bash scripts/check-contract-fixture.sh"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

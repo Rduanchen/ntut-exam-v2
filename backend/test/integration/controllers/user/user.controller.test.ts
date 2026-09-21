@@ -12,12 +12,19 @@ import { DeviceKeyMap } from "../../../../src/models/device-key-map.model";
 import { SystemSettings } from "../../../../src/models/system-settings.model";
 import { CryptoService } from "../../../../src/services/crypto.service";
 import { DeviceService } from "../../../../src/services/device.service";
+import { SystemSettingsService } from "../../../../src/services/system-settings.service";
+import { ExamState } from "../../../../src/services/exam-state.service";
+import { seedExamPhase, satisfyInitializePreconditions } from "../../../helpers/exam-phase";
 
 describe("UserController (integration)", () => {
   let app: express.Express;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     app = createApp();
+    /* Student endpoints are phase-gated. Seed a running exam so these tests
+     * exercise the endpoint rather than the gate; the gate has its own tests
+     * in test/unit/middlewares/exam-phase.middleware.test.ts. */
+    await seedExamPhase(ExamState.IN_PROGRESS);
   });
 
   const seedConfig = async () =>
@@ -52,9 +59,32 @@ describe("UserController (integration)", () => {
       expect(res.body.error).toContain("Bad Request");
     });
 
-    it("registers a device and blocks a duplicate registration with 403", async () => {
+    it("registers a machine while self-service is open", async () => {
+      await SystemSettingsService.setAllowDeviceRegistration(true);
       const client = new TestClient(app);
-      await client.registerDevice("device-macbook-pro");
+
+      await expect(client.registerDevice("device-macbook-pro")).resolves.toMatchObject({
+        deviceUuid: "device-macbook-pro",
+      });
+    });
+
+    it("lets the same machine re-key itself while self-service is open", async () => {
+      /* A restart arrives as an unregistered machine with a new key, because
+       * the key only ever lived in memory. During the phase where machines set
+       * themselves up, that needs no ceremony — refusing it is what used to
+       * make a crash unrecoverable. */
+      await SystemSettingsService.setAllowDeviceRegistration(true);
+      await new TestClient(app).registerDevice("device-macbook-pro");
+
+      const again = await new TestClient(app).registerDevice("device-macbook-pro");
+
+      expect(again.deviceUuid).toBe("device-macbook-pro");
+    });
+
+    it("sends a machine to the TA once self-service has closed", async () => {
+      await SystemSettingsService.setAllowDeviceRegistration(true);
+      await new TestClient(app).registerDevice("device-macbook-pro");
+      await SystemSettingsService.setAllowDeviceRegistration(false);
 
       const keyRes = await request(app).get("/user/auth/rsa-public-key");
       const encrypted = crypto
@@ -68,11 +98,12 @@ describe("UserController (integration)", () => {
         )
         .toString("base64");
 
-      const duplicate = await request(app)
+      const refused = await request(app)
         .post("/user/auth/register-device")
         .send({ device_uuid: "device-macbook-pro", encrypted_aes_key: encrypted });
 
-      expect(duplicate.status).toBe(403);
+      expect(refused.status).toBe(403);
+      expect(refused.body.code).toBe("entry_pending");
     });
   });
 
@@ -139,8 +170,27 @@ describe("UserController (integration)", () => {
   });
 
   describe("POST /user/exam/config", () => {
-    it("returns the exam config encrypted to the session key", async () => {
+    it("is reachable by a machine that has never logged in", async () => {
+      /* The case the service test could not see: it calls getSecureConfig
+       * directly, and the integration test above signs in first, so both
+       * carried a session token without needing one. The route still demanded
+       * it — which made delivery impossible in the phase it is meant for,
+       * where no student has logged in yet. Found by running the thing. */
       await seedConfig();
+      await satisfyInitializePreconditions();
+
+      const machine = new TestClient(app);
+      await machine.registerDevice("device-never-logged-in");
+
+      const res = await machine.post("/user/exam/config");
+
+      expect(res.status).toBe(200);
+      expect(machine.decrypt(res.body).meta).toBeDefined();
+    });
+
+    it("returns the split paper encrypted to the device key", async () => {
+      await seedConfig();
+      await satisfyInitializePreconditions();
       const studentId = "112590004";
       await User.create({ testId: studentId, name: "Dora", ipAddress: null });
 
@@ -153,9 +203,11 @@ describe("UserController (integration)", () => {
       expect(res.status).toBe(200);
       expect(res.body.ciphertext).toBeDefined();
 
-      const config = client.decrypt(res.body);
-      expect(config.sections).toBeDefined();
-      expect(config.sections[0].puzzles[0].id).toBe("Q1");
+      const payload = client.decrypt(res.body);
+      expect(payload.meta.sections[0].puzzles[0].id).toBe("Q1");
+      expect(payload.cipher.ciphertext).toBeDefined();
+      // The half that would tell a student what the exam is about stays shut.
+      expect(JSON.stringify(payload.meta)).not.toContain("subtasks");
     });
 
     it("returns 401 for a device that was never registered", async () => {

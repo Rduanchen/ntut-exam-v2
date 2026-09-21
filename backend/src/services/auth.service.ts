@@ -50,7 +50,7 @@ export class AuthService {
     // Check device existence
     const device = await DeviceKeyMap.findOne({ where: { deviceUuid } });
     if (!device && process.env.LOAD_TEST_MODE !== 'pure') {
-      throw new HttpError(403, "REGISTRATION_FAILED", "Device is not registered. Please ensure key exchange is complete.");
+      throw new HttpError(403, "Device is not registered. Please ensure key exchange is complete.", "REGISTRATION_FAILED");
     }
 
     // Check if device is bound to ANOTHER user
@@ -72,7 +72,7 @@ export class AuthService {
           device.status = refreshedDevice.status;
         }
       } else {
-        throw new HttpError(403, "BINDING_LOCKED", "This device is already bound to another student. Please ask TA to unbind it first.");
+        throw new HttpError(403, "This device is already bound to another student. Please ask TA to unbind it first.", "BINDING_LOCKED");
       }
     }
 
@@ -81,10 +81,10 @@ export class AuthService {
       const oldDevice = await DeviceKeyMap.findOne({ where: { deviceUuid: user.deviceUuid } });
       if (oldDevice) {
         if (oldDevice.isOnline) {
-          throw new HttpError(403, "ALREADY_LOGGED_IN", "This student ID is currently logged in on another active device.");
+          throw new HttpError(403, "This student ID is currently logged in on another active device.", "ALREADY_LOGGED_IN");
         } else {
           // It's bound but offline. According to new requirements, they must be unbound by TA.
-          throw new HttpError(403, "BINDING_LOCKED", "This student ID is bound to an offline device. Please ask TA to unbind it first.");
+          throw new HttpError(403, "This student ID is bound to an offline device. Please ask TA to unbind it first.", "BINDING_LOCKED");
         }
       }
     }
@@ -102,7 +102,7 @@ export class AuthService {
       if (user.ipAddress) {
         const deviceIp = device?.ipAddress || "";
         if (cleanClientIp !== user.ipAddress && deviceIp !== user.ipAddress) {
-          throw new HttpError(403, "Your device ip is not match with the preset ip, please contact the TA");
+          throw new HttpError(403, "Your device ip is not match with the preset ip, please contact the TA", "IP_MISMATCH");
         }
       }
     }

@@ -1,0 +1,274 @@
+{
+  "$comment": [
+    "契約錨點 —— feature 007。config schema 在本專案有三份獨立定義：",
+    "  host/backend/src/schemas/config.schema.ts      (zod ^3)",
+    "  desktop/src/main/schemas/examConfig.schema.ts  (zod ^4)",
+    "  host/frontend/src/types/config.ts              (TypeScript type)",
+    "本檔在三處各有一份逐位元組相同的副本，三端各自有測試以它驗證自身定義。",
+    "修改契約時三份必須一起改；任一份漏改，其他端的測試會失敗。",
+    "full 樣本填滿所有選填欄位，minimal 樣本一律省略 —— 兩者並存是為了讓",
+    "zod ^3 與 ^4 在預設值填充上的行為差異在測試時暴露，而非在考試現場。"
+  ],
+  "full": {
+    "payload": {
+      "meta": {
+        "testTitle": "契約錨點考試",
+        "description": "本樣本填滿所有選填欄位",
+        "accessibleUsers": [
+          {
+            "id": "110000001",
+            "name": "王小明",
+            "ip": "192.168.1.11"
+          },
+          {
+            "id": "110000002",
+            "name": "陳大文",
+            "ip": ""
+          }
+        ],
+        "judgerSettings": {
+          "timeLimit": 1000,
+          "memoryLimit": 256,
+          "compareMode": "loose",
+          "compileTimeout": 30000,
+          "compileMemoryLimit": 512,
+          "maxConcurrentJobs": 20,
+          "maxSystemRetries": 2
+        },
+        "submitGraceSeconds": 60,
+        "sections": [
+          {
+            "id": "S1",
+            "title": "基礎題",
+            "description": "暖身",
+            "maxScore": 60,
+            "puzzles": [
+              {
+                "id": "P1",
+                "language": "Cpp",
+                "timeLimit": 2000,
+                "memoryLimit": 128
+              },
+              {
+                "id": "P2",
+                "language": "Python",
+                "timeLimit": 5000,
+                "memoryLimit": 256
+              }
+            ]
+          },
+          {
+            "id": "S2",
+            "title": "進階題",
+            "description": "",
+            "maxScore": 40,
+            "puzzles": [
+              {
+                "id": "P3",
+                "language": "Java",
+                "timeLimit": 4000,
+                "memoryLimit": 512
+              }
+            ]
+          }
+        ],
+        "wrappedExamKey": {
+          "salt": "CBUiLzxJVmNwfYqXpLG+yw==",
+          "iv": "DxwpNkNQXWp3hJGe",
+          "ciphertext": "FiMwPUpXZHF+i5ilsr/M2ebzBRIfLDlGU2BteoeUoa4=",
+          "tag": "HSo3RFFea3iFkp+sucbT4A=="
+        }
+      },
+      "cipher": {
+        "iv": "JDE+S1hlcn+Mmaaz",
+        "ciphertext": "KzhFUl9seYaToK26x9Th7vsNGic0QU5baHWCj5yptsPQ3er3CRYjMD1KV2RxfouYpbK/zNnm8wUSHyw5RlNgbXqHlKGuu8jV4u8BDhsoNUJPXGl2g5CdqrfE0d7r+AoX",
+        "tag": "Mj9MWWZzgI2ap7TBztvo9Q=="
+      }
+    },
+    "secret": {
+      "puzzles": [
+        {
+          "id": "P1",
+          "title": "兩數相加",
+          "score": 30,
+          "subtasks": [
+            {
+              "title": "小測資",
+              "score": 10,
+              "visible": [
+                {
+                  "input": "1 2\n",
+                  "output": "3\n"
+                }
+              ],
+              "hidden": [
+                {
+                  "input": "5 7\n",
+                  "output": "12\n"
+                }
+              ]
+            },
+            {
+              "title": "大測資",
+              "score": 20,
+              "visible": [
+                {
+                  "input": "1000000 1\n",
+                  "output": "1000001\n"
+                }
+              ],
+              "hidden": [
+                {
+                  "input": "999999 1\n",
+                  "output": "1000000\n"
+                },
+                {
+                  "input": "0 0\n",
+                  "output": "0\n"
+                }
+              ]
+            }
+          ],
+          "specialRules": [
+            {
+              "id": "R1",
+              "type": "use",
+              "constraint": "MUST_NOT_HAVE",
+              "message": "不得使用內建加總",
+              "severity": "warn",
+              "multiplier": 0.5,
+              "params": {
+                "identifiers": [
+                  "sum"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "P2",
+          "title": "字串反轉",
+          "score": 30,
+          "subtasks": [
+            {
+              "title": "唯一測資",
+              "score": 30,
+              "visible": [
+                {
+                  "input": "abc\n",
+                  "output": "cba\n"
+                }
+              ],
+              "hidden": [
+                {
+                  "input": "xyz\n",
+                  "output": "zyx\n"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "P3",
+          "title": "最短路徑",
+          "score": 40,
+          "subtasks": [
+            {
+              "title": "小圖",
+              "score": 40,
+              "visible": [
+                {
+                  "input": "3 2\n1 2 5\n2 3 7\n",
+                  "output": "12\n"
+                }
+              ],
+              "hidden": [
+                {
+                  "input": "2 1\n1 2 4\n",
+                  "output": "4\n"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "globalSpecialRules": [
+        {
+          "id": "G1",
+          "type": "regex",
+          "constraint": "MUST_NOT_HAVE",
+          "message": "不得呼叫 system()",
+          "severity": "info",
+          "multiplier": 0,
+          "params": {
+            "pattern": "system\\s*\\("
+          }
+        }
+      ]
+    }
+  },
+  "minimal": {
+    "payload": {
+      "meta": {
+        "testTitle": "最小樣本",
+        "description": "本樣本省略所有選填欄位",
+        "accessibleUsers": [
+          {
+            "id": "110000003",
+            "name": "李小華"
+          }
+        ],
+        "judgerSettings": {
+          "timeLimit": 1000,
+          "memoryLimit": 256
+        },
+        "sections": [
+          {
+            "id": "S1",
+            "title": "唯一區塊",
+            "maxScore": 100,
+            "puzzles": [
+              {
+                "id": "P1",
+                "language": "C"
+              }
+            ]
+          }
+        ],
+        "wrappedExamKey": {
+          "salt": "OUZTYG16h5ShrrvI1eLvAQ==",
+          "iv": "QE1aZ3SBjpuotcLP",
+          "ciphertext": "R1RhbnuIlaKvvMnW4/ACDxwpNkNQXWp3hJGeq7jF0t8=",
+          "tag": "TltodYKPnKm2w9Dd6vcJFg=="
+        }
+      },
+      "cipher": {
+        "iv": "VWJvfImWo7C9ytfk",
+        "ciphertext": "XGl2g5CdqrfE0d7r+AoXJDE+S1hlcn+MmaazwM3a5/QGEyAtOkdUYW57iJWir7zJ",
+        "tag": "Y3B9ipeksb7L2OXyBBEeKw=="
+      }
+    },
+    "secret": {
+      "puzzles": [
+        {
+          "id": "P1",
+          "title": "輸出 Hello",
+          "score": 100,
+          "subtasks": [
+            {
+              "title": "唯一測資",
+              "score": 100,
+              "visible": [
+                {
+                  "input": "",
+                  "output": "Hello\n"
+                }
+              ],
+              "hidden": []
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

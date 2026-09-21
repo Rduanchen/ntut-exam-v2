@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useConnectionStore } from '../../stores/connection.store';
 
 const connectionStore = useConnectionStore();
@@ -20,13 +20,72 @@ const headers = [
 ] as const;
 
 const requestHeaders = [
-  { title: 'Type', key: 'type', align: 'start' },
-  { title: 'Device UUID', key: 'deviceUuid' },
-  { title: 'IP Address', key: 'ipAddress' },
-  { title: 'Student ID', key: 'testId' },
-  { title: 'Time', key: 'createdAt' },
-  { title: 'Actions', key: 'actions', align: 'end', sortable: false }
+  { title: '情境', key: 'type', align: 'start' },
+  { title: '判斷依據', key: 'evidence', sortable: false },
+  { title: '機器', key: 'deviceUuid' },
+  { title: '時間', key: 'createdAt' },
+  { title: '處置', key: 'actions', align: 'end', sortable: false }
 ] as const;
+
+/**
+ * The three situations a TA has to tell apart.
+ *
+ * Named after what the machine is, not what happened to it — the backend
+ * cannot distinguish a restart from a swapped seat, since both send the same
+ * request, but it can say whether this machine is new, was bound to someone,
+ * or was registered and never claimed. Those need different decisions.
+ */
+const REQUEST_KINDS: Record<string, { label: string; color: string; hint: string }> = {
+  NEW_DEVICE: {
+    label: '全新機器',
+    color: 'info',
+    hint: '這台機器沒有註冊過。通常是臨時增加的座位。'
+  },
+  REBIND: {
+    label: '已綁學生的機器',
+    color: 'warning',
+    hint: '這台機器原本屬於某位學生。可能是他重開機，也可能是換了座位。'
+  },
+  UNBOUND_DEVICE: {
+    label: '註冊過未綁人',
+    color: 'grey',
+    hint: '註冊過但沒有人登入過，沒有作答會受影響。'
+  }
+};
+
+const kindOf = (type: string) => REQUEST_KINDS[type] ?? { label: type, color: 'grey', hint: '' };
+
+const elapsed = (iso: string | null): string => {
+  if (!iso) return '—';
+  const seconds = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (seconds < 60) return `${seconds} 秒前`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)} 分鐘前`;
+  return `${Math.round(seconds / 3600)} 小時前`;
+};
+
+/* Approval dialog: who sits here next. */
+const approveDialog = ref(false);
+const approving = ref<any>(null);
+const targetTestId = ref('');
+
+const openApprove = (item: any) => {
+  approving.value = item;
+  /* Defaults to whoever the machine already belonged to, because that is the
+   * common case — a restart. Changing it is the swapped-seat case. */
+  targetTestId.value = item.previousTestId ?? item.testId ?? '';
+  approveDialog.value = true;
+};
+
+const confirmApprove = async () => {
+  if (!approving.value) return;
+  await connectionStore.approveRequest(approving.value.id, 'KEEP_USER', targetTestId.value || undefined);
+  approveDialog.value = false;
+  approving.value = null;
+};
+
+const studentOptions = computed(() =>
+  connectionStore.devices.map((d: any) => ({ title: `${d.id} ${d.name ?? ''}`.trim(), value: d.id }))
+);
 
 onMounted(() => {
   refreshData();
@@ -194,30 +253,43 @@ async function unbindDevice(uuid: string) {
             class="px-2"
           >
             <template v-slot:item.type="{ item }">
-              <v-chip :color="item.type === 'FIRST_TIME' ? 'info' : 'warning'" size="small" variant="flat">
-                {{ item.type === 'FIRST_TIME' ? 'New Device' : 'Secondary Login' }}
+              <v-chip :color="kindOf(item.type).color" size="small" variant="flat" class="font-weight-bold">
+                {{ kindOf(item.type).label }}
               </v-chip>
+              <div class="text-caption text-medium-emphasis mt-1" style="max-width: 200px">
+                {{ kindOf(item.type).hint }}
+              </div>
+            </template>
+
+            <template v-slot:item.evidence="{ item }">
+              <div class="text-caption" data-test="request-evidence">
+                <div v-if="item.previousTestId">
+                  原綁：<strong>{{ item.previousTestId }}</strong>
+                  <span v-if="item.previousStudentName">（{{ item.previousStudentName }}）</span>
+                </div>
+                <div v-if="item.previousStudentOnlineElsewhere" class="text-error font-weight-bold">
+                  ⚠ 該學號正在另一台機器上作答
+                </div>
+                <div>上次斷線：{{ elapsed(item.lastDisconnectedAt) }}</div>
+                <div :class="item.ipMatchesRoster ? 'text-success' : 'text-warning'">
+                  來源 {{ item.ipAddress }}
+                  {{ item.ipMatchesRoster ? '（與名單相符）' : '（與名單不符）' }}
+                </div>
+              </div>
             </template>
             <template v-slot:item.createdAt="{ item }">
               {{ new Date(item.createdAt).toLocaleTimeString() }}
             </template>
             <template v-slot:item.actions="{ item }">
               <div class="d-flex justify-end gap-2">
-                <v-menu location="bottom end">
-                  <template v-slot:activator="{ props }">
-                    <v-btn v-bind="props" icon="mdi-check" color="success" size="small" variant="tonal"></v-btn>
-                  </template>
-                  <v-list density="compact" class="rounded-lg">
-                    <v-list-item @click="connectionStore.approveRequest(item.id, 'KEEP_USER')">
-                      <template v-slot:prepend><v-icon color="success">mdi-lock-open-variant</v-icon></template>
-                      <v-list-item-title>Allow Original User</v-list-item-title>
-                    </v-list-item>
-                    <v-list-item @click="connectionStore.approveRequest(item.id, 'UNBIND_USER')">
-                      <template v-slot:prepend><v-icon color="error">mdi-account-switch</v-icon></template>
-                      <v-list-item-title>Unbind & Allow New User</v-list-item-title>
-                    </v-list-item>
-                  </v-list>
-                </v-menu>
+                <v-btn
+                  icon="mdi-check"
+                  color="success"
+                  size="small"
+                  variant="tonal"
+                  data-test="open-approve"
+                  @click="openApprove(item)"
+                ></v-btn>
                 <v-btn icon="mdi-close" color="error" size="small" variant="tonal" @click="connectionStore.rejectRequest(item.id)"></v-btn>
               </div>
             </template>
@@ -301,6 +373,46 @@ async function unbindDevice(uuid: string) {
       </v-col>
     </v-row>
   </v-container>
+
+  <v-dialog v-model="approveDialog" max-width="520">
+    <v-card class="rounded-lg">
+      <v-card-title class="font-weight-bold">核准這台機器入場</v-card-title>
+      <v-card-text>
+        <div class="text-body-2 text-medium-emphasis mb-4">
+          機器 <code>{{ approving?.deviceUuid }}</code>
+        </div>
+
+        <v-select
+          v-model="targetTestId"
+          :items="studentOptions"
+          label="這台機器接下來給哪個學號"
+          density="comfortable"
+          data-test="approve-target"
+        ></v-select>
+
+        <v-alert
+          v-if="approving?.previousTestId && targetTestId && targetTestId !== approving.previousTestId"
+          type="warning"
+          variant="tonal"
+          density="comfortable"
+          class="mt-2"
+        >
+          換人使用。核准時會同時解除
+          <strong>{{ approving.previousTestId }}</strong> 與這台機器的綁定，以及
+          <strong>{{ targetTestId }}</strong> 與其原本機器的綁定 ——
+          兩邊一次解完，學生才能直接登入。兩人已提交的作答都不受影響。
+        </v-alert>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn variant="text" @click="approveDialog = false">取消</v-btn>
+        <v-btn color="success" variant="flat" data-test="confirm-approve" @click="confirmApprove">
+          核准
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
 </template>
 
 <style scoped>

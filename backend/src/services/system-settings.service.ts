@@ -3,7 +3,16 @@ import { HttpError } from "../utils/http-error";
 import logger from "../utils/logger.util";
 
 export type SystemSettingKey = string;
-export const PROTECTED_SETTINGS_KEYS: SystemSettingKey[] = ["exam_config", "allow_device_registration", "judger_deploy_test_latest"];
+export const PROTECTED_SETTINGS_KEYS: SystemSettingKey[] = [
+  "exam_config",
+  "allow_device_registration",
+  "judger_deploy_test_latest",
+  /* Feature 007. Deleting any of these mid-exam would leave every machine
+   * holding a paper it can never decrypt, with no way to re-derive the key. */
+  "exam_key",
+  "exam_config_cipher",
+  "exam_config_meta"
+];
 
 export class SystemSettingsService {
   static async createSetting(key: SystemSettingKey, value: any): Promise<void> {
@@ -58,6 +67,28 @@ export class SystemSettingsService {
     await SystemSettings.update({ value: stringifiedValue }, { where: { name: key } });
   }
 
+  /** Create or replace, whichever applies. */
+  static async upsertSetting(key: SystemSettingKey, value: any): Promise<void> {
+    const existing = await SystemSettings.findOne({ where: { name: key } });
+    if (existing) {
+      await this.updateSetting(key, value);
+    } else {
+      await this.createSetting(key, value);
+    }
+  }
+
+  /**
+   * Remove a setting even if it is protected, and say nothing if it is absent.
+   *
+   * Only for the reset channel. Protection exists to stop an operator deleting
+   * the exam key mid-exam, leaving every machine holding a paper it can never
+   * open — but reset is precisely the operation that must remove it, since
+   * nothing may survive that could decrypt the previous paper.
+   */
+  static async purgeSetting(key: SystemSettingKey): Promise<void> {
+    await SystemSettings.destroy({ where: { name: key } });
+  }
+
   static async deleteSetting(key: SystemSettingKey): Promise<void> {
     if (PROTECTED_SETTINGS_KEYS.includes(key)) {
       throw new HttpError(403, "Forbidden: 系統核心設定禁止刪除");
@@ -86,8 +117,11 @@ export class SystemSettingsService {
 
   static async getAllowDeviceRegistration(): Promise<boolean> {
     const value = await this.getSetting<boolean>("allow_device_registration");
-    // Default to true if not set
-    return value === null ? true : value;
+    /* Closed when unset. Every phase sets this explicitly, so an unset value
+     * means no phase has run — and an exam that has not been set up should not
+     * be accepting machines. Defaulting open made "nobody has decided yet" and
+     * "the operator opened it" indistinguishable. */
+    return value === null ? false : value;
   }
 
   static async setAllowDeviceRegistration(value: boolean): Promise<void> {

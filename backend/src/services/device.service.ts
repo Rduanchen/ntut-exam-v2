@@ -24,81 +24,40 @@ export class DeviceService {
     }
 
     const existing = await DeviceKeyMap.findOne({ where: { deviceUuid }, include: [User] });
-    
-    // Check if device is unblocked
+
+    // Check if this device has been let through by a TA
     const unblocked = await UnblockedDevice.findOne({
       where: { targetType: "UUID", targetValue: deviceUuid }
     });
 
     const isSimulationMode = process.env.LOAD_TEST_MODE === 'simulation';
+    const allowRegistration = await SystemSettingsService.getAllowDeviceRegistration();
+
+    /* Self-service is open for exactly one phase — machines in the room,
+     * students not yet in it. After that every arrival goes past a TA.
+     *
+     * A machine that already exists is treated no differently here. The key
+     * lives in memory only, so a restart genuinely arrives as an unregistered
+     * machine with a new key; refusing it on that basis alone is what used to
+     * turn every crash into a dead end that no path could recover from. */
+    if (!allowRegistration && !unblocked && !isSimulationMode) {
+      await this.requestEntry(deviceUuid, ipAddress, existing);
+      throw new HttpError(
+        403,
+        "Registration is closed. A request has been sent to the TA.",
+        "entry_pending"
+      );
+    }
+
+    if (unblocked) await unblocked.destroy();
 
     if (existing) {
-      // Secondary Binding: This device is already registered, and client is sending a new AES key.
-      if (!unblocked && !isSimulationMode) {
-        // Block it and log request if not already pending
-        const existingReq = await LoginRequest.findOne({
-          where: { ipAddress, deviceUuid, status: "PENDING" }
-        });
-        if (!existingReq) {
-          await LoginRequest.create({
-            ipAddress,
-            deviceUuid,
-            testId: existing.user ? existing.user.testId : null,
-            type: "SECONDARY",
-            status: "PENDING"
-          });
-        }
-        
-        // Update the status so the frontend shows it is waiting for login instead of being stuck on online
-        existing.status = existing.testId ? "AWAITING_LOGIN" : "UNBOUND";
-        await existing.save();
-
-        SocketService.triggerDataUpdateEvent('connection');
-        SocketService.triggerDataUpdateEvent('student');
-
-        throw new HttpError(403, "Secondary binding blocked. A request has been sent to the TA.");
-      } else {
-        // Unblocked or Simulation Mode: Consume the pass and allow binding
-        if (unblocked) await unblocked.destroy();
-        existing.clientAesKey = clientAesKeyBuffer.toString("hex");
-        existing.ipAddress = ipAddress;
-        existing.isOnline = true;
-        if (existing.testId) {
-          existing.status = "AWAITING_LOGIN";
-        } else {
-          existing.status = "UNBOUND";
-        }
-        await existing.save();
-        SocketService.triggerDataUpdateEvent('connection');
-        SocketService.triggerDataUpdateEvent('student');
-      }
+      existing.clientAesKey = clientAesKeyBuffer.toString("hex");
+      existing.ipAddress = ipAddress;
+      existing.isOnline = true;
+      existing.status = existing.testId ? "AWAITING_LOGIN" : "UNBOUND";
+      await existing.save();
     } else {
-      // First-Time Binding
-      const allowRegistration = await SystemSettingsService.getAllowDeviceRegistration();
-      if (!allowRegistration && !unblocked && !isSimulationMode) {
-        // Try to guess testId by IP if possible
-        const existingReq = await LoginRequest.findOne({
-          where: { ipAddress, deviceUuid, status: "PENDING" }
-        });
-        if (!existingReq) {
-          const userByIp = await User.findOne({ where: { ipAddress } });
-          await LoginRequest.create({
-            ipAddress,
-            deviceUuid,
-            testId: userByIp ? userByIp.testId : null,
-            type: "FIRST_TIME",
-            status: "PENDING"
-          });
-          SocketService.triggerDataUpdateEvent('connection');
-        }
-        throw new HttpError(403, "Registration is closed. A request has been sent to the TA.");
-      }
-      
-      // Consume pass if it was used to bypass
-      if (!allowRegistration && unblocked) {
-        await unblocked.destroy();
-      }
-
       await DeviceKeyMap.create({
         deviceUuid,
         ipAddress,
@@ -106,9 +65,91 @@ export class DeviceService {
         isOnline: true,
         status: "UNBOUND"
       });
-      SocketService.triggerDataUpdateEvent('connection');
-      SocketService.triggerDataUpdateEvent('student');
     }
+
+    SocketService.triggerDataUpdateEvent('connection');
+    SocketService.triggerDataUpdateEvent('student');
+  }
+
+  /**
+   * Record that a machine is waiting to be let in.
+   *
+   * Changes nothing about the device itself. A device UUID travels in clear
+   * text on every request, so anyone can send one that is not theirs — if a
+   * refused request could alter a device, a student mid-exam could be shown as
+   * disconnected on the TA's console by someone else's request.
+   *
+   * One pending request per machine. Retries are normal — a restarted client
+   * asks again on a timer — and each one becoming a row would bury the TA at
+   * exactly the moment their attention matters.
+   */
+  private static async requestEntry(
+    deviceUuid: string,
+    ipAddress: string,
+    existing: DeviceKeyMap | null
+  ): Promise<void> {
+    const pending = await LoginRequest.findOne({ where: { deviceUuid, status: "PENDING" } });
+    if (pending) return;
+
+    /* Classified by what the machine is, not by what happened to it. The
+     * backend cannot tell a restart from a swapped seat — both send exactly
+     * this request — but it can say whether this machine is new, was bound to
+     * someone, or was registered and never claimed. Those need different
+     * decisions from the TA. */
+    let type: string;
+    let previousTestId: string | null = null;
+
+    if (!existing) {
+      type = "NEW_DEVICE";
+    } else if (existing.testId) {
+      type = "REBIND";
+      previousTestId = existing.testId;
+    } else {
+      type = "UNBOUND_DEVICE";
+    }
+
+    const userByIp = existing?.testId
+      ? null
+      : await User.findOne({ where: { ipAddress } });
+
+    await LoginRequest.create({
+      ipAddress,
+      deviceUuid,
+      testId: previousTestId ?? userByIp?.testId ?? null,
+      previousTestId,
+      type,
+      status: "PENDING"
+    });
+
+    SocketService.triggerDataUpdateEvent('connection');
+  }
+
+  /**
+   * Record a machine's environment-check verdict.
+   *
+   * Stores the verdict and the failing language names, nothing more. The full
+   * report stays on the machine: an invigilator needs to know whether a seat is
+   * usable, and the compiler output that would explain why is unbounded — this
+   * system has frozen before on exactly that kind of untruncated text.
+   */
+  static async recordEnvironmentReport(
+    deviceUuid: string,
+    status: string,
+    failedLanguages: string[]
+  ): Promise<void> {
+    const device = await DeviceKeyMap.findOne({ where: { deviceUuid } });
+    if (!device) {
+      throw new HttpError(401, `Unauthorized: Device UUID "${deviceUuid}" is not registered`);
+    }
+
+    device.envCheckStatus = status;
+    device.envCheckFailedLanguages = failedLanguages.length
+      ? JSON.stringify(failedLanguages)
+      : null;
+    device.envCheckReportedAt = new Date();
+    await device.save();
+
+    SocketService.triggerDataUpdateEvent("student");
   }
 
   /**

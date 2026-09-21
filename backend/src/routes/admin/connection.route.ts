@@ -10,6 +10,9 @@ router.get("/devices", ConnectionController.getDevices);
 router.post("/devices/:uuid/unbind", ConnectionController.unbindDevice);
 router.delete("/devices/:uuid", ConnectionController.unregisterDevice);
 
+// Send one machine back through the entry gate, keeping its student's work.
+router.post("/devices/:deviceUuid/re-entry", ConnectionController.reEntryDevice);
+
 router.get("/requests", ConnectionController.getRequests);
 router.post("/requests/:id/approve", ConnectionController.approveRequest);
 router.post("/requests/:id/reject", ConnectionController.rejectRequest);

@@ -81,6 +81,10 @@ export class MessageSocketService {
           if (device) {
             device.isOnline = false;
             device.socketId = ""; // Or null, but string is safer if typings require string
+            /* Stamped so a TA reviewing a re-entry request can tell a machine
+             * that dropped seconds ago from one that has been gone for ten
+             * minutes — the difference between a restart and a swapped seat. */
+            device.lastDisconnectedAt = new Date();
             await device.save();
 
             const user = await User.findOne({ where: { deviceUuid: device.deviceUuid } });
@@ -156,6 +160,30 @@ export class MessageSocketService {
       });
     } catch (err: any) {
       logger.warn(`Failed to send status update notification via socket: ${err.message}`);
+    }
+  }
+
+  /**
+   * Tell every machine the exam has been wiped.
+   *
+   * Its own event, not another status broadcast. What a client must do here is
+   * nothing like a phase change — it has to forget its identity, its key and
+   * its paper, all of which the backend has just deleted. Carrying that on the
+   * status channel would put a destructive operation inside ordinary message
+   * handling, one flag away from being triggered by accident.
+   *
+   * Nothing is written to the message table: reset empties it first, so a row
+   * describing the reset would be deleted by the reset.
+   */
+  public static sendExamReset(reason?: string): void {
+    try {
+      const instance = MessageSocketService.getInstance();
+      instance.emitEvent("exam-reset", {
+        resetAt: new Date().toISOString(),
+        reason: reason ?? "The exam has been reset."
+      });
+    } catch (err: any) {
+      logger.warn(`Failed to broadcast exam reset: ${err.message}`);
     }
   }
 

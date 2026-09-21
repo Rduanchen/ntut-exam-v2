@@ -94,7 +94,94 @@ export const examConfigSchema = z.object({
     accessibleUsers: z.array(accessUserSchema),
     globalSpecialRules: z.array(specialRuleSchema).optional(),
     sections: z.array(sectionSchema),
+
+    /* How long submissions stay accepted after the exam is declared over.
+     * Optional with a default so existing papers keep working; the value lives
+     * on the paper because both ends need it and only one can be the source. */
+    submitGraceSeconds: z.number().min(0).optional().default(60),
 });
+
+/* ── Feature 007: the paper, split ────────────────────────────────────────
+ *
+ * The device AES key protects transport, but the student holds it — so it
+ * cannot keep the paper unreadable on that student's own machine. A second
+ * key does that, and the backend withholds it until the exam starts.
+ *
+ * Everything a machine needs *before* then goes in the meta part: the roster,
+ * the languages to probe, the limits to probe them at. Everything that would
+ * tell a student what the exam is about goes in the ciphered part — including
+ * puzzle titles, which give the subject away.
+ */
+
+const encryptedEnvelopeSchema = z.object({
+    iv: z.string(),
+    ciphertext: z.string(),
+    tag: z.string(),
+});
+
+export const wrappedExamKeySchema = z.object({
+    salt: z.string(),
+    iv: z.string(),
+    ciphertext: z.string(),
+    tag: z.string(),
+});
+
+/** A puzzle as it appears before the exam starts: enough to probe, no more. */
+const puzzleSkeletonSchema = z.object({
+    id: z.string(),
+    language: languageSchema,
+    timeLimit: z.number().optional(),
+    memoryLimit: z.number().optional(),
+});
+
+const sectionSkeletonSchema = z.object({
+    id: z.string(),
+    title: z.string(),
+    description: z.string().optional(),
+    maxScore: z.number().min(0),
+    puzzles: z.array(puzzleSkeletonSchema),
+});
+
+export const examConfigMetaSchema = z.object({
+    testTitle: z.string(),
+    description: z.string(),
+    accessibleUsers: z.array(accessUserSchema),
+    judgerSettings: z.object({
+        timeLimit: z.number(),
+        memoryLimit: z.number(),
+        compareMode: z.enum(["strict", "loose"]).optional(),
+        compileTimeout: z.number().optional(),
+        compileMemoryLimit: z.number().optional(),
+        maxConcurrentJobs: z.number().optional(),
+        maxSystemRetries: z.number().optional(),
+    }),
+    submitGraceSeconds: z.number().min(0).optional(),
+    sections: z.array(sectionSkeletonSchema),
+    wrappedExamKey: wrappedExamKeySchema,
+});
+
+/** The half that stays unreadable until the exam starts. */
+export const examConfigSecretSchema = z.object({
+    puzzles: z.array(z.object({
+        id: z.string(),
+        title: z.string(),
+        score: z.number().min(0),
+        subtasks: z.array(subtaskSchema),
+        specialRules: z.array(specialRuleSchema).optional(),
+    })),
+    globalSpecialRules: z.array(specialRuleSchema).optional(),
+});
+
+export const examConfigPayloadSchema = z.object({
+    meta: examConfigMetaSchema,
+    cipher: encryptedEnvelopeSchema,
+});
+
+export type EncryptedEnvelope = z.infer<typeof encryptedEnvelopeSchema>;
+export type WrappedExamKey = z.infer<typeof wrappedExamKeySchema>;
+export type ExamConfigMeta = z.infer<typeof examConfigMetaSchema>;
+export type ExamConfigSecret = z.infer<typeof examConfigSecretSchema>;
+export type ExamConfigPayload = z.infer<typeof examConfigPayloadSchema>;
 
 export type ExamConfig = z.infer<typeof examConfigSchema>;
 export type Section = z.infer<typeof sectionSchema>;

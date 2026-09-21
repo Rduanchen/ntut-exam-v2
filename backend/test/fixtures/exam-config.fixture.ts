@@ -12,6 +12,7 @@ import { JUDGE_DEFAULTS } from '../../src/config/judge.config';
 export const buildExamConfig = (overrides: Partial<ExamConfig> = {}): ExamConfig => ({
   testTitle: 'NTUT Midterm Exam',
   description: 'Midterm exam for NTUT students',
+  submitGraceSeconds: 60,
   judgerSettings: {
     timeLimit: 5000,
     memoryLimit: 65536,

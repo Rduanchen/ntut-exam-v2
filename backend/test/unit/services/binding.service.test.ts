@@ -6,6 +6,7 @@ import { User } from '../../../src/models/user.model';
 import { HttpError } from '../../../src/utils/http-error';
 import { SocketService } from '../../../src/sockets/socket.service';
 import { MessageSocketService } from '../../../src/sockets/message-socket.service';
+import { SystemSettingsService } from '../../../src/services/system-settings.service';
 import { buildUser, buildDeviceKey, buildAesKey } from '../../fixtures/identity.fixture';
 import type { DeviceKeyAttrs } from '../../fixtures/identity.fixture';
 
@@ -102,7 +103,7 @@ describe('BindingService', () => {
   });
 
   describe('unbindUser', () => {
-    it('clears the device binding AND the IP address', async () => {
+    it('clears the device binding and returns the IP to what the roster says', async () => {
       await seedDevice({ deviceUuid: 'dev-1', testId: 's-1' });
       await User.create({ ...buildUser({ testId: 's-1', deviceUuid: 'dev-1', ipAddress: '10.0.0.5' }) });
 
@@ -110,13 +111,43 @@ describe('BindingService', () => {
 
       const user = await User.findOne({ where: { testId: 's-1' } });
       expect(user!.deviceUuid).toBeNull();
-      // Clearing the IP on unbind is deliberate: a stale IP would let the next
-      // device inherit the old binding rule.
+      /* Feature 007 bugfix BUG-04. This used to be nulled, and `user.ipAddress`
+       * carries two things: the seat the config assigns and the address last
+       * logged in from. Login reads it as `if (user.ipAddress)`, so nulling it
+       * disarmed the seat check for that student for the rest of the exam —
+       * one TA approval and the ID could sign in from anywhere. With no roster
+       * entry there is nothing to restore, and null is the honest answer. */
       expect(user!.ipAddress).toBeNull();
 
       const device = await DeviceKeyMap.findOne({ where: { deviceUuid: 'dev-1' } });
       expect(device!.testId).toBeNull();
       expect(device!.status).toBe('UNBOUND');
+    });
+
+    it('restores the seat the exam config assigns rather than clearing it', async () => {
+      vi.spyOn(SystemSettingsService, 'getExamConfig').mockResolvedValue({
+        accessibleUsers: [{ id: 's-1', name: 'Student One', ip: '192.168.0.11' }]
+      } as any);
+
+      await seedDevice({ deviceUuid: 'dev-1', testId: 's-1' });
+      await User.create({ ...buildUser({ testId: 's-1', deviceUuid: 'dev-1', ipAddress: '10.0.0.5' }) });
+
+      await BindingService.unbindUser('s-1');
+
+      const user = await User.findOne({ where: { testId: 's-1' } });
+      expect(user!.ipAddress).toBe('192.168.0.11');
+    });
+
+    it('falls back to no seat when the config cannot be read', async () => {
+      vi.spyOn(SystemSettingsService, 'getExamConfig').mockRejectedValue(new Error('boom'));
+
+      await seedDevice({ deviceUuid: 'dev-1', testId: 's-1' });
+      await User.create({ ...buildUser({ testId: 's-1', deviceUuid: 'dev-1', ipAddress: '10.0.0.5' }) });
+
+      await expect(BindingService.unbindUser('s-1')).resolves.toBeUndefined();
+
+      const user = await User.findOne({ where: { testId: 's-1' } });
+      expect(user!.ipAddress).toBeNull();
     });
 
     it('is a no-op for an unknown user', async () => {
@@ -125,7 +156,11 @@ describe('BindingService', () => {
   });
 
   describe('unregisterDevice', () => {
-    it('deletes the device row and clears the user binding and IP', async () => {
+    it('deletes the device row and returns the user IP to the roster value', async () => {
+      vi.spyOn(SystemSettingsService, 'getExamConfig').mockResolvedValue({
+        accessibleUsers: [{ id: 's-1', name: 'Student One', ip: '192.168.0.11' }]
+      } as any);
+
       await seedDevice({ deviceUuid: 'dev-1', testId: 's-1' });
       await User.create({ ...buildUser({ testId: 's-1', deviceUuid: 'dev-1', ipAddress: '10.0.0.5' }) });
 
@@ -135,7 +170,7 @@ describe('BindingService', () => {
 
       const user = await User.findOne({ where: { testId: 's-1' } });
       expect(user!.deviceUuid).toBeNull();
-      expect(user!.ipAddress).toBeNull();
+      expect(user!.ipAddress).toBe('192.168.0.11');
     });
 
     it('is a no-op for an unknown device', async () => {

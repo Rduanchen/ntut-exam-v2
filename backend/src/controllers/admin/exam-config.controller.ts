@@ -103,6 +103,31 @@ export class ExamConfigController {
   }
 
   /**
+   * GET /admin/config/offline-bundle
+   *
+   * The paper as a file, for machines that cannot reach the backend.
+   *
+   * Exactly what the delivery endpoint returns: the same meta half and the same
+   * ciphertext, so a machine loading it from a stick runs one parsing path, not
+   * two. It carries no key and no password — a lost memory stick must not be a
+   * leaked exam, which the plaintext config this replaces could not promise.
+   */
+  static async exportOfflineBundle(req: Request, res: Response, next: NextFunction) {
+    try {
+      const meta = await SystemSettingsService.getSetting<any>("exam_config_meta");
+      const cipher = await SystemSettingsService.getSetting<any>("exam_config_cipher");
+
+      if (!meta || !cipher) {
+        throw new HttpError(409, "Conflict: The exam paper has not been prepared yet");
+      }
+
+      res.status(200).json({ meta, cipher });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /admin/init/init-status
    * Checks current initialized state of the database and configuration.
    */

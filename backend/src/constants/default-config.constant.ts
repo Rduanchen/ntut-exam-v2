@@ -4,6 +4,7 @@ import { JUDGE_DEFAULTS } from "../config/judge.config";
 export const DEFAULT_EXAM_CONFIG: ExamConfig = {
   testTitle: "Default Exam",
   description: "This is a default generated exam config.",
+  submitGraceSeconds: 60,
   judgerSettings: {
     timeLimit: 1000,
     memoryLimit: 256,

@@ -59,46 +59,111 @@ describe('DeviceService', () => {
         .rejects.toThrowError(HttpError);
     });
 
-    it('blocks first-time registration when registration is closed and files a TA request', async () => {
-      await SystemSettingsService.setAllowDeviceRegistration(false);
-      await User.create({ ...buildUser({ testId: 's-1', ipAddress: '10.0.0.7' }) });
+    it('lets a machine re-key itself while self-service is open', async () => {
+      /* The phase where machines set themselves up in an empty room. A restart
+       * here has no TA to ask and needs none — refusing it on the grounds that
+       * the device already exists is what used to make a crash unrecoverable. */
+      await SystemSettingsService.setAllowDeviceRegistration(true);
+      const { hex } = buildAesKey();
+      await DeviceKeyMap.create({ ...buildDeviceKey({ deviceUuid: 'dev-again', clientAesKey: hex }) });
 
-      await expect(DeviceService.registerKey('dev-closed', wrapKey(crypto.randomBytes(32)), '10.0.0.7'))
-        .rejects.toThrowError(HttpError);
+      const newKey = crypto.randomBytes(32);
+      await DeviceService.registerKey('dev-again', wrapKey(newKey), '10.0.0.1');
 
-      const req = await LoginRequest.findOne({ where: { deviceUuid: 'dev-closed' } });
-      expect(req).not.toBeNull();
-      expect(req!.type).toBe('FIRST_TIME');
-      expect(req!.status).toBe('PENDING');
-      // The request is attributed to the student assigned that IP.
-      expect(req!.testId).toBe('s-1');
+      const record = await DeviceKeyMap.findOne({ where: { deviceUuid: 'dev-again' } });
+      expect(record!.clientAesKey).toBe(newKey.toString('hex'));
+      expect(await LoginRequest.count()).toBe(0);
     });
 
-    it('blocks a secondary binding and records a SECONDARY request', async () => {
-      const { hex } = buildAesKey();
-      await DeviceKeyMap.create({ ...buildDeviceKey({ deviceUuid: 'dev-dup', clientAesKey: hex, testId: 's-1' }) });
-      await User.create({ ...buildUser({ testId: 's-1' }) });
+    describe('when the entry gate has closed', () => {
+      beforeEach(async () => {
+        await SystemSettingsService.setAllowDeviceRegistration(false);
+      });
 
-      await expect(DeviceService.registerKey('dev-dup', wrapKey(crypto.randomBytes(32)), '10.0.0.9'))
-        .rejects.toThrowError(HttpError);
+      it('files a NEW_DEVICE request for a machine nobody has seen', async () => {
+        await User.create({ ...buildUser({ testId: 's-1', ipAddress: '10.0.0.7' }) });
 
-      const req = await LoginRequest.findOne({ where: { deviceUuid: 'dev-dup' } });
-      expect(req).not.toBeNull();
-      expect(req!.type).toBe('SECONDARY');
+        await expect(DeviceService.registerKey('dev-closed', wrapKey(crypto.randomBytes(32)), '10.0.0.7'))
+          .rejects.toThrowError(HttpError);
 
-      // The device is moved out of ONLINE so the dashboard stops showing it connected.
-      const record = await DeviceKeyMap.findOne({ where: { deviceUuid: 'dev-dup' } });
-      expect(record!.status).toBe('AWAITING_LOGIN');
-    });
+        const req = await LoginRequest.findOne({ where: { deviceUuid: 'dev-closed' } });
+        expect(req).toMatchObject({ type: 'NEW_DEVICE', status: 'PENDING', previousTestId: null });
+        // Attributed to whoever is assigned that seat, to save the TA a lookup.
+        expect(req!.testId).toBe('s-1');
+      });
 
-    it('does not stack duplicate pending requests for the same device and IP', async () => {
-      const { hex } = buildAesKey();
-      await DeviceKeyMap.create({ ...buildDeviceKey({ deviceUuid: 'dev-dup', clientAesKey: hex }) });
+      it('files a REBIND request naming the student the machine was bound to', async () => {
+        const { hex } = buildAesKey();
+        await DeviceKeyMap.create({ ...buildDeviceKey({ deviceUuid: 'dev-dup', clientAesKey: hex, testId: 's-1' }) });
+        await User.create({ ...buildUser({ testId: 's-1' }) });
 
-      await expect(DeviceService.registerKey('dev-dup', wrapKey(crypto.randomBytes(32)), '10.0.0.9')).rejects.toThrow();
-      await expect(DeviceService.registerKey('dev-dup', wrapKey(crypto.randomBytes(32)), '10.0.0.9')).rejects.toThrow();
+        await expect(DeviceService.registerKey('dev-dup', wrapKey(crypto.randomBytes(32)), '10.0.0.9'))
+          .rejects.toThrowError(HttpError);
 
-      expect(await LoginRequest.count({ where: { deviceUuid: 'dev-dup', status: 'PENDING' } })).toBe(1);
+        const req = await LoginRequest.findOne({ where: { deviceUuid: 'dev-dup' } });
+        expect(req).toMatchObject({ type: 'REBIND', previousTestId: 's-1' });
+      });
+
+      it('files an UNBOUND_DEVICE request for a machine registered but never claimed', async () => {
+        /* Different from REBIND in what the TA has to decide: nobody's work is
+         * attached to this seat, so there is no binding to move. */
+        const { hex } = buildAesKey();
+        await DeviceKeyMap.create({ ...buildDeviceKey({ deviceUuid: 'dev-idle', clientAesKey: hex }) });
+
+        await expect(DeviceService.registerKey('dev-idle', wrapKey(crypto.randomBytes(32)), '10.0.0.9'))
+          .rejects.toThrowError(HttpError);
+
+        const req = await LoginRequest.findOne({ where: { deviceUuid: 'dev-idle' } });
+        expect(req).toMatchObject({ type: 'UNBOUND_DEVICE', previousTestId: null });
+      });
+
+      it('changes nothing about the device it refuses', async () => {
+        /* A device UUID travels in clear text on every request, so anyone can
+         * send one that is not theirs. If a refused request could alter a
+         * device, a student mid-exam could be shown as disconnected on the TA's
+         * console by somebody else's request. */
+        const { hex } = buildAesKey();
+        await DeviceKeyMap.create({
+          ...buildDeviceKey({ deviceUuid: 'dev-live', clientAesKey: hex, testId: 's-1' }),
+          status: 'ONLINE',
+          isOnline: true,
+        });
+        const before = (await DeviceKeyMap.findOne({ where: { deviceUuid: 'dev-live' } }))!.toJSON();
+
+        await expect(DeviceService.registerKey('dev-live', wrapKey(crypto.randomBytes(32)), '10.0.0.9'))
+          .rejects.toThrowError(HttpError);
+
+        const after = (await DeviceKeyMap.findOne({ where: { deviceUuid: 'dev-live' } }))!.toJSON();
+        expect(after).toEqual(before);
+      });
+
+      it('files one request per machine however many times it asks', async () => {
+        /* A restarted client retries on a timer. Each retry becoming a row
+         * would bury the TA at the moment their attention matters most. */
+        const { hex } = buildAesKey();
+        await DeviceKeyMap.create({ ...buildDeviceKey({ deviceUuid: 'dev-dup', clientAesKey: hex }) });
+
+        for (const ip of ['10.0.0.9', '10.0.0.9', '10.0.0.44']) {
+          await expect(
+            DeviceService.registerKey('dev-dup', wrapKey(crypto.randomBytes(32)), ip),
+          ).rejects.toThrow();
+        }
+
+        expect(await LoginRequest.count({ where: { deviceUuid: 'dev-dup', status: 'PENDING' } })).toBe(1);
+      });
+
+      it('carries a code the client can route on', async () => {
+        const { hex } = buildAesKey();
+        await DeviceKeyMap.create({ ...buildDeviceKey({ deviceUuid: 'dev-code', clientAesKey: hex }) });
+
+        try {
+          await DeviceService.registerKey('dev-code', wrapKey(crypto.randomBytes(32)), '10.0.0.9');
+          expect.unreachable('expected a refusal');
+        } catch (err: any) {
+          expect(err.statusCode).toBe(403);
+          expect(err.code).toBe('entry_pending');
+        }
+      });
     });
 
     it('consumes a TA approval to allow a secondary binding', async () => {
