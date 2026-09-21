@@ -4,8 +4,36 @@ import { HttpError } from "../utils/http-error";
 import { MessageSocketService } from "../sockets/message-socket.service";
 import logger from "../utils/logger.util";
 import { SocketService } from "../sockets/socket.service";
+import { SystemSettingsService } from "./system-settings.service";
 
 export class BindingService {
+  /**
+   * The seat the roster assigns this student, or null if it assigns none.
+   *
+   * `user.ipAddress` carries two things at once: the seat the exam config
+   * declares, and the address the student last logged in from. Unbinding used
+   * to null it, which threw the first away along with the second — and the
+   * login check is written as `if (user.ipAddress)`, so a student whose seat
+   * had been cleared could sign in from anywhere for the rest of the exam. One
+   * TA approval was enough to disable the check permanently.
+   *
+   * Restoring the declared value keeps the check meaning what the config says.
+   * A student who genuinely moved seats is handled by the approval issuing a
+   * one-shot pass for the new address, not by disarming the rule.
+   */
+  private static async rosterIpFor(testId: string): Promise<string | null> {
+    try {
+      const config = await SystemSettingsService.getExamConfig();
+      const entry = config?.accessibleUsers?.find(
+        (candidate: any) => String(candidate?.id) === String(testId)
+      );
+      return entry?.ip ?? null;
+    } catch (error: any) {
+      logger.warn(`[BindingService] Could not read the roster IP for ${testId}: ${error.message}`);
+      return null;
+    }
+  }
+
   /**
    * Bind a device to a user (Bidirectional).
    */
@@ -76,7 +104,7 @@ export class BindingService {
 
     // Unbind User
     user.deviceUuid = null;
-    user.ipAddress = null;
+    user.ipAddress = await this.rosterIpFor(testId);
     await user.save();
 
     // Unbind Device
@@ -110,7 +138,7 @@ export class BindingService {
     const user = await User.findOne({ where: { deviceUuid } });
     if (user) {
       user.deviceUuid = null;
-      user.ipAddress = null;
+      user.ipAddress = await this.rosterIpFor(user.testId);
       await user.save();
     }
 

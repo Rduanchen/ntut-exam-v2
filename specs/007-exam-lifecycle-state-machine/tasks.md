@@ -284,6 +284,43 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 ---
 
+## Phase 10: Bugfix Round 1 —— 現場走查回報的七個缺陷
+
+**Purpose**: 修正 007 首次完整實作後現場走查發現的七個缺陷。逐條對應 `bugfixes.md` BUG-01 ～ BUG-07 與 spec.md FR-035 ～ FR-043。
+
+**⚠️ 契約變更**: T127 改變後端錯誤回應的欄位語意，桌面版依賴之。兩個 repo 必須同時佈署。
+
+### Tests for Bugfix Round 1 (MANDATORY) ⚠️
+
+- [X] T127 [P] 在 `host/backend/test/unit/services/auth.service.test.ts` 斷言四個綁定錯誤的 `code` 欄位是碼、`message` 欄位是人類可讀訊息（BUG-04，FR-035）
+- [X] T128 [P] 在 `host/backend/test/unit/services/binding.service.test.ts` 斷言 unbind 後 `user.ipAddress` 回到名單值而非 `null`（BUG-04，FR-037）
+- [X] T129 [P] 在 `host/backend/test/unit/controllers/connection.controller.test.ts` 斷言核准入場時一併發出來源位置例外（BUG-04，FR-037）
+- [X] T130 [P] 在 `desktop/test/ipc/auth.ipc.test.ts` 斷言任何登入失敗都不清除 `cryptoState`（BUG-04，FR-036）
+- [X] T131 [P] 在 `desktop/test/ui/phase-derivation.test.ts` 涵蓋離線機器的推導：`SETUP_FINISHED`／`IN_PROGRESS` × 離線 → 不得是 `pending-approval`（BUG-03，FR-040）
+- [X] T132 [P] 在 `desktop/test/service/config.service.test.ts` 斷言 `initFromPreSettings` 在有 `remoteHost` 時標記為已佈署（BUG-02，FR-039）
+- [X] T133 [P] 在 `desktop/test/ipc/auth.ipc.test.ts` 斷言登入成功且階段已是 `IN_PROGRESS` 時，會取得解讀能力並還原考卷（BUG-05，FR-041）
+- [X] T134 [P] 在 `desktop/test/service/localProgram.service.test.ts` 與 `desktop/test/ipc/judger.ipc.test.ts` 斷言路徑為 `undefined` 時以明確錯誤拒絕（BUG-07，FR-042）
+- [X] T135 [P] 在 `desktop/test/service/connection.service.test.ts` 斷言 reset 清空補送佇列（BUG-06，FR-043）
+
+### Implementation for Bugfix Round 1
+
+- [X] T136 在 `host/backend/src/services/auth.service.ts` 修正四處 `HttpError` 的參數順序（BUG-04，FR-035）
+- [X] T137 在 `host/backend/src/services/binding.service.ts` 讓 `unbindUser`／`unregisterDevice` 把 `ipAddress` 還原成名單值（BUG-04，FR-037）
+- [X] T138 在 `host/backend/src/controllers/admin/connection.controller.ts` 讓核准一併發出來源位置例外，並把核准對象寫回申請列（BUG-04，FR-037）
+- [X] T139 在 `desktop/src/main/ipc/auth.ipc.ts` 移除登入失敗時的 `cryptoState` 清除（BUG-04，FR-036）
+- [X] T140 在 `desktop/src/renderer/router/phase-derivation.ts` 讓推導接受「離線機器」輸入（BUG-03，FR-040）
+- [X] T141 在 `desktop/src/renderer/router/navigate.ts`、`index.ts` 傳入離線旗標，並讓 `settings` 在已有後端位址時導向推導畫面（BUG-02／BUG-03，FR-039、FR-040）
+- [X] T142 在 `desktop/src/main/services/config.service.ts` 讓 `initFromPreSettings` 標記已佈署（BUG-02，FR-039）
+- [X] T143 在 `desktop/src/renderer/App.vue` 集中訂閱階段變更並重新推導；移除各頁面重複的訂閱（BUG-01，FR-038）
+- [X] T144 在 `desktop/src/renderer/pages/ExamPage.vue` 只保留收卷緩衝的責任（BUG-01，FR-038）
+- [X] T145 在 `desktop/src/main/services/config.service.ts` 新增冪等的 `ensureExamPaperReadable()`，並在登入成功與收到考卷後呼叫（BUG-05，FR-041）
+- [X] T146 在 `desktop/src/preload/index.ts` 以 `webUtils.getPathForFile` 提供 `files.getPath`，並更新三處呼叫端（BUG-07，FR-042）
+- [X] T147 在 `desktop/src/main/services/connection.service.ts` 新增 `clearQueues()` 並於 reset 時呼叫（BUG-06，FR-043）
+
+**Checkpoint**: 七個缺陷皆有測試覆蓋且兩端測試綠燈
+
+---
+
 ## Dependencies
 
 ### 階段相依

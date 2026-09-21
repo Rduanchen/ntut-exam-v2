@@ -199,6 +199,10 @@ export class ConnectionController {
       }
 
       request.status = "ALLOWED";
+      /* Who the seat was handed to, kept on the request itself. Without it the
+       * console can show that a machine was approved but not for whom, which is
+       * the one thing a second TA looking at the same queue needs to know. */
+      if (targetTestId) request.testId = targetTestId;
       await request.save();
 
       const unbound: string[] = [];
@@ -227,6 +231,26 @@ export class ConnectionController {
         targetType: "UUID",
         targetValue: request.deviceUuid,
       });
+
+      /* A one-shot pass for the address this request came from.
+       *
+       * The roster pins each student to a seat, and login refuses an address
+       * that is not theirs. Approving a machine used to work around that by
+       * clearing the student's seat outright, which disarmed the check for the
+       * rest of the exam — one approval and that ID could sign in anywhere.
+       * The pass lets exactly this entry through instead, and is consumed by
+       * the login that uses it. */
+      if (request.ipAddress) {
+        const existingIpPass = await UnblockedDevice.findOne({
+          where: { targetType: "IP", targetValue: request.ipAddress }
+        });
+        if (!existingIpPass) {
+          await UnblockedDevice.create({
+            targetType: "IP",
+            targetValue: request.ipAddress
+          });
+        }
+      }
 
       SocketService.triggerDataUpdateEvent("connection");
       SocketService.triggerDataUpdateEvent("student");

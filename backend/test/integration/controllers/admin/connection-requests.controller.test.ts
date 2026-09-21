@@ -8,6 +8,7 @@ import { ExamState } from '../../../../src/services/exam-state.service';
 import { User } from '../../../../src/models/user.model';
 import { DeviceKeyMap } from '../../../../src/models/device-key-map.model';
 import { LoginRequest } from '../../../../src/models/login-request.model';
+import { UnblockedDevice } from '../../../../src/models/unblocked-device.model';
 import { SocketService } from '../../../../src/sockets/socket.service';
 import { MessageSocketService } from '../../../../src/sockets/message-socket.service';
 import { buildDeviceKey, buildAesKey } from '../../../fixtures/identity.fixture';
@@ -190,6 +191,48 @@ describe('admin entry requests (integration)', () => {
         .send({ targetTestId: 'old' });
 
       expect((await LoginRequest.findByPk(request.id))!.status).toBe('ALLOWED');
+    });
+
+    it('issues a one-shot pass for the address the request came from', async () => {
+      /* Feature 007 bugfix BUG-04. Approval used to make a swapped seat work by
+       * clearing the student's roster IP, which disarmed the seat check for the
+       * rest of the exam. The pass lets this one entry through instead, and the
+       * login that uses it consumes it. */
+      const request = await swapSetup();
+
+      await adminRequest(app)
+        .post(`/admin/connection/requests/${request.id}/approve`)
+        .send({ targetTestId: 'new' });
+
+      const pass = await UnblockedDevice.findOne({
+        where: { targetType: 'IP', targetValue: '10.0.0.5' }
+      });
+      expect(pass).not.toBeNull();
+    });
+
+    it('does not stack duplicate address passes when approved twice', async () => {
+      const request = await swapSetup();
+
+      await adminRequest(app)
+        .post(`/admin/connection/requests/${request.id}/approve`)
+        .send({ targetTestId: 'new' });
+      await adminRequest(app)
+        .post(`/admin/connection/requests/${request.id}/approve`)
+        .send({ targetTestId: 'new' });
+
+      expect(
+        await UnblockedDevice.count({ where: { targetType: 'IP', targetValue: '10.0.0.5' } })
+      ).toBe(1);
+    });
+
+    it('records who the seat was handed to', async () => {
+      const request = await swapSetup();
+
+      await adminRequest(app)
+        .post(`/admin/connection/requests/${request.id}/approve`)
+        .send({ targetTestId: 'new' });
+
+      expect((await LoginRequest.findByPk(request.id))!.testId).toBe('new');
     });
 
     it('returns 404 for a request that does not exist', async () => {

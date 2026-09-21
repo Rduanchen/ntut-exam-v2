@@ -40,7 +40,7 @@ describe('AuthService - IP Fallback', () => {
     const payload = { device_uuid: 'device_ip_1' } as any;
 
     await expect(AuthService.loginAndBind(payload, '192.168.1.200'))
-      .rejects.toThrowError(new HttpError(403, "Your device ip is not match with the preset ip, please contact the TA"));
+      .rejects.toThrowError(new HttpError(403, "Your device ip is not match with the preset ip, please contact the TA", "IP_MISMATCH"));
   });
 
   it('should allow login and consume approval state when TA approves new IP', async () => {
@@ -76,7 +76,64 @@ describe('AuthService - Device Rebinding', () => {
     const payload = { device_uuid: 'device_rebind_1' } as any;
 
     await expect(AuthService.loginAndBind(payload, '192.168.1.100'))
-      .rejects.toThrowError(new HttpError(403, "BINDING_LOCKED", "This device is already bound to another student. Please ask TA to unbind it first."));
+      .rejects.toThrowError(new HttpError(403, "This device is already bound to another student. Please ask TA to unbind it first.", "BINDING_LOCKED"));
+  });
+
+  /* Feature 007 bugfix BUG-04. `HttpError` is (status, message, code) and these
+   * four throws had the last two the other way round, so the wire carried
+   * `{ error: "BINDING_LOCKED", code: "This device is already..." }`. The
+   * desktop reads `code` to decide whether a refusal is about the device or
+   * about the binding — with a sentence there, every binding refusal looked
+   * like an unregistered device, and the machine threw away a perfectly good
+   * registration and rejoined the TA queue. Asserting the message alone,
+   * which is all `toThrowError` compares, cannot see this. */
+  it('carries the machine-readable code in code, not in message', async () => {
+    await User.create({ testId: 'test_old_student', name: 'Old Student' });
+    await User.create({ testId: 'test_new_student', name: 'New Student' });
+    await DeviceKeyMap.create({ deviceUuid: 'device_rebind_1', testId: 'test_old_student', clientAesKey: 'key' });
+
+    const payload = { device_uuid: 'device_rebind_1' } as any;
+
+    await expect(AuthService.loginAndBind(payload, '192.168.1.100')).rejects.toMatchObject({
+      statusCode: 403,
+      code: 'BINDING_LOCKED',
+      message: expect.stringContaining('already bound to another student')
+    });
+  });
+
+  it('reports a second live session as ALREADY_LOGGED_IN in the code field', async () => {
+    await DeviceKeyMap.create({ deviceUuid: 'device_elsewhere', clientAesKey: 'key', isOnline: true });
+    await DeviceKeyMap.create({ deviceUuid: 'device_rebind_1', clientAesKey: 'key' });
+    await User.create({
+      testId: 'test_new_student',
+      name: 'New Student',
+      deviceUuid: 'device_elsewhere'
+    });
+
+    const payload = { device_uuid: 'device_rebind_1' } as any;
+
+    await expect(AuthService.loginAndBind(payload, '192.168.1.100')).rejects.toMatchObject({
+      statusCode: 403,
+      code: 'ALREADY_LOGGED_IN'
+    });
+  });
+
+  it('reports a binding held by an offline machine as BINDING_LOCKED in the code field', async () => {
+    await DeviceKeyMap.create({ deviceUuid: 'device_elsewhere', clientAesKey: 'key', isOnline: false });
+    await DeviceKeyMap.create({ deviceUuid: 'device_rebind_1', clientAesKey: 'key' });
+    await User.create({
+      testId: 'test_new_student',
+      name: 'New Student',
+      deviceUuid: 'device_elsewhere'
+    });
+
+    const payload = { device_uuid: 'device_rebind_1' } as any;
+
+    await expect(AuthService.loginAndBind(payload, '192.168.1.100')).rejects.toMatchObject({
+      statusCode: 403,
+      code: 'BINDING_LOCKED',
+      message: expect.stringContaining('offline device')
+    });
   });
 
   it('should allow device rebinding and consume approval state when TA approves', async () => {

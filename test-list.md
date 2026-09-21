@@ -4,7 +4,8 @@
 
 - 適用範圍：`backend/src/` 全部 routes / controllers / services / middlewares / sockets / config。
 - 與 `test-checklist.md` 的差異：那份是「Host + Desktop 端到端操作」的部署清單；**這份是後端功能面的完整盤點**，每一項都對應到實際存在的程式進入點。
-- **最後更新：feature 007（考試生命週期與考卷加密）**。第 2、4、14、14b、14c 章為該功能新增或整段改寫；規格見 `specs/007-exam-lifecycle-state-machine/`，兩端行為說明見 `EXAM-LIFECYCLE.md`。
+- **最後更新：feature 007（
+  考試生命週期與考卷加密）**。第 2、4、14、14b、14c 章為該功能新增或整段改寫；規格見 `specs/007-exam-lifecycle-state-machine/`，兩端行為說明見 `EXAM-LIFECYCLE.md`。
 - 驗證方式代號：`API` = 直接打 HTTP 端點（curl / Postman）、`UI` = 透過管理前端、`CLI` = 觀察終端機/log、`DB` = 檢查 SQLite 內容、`E2E` = 需搭配 Desktop 客戶端。
 - 所有 `/admin/*` 端點都需帶 `Authorization: Bearer <ADMIN_TOKEN>` 或 `x-admin-token`。
 
@@ -12,11 +13,11 @@
 
 ## 0. 前置環境 (Preconditions)
 
-- [ ] `CLI` 後端啟動成功，`Server is running on http://localhost:<PORT>`，無 error log。
-- [ ] `CLI` 啟動時 `initDatabase()` 正常，首次啟動能自動建立 `ntut-exam.sqlite` 與所有資料表。
-- [ ] `CLI` 啟動時 `checkPistonServer()` 有回報 Piston 可達；Piston 關閉時啟動流程給出明確錯誤而非無聲失敗。
-- [ ] `CLI` `.env` 未設 `LOAD_TEST_MODE` 時，終端機**沒有**紅底警告（正式考試必須是這個狀態）。
-- [ ] `CLI` 分別設 `LOAD_TEST_MODE=true / simulation / pure`，確認三種紅底警告文字各自正確出現。
+- [ V ] `CLI` 後端啟動成功，`Server is running on http://localhost:<PORT>`，無 error log。
+- [ V ] `CLI` 啟動時 `initDatabase()` 正常，首次啟動能自動建立 `ntut-exam.sqlite` 與所有資料表。
+- [ V ] `CLI` 啟動時 `checkPistonServer()` 有回報 Piston 可達；Piston 關閉時啟動流程給出明確錯誤而非無聲失敗。
+- [ V ] `CLI` `.env` 未設 `LOAD_TEST_MODE` 時，終端機**沒有**紅底警告（正式考試必須是這個狀態）。
+- [ V ] `CLI` 分別設 `LOAD_TEST_MODE=true / simulation / pure`，確認三種紅底警告文字各自正確出現。
 
 ---
 
@@ -46,22 +47,22 @@
 
 ### 2.1 階段推進
 
-- [ ] `API` `GET /admin/exam-state` — 未設定時回 `UNINITIALIZED`，並回 `allowedNext: ["INITIALIZED"]`。
-- [ ] `API` 依序推進 `UNINITIALIZED → INITIALIZED → SETUP_FINISHED → IN_PROGRESS → FINISHED`，每一步都成功。
-- [ ] `API` `FINISHED` 時 `allowedNext` 為**空陣列**（沒有下一步）。
-- [ ] `API` **跳階**（如 `UNINITIALIZED → IN_PROGRESS`）→ 400 `invalid_transition`，且階段不變。
-- [ ] `API` **回退**（如 `SETUP_FINISHED → INITIALIZED`）→ 400 `invalid_transition`。
-- [ ] `API` **原地轉移**（送出目前的階段）→ 400 `invalid_transition`（不再是靜默 no-op）。
-- [ ] `API` 未初始化就送 `INITIALIZED` → 409 `preconditions_not_met`，`missing` 逐項列出缺什麼（`exam_config` / `students` / `exam_key` / `exam_config_meta` / `exam_config_cipher`）。
-- [ ] `UI` 管理端只呈現「推進到下一階段」單一按鈕與 reset，**沒有**四顆任選階段的按鈕。
-- [ ] `UI` 推進前的確認對話框說明該階段會發生什麼，並提醒階段不可逆。
+- [ V ] `API` `GET /admin/exam-state` — 未設定時回 `UNINITIALIZED`，並回 `allowedNext: ["INITIALIZED"]`。
+- [ V ] `API` 依序推進 `UNINITIALIZED → INITIALIZED → SETUP_FINISHED → IN_PROGRESS → FINISHED`，每一步都成功。
+- [ V ] `API` `FINISHED` 時 `allowedNext` 為**空陣列**（沒有下一步）。
+- [ V ] `API` **跳階**（如 `UNINITIALIZED → IN_PROGRESS`）→ 400 `invalid_transition`，且階段不變。
+- [ V ] `API` **回退**（如 `SETUP_FINISHED → INITIALIZED`）→ 400 `invalid_transition`。
+- [ V ] `API` **原地轉移**（送出目前的階段）→ 400 `invalid_transition`（不再是靜默 no-op）。
+- [ V ] `API` 未初始化就送 `INITIALIZED` → 409 `preconditions_not_met`，`missing` 逐項列出缺什麼（`exam_config` / `students` / `exam_key` / `exam_config_meta` / `exam_config_cipher`）。
+- [ V ] `UI` 管理端只呈現「推進到下一階段」單一按鈕與 reset，**沒有**四顆任選階段的按鈕。
+- [ V ] `UI` 推進前的確認對話框說明該階段會發生什麼，並提醒階段不可逆。
 
 ### 2.2 註冊開關的時機（防作弊關鍵）
 
-- [ ] `API` 進入 `INITIALIZED` → `allowDeviceRegistration` 自動變 **true**。
-- [ ] `API` 進入 `SETUP_FINISHED` → 自動變 **false**。⚠️ 這是學生入場的時刻，務必確認在此關閉而非等到開考。
-- [ ] `API` 進入 `IN_PROGRESS` → 仍為 false（不是在這裡才關）。
-- [ ] `DB` `allow_device_registration` 未設定時讀回 **false**（未經任何階段 = 不接受機器）。
+- [ V ] `API` 進入 `INITIALIZED` → `allowDeviceRegistration` 自動變 **true**。
+- [ V ] `API` 進入 `SETUP_FINISHED` → 自動變 **false**。⚠️ 這是學生入場的時刻，務必確認在此關閉而非等到開考。
+- [ V ] `API` 進入 `IN_PROGRESS` → 仍為 false（不是在這裡才關）。
+- [ V ] `DB` `allow_device_registration` 未設定時讀回 **false**（未經任何階段 = 不接受機器）。
 
 ### 2.3 階段權限矩陣
 
@@ -186,6 +187,7 @@
 `judger.service.ts` / `judge-execution.service.ts` / `judge-queue.service.ts` / `judge-limiter.ts` / `judge-startup.service.ts` / `utils/judger-output.util.ts`
 
 ### 7.1 基本評測正確性
+
 - [ ] `API` `POST /admin/judger/judge/:testId` — 接受評測並**立即回傳 job handle（不阻塞等待）**（spec 004 US3）。
 - [ ] `API` `GET /admin/judger/jobs/:jobId` — 可追蹤 pending → running → done 的狀態轉換。
 - [ ] `API` `POST /admin/judger/rejudge` — 以 body 指定對象重新評測（此路由過去回 404，需特別確認已修復）。
@@ -196,6 +198,7 @@
 - [ ] `API` `compareMode: strict` 與 `loose` 兩種比對模式行為差異正確（尾端空白、換行）。
 
 ### 7.2 失敗歸因隔離 (Fault Attribution) — 本專案 Root Principle
+
 - [ ] `API` 讓 Piston 過載造成編譯階段被 SIGKILL → 判為 **SYSTEM 失敗而非 CE**（spec 003 US1 / spec 004 US1 驗收 1）。
 - [ ] `API` 系統失敗會**自動重試**，重試次數受 `maxSystemRetries` 限制。
 - [ ] `API` 重試耗盡後 → 記為系統失敗、**不計分、也不算答錯**（spec 004 US1 驗收 2）。
@@ -205,6 +208,7 @@
 - [ ] `CLI` 評測過程**不得**把學生原始碼 / 輸出印到 stdout（spec 003 US2 驗收 2）。
 
 ### 7.3 併發上限 (Concurrency Ceiling)
+
 - [ ] `API` 同時送出遠超上限的評測 → 實際 in-flight 數**永不超過** `maxConcurrentJobs`（spec 004 US2 驗收 1）。
 - [ ] `API` 多個獨立評測請求同時到達 → 上限是**全域共用**而非每請求各自計算（驗收 2）。
 - [ ] `API` 等待中的工作在容量釋放後會繼續完成，不會餓死（驗收 3）。
@@ -212,6 +216,7 @@
 - [ ] `API` 觀察 `peakInFlightCount()` 確認量測的是尖峰而非平均。
 
 ### 7.4 崩潰復原
+
 - [ ] `CLI` 評測進行到一半強制 kill 後端 → 重啟時 `JudgeStartupService.recoverInterruptedJudging()` 修復卡在「評測中」的提交。
 - [ ] `CLI` 舊格式狀態經 `normaliseLegacyStatuses()` 遷移，啟動 log 有回報 recovered / migrated 數量。
 
@@ -239,6 +244,7 @@
 `admin-deploy-test.controller.ts` / `deploy-test.service.ts` / `deploy-test-repository.ts` / `deploy-test-metrics.ts` / `deploy-test-startup.service.ts` / `judging-work-coordinator.ts`
 
 ### 9.1 執行與追蹤
+
 - [ ] `API` `GET /admin/judger/deploy-tests/profile` — 回傳預設 profile：phases `smoke/verdict/concurrency`、語言 `c/cpp/python`、`jobCount 100`、`deadlineMs 900000`、併發階梯依當前 ceiling 計算。
 - [ ] `API` `POST /admin/judger/deploy-tests` — 啟動測試並立即回傳 run 資訊（US1 驗收 1）。
 - [ ] `API` `GET /admin/judger/deploy-tests/:runId` — 顯示 state、開始時間、目前 phase、completed/total work（US1 驗收 2）。
@@ -247,12 +253,14 @@
 - [ ] `UI` 以上流程全部在既有 Judge 頁面內完成，不需離開頁面或用命令列。
 
 ### 9.2 語言 smoke 測試
+
 - [ ] `API` C / C++ / Python **各自**跑完確定性 I/O 程式（輸出 `42`）並各有獨立結果（US2 驗收 1）。
 - [ ] `API` 缺某語言 runtime → 該語言標為 `blocked` 並**指名缺哪個 runtime**，其他語言仍照跑（US2 驗收 2）。
 - [ ] `API` 語言有被 advertise 但實際跑不起來 → 標為 `failed` 而非 available（US2 驗收 3）。
 - [ ] `API` 每個 probe 結果都含：預期 verdict、實際 verdict、attribution、耗時、**有長度上限的診斷訊息**（5000 字元）（US2 驗收 4）。
 
 ### 9.3 verdict 與安全上限
+
 - [ ] `API` `verdict-ce`（`int main( {`）→ CE / SUBMISSION。
 - [ ] `API` `verdict-re`（空指標寫入）→ RE / SUBMISSION。
 - [ ] `API` `verdict-tle`（無窮迴圈，run_timeout 250ms）→ TLE / SUBMISSION。
@@ -261,13 +269,16 @@
 - [ ] `API` 報告能**清楚區分「預期中的學生端失敗」與「基礎設施失敗」**（US3 核心）。
 
 ### 9.4 併發階段與資源隔離
+
 - [ ] `API` 併發階段依 `concurrencyLevels` 分配 jobs（`distributeJobs`），各階梯的 P50/P95/P99 延遲有統計出來（`nearestRank` / `distribution`）。
 - [ ] `API` 測試期間 in-flight 不超過該階梯設定值。
 - [ ] `API` 錯誤樣本數受 `DEPLOY_TEST_ERROR_SAMPLE_LIMIT`（10）限制，不會塞爆回應。
 - [ ] `DB` **壓測絕不動到學生資料**：跑完確認 submissions / scores / 評測歷史完全未變（feature 006 硬性要求）。
 
 ### 9.5 進入條件與互斥 (Admission Control)
+
 逐一觸發並確認 `blockedReason` 正確：
+
 - [ ] `API` 考試進行中啟動壓測 → `exam_in_progress`。
 - [ ] `API` 有學生評測進行中 → `student_judging_active`。
 - [ ] `API` 已有壓測在跑 → `deploy_test_active`。
@@ -447,39 +458,39 @@ reset 是**唯一**能讓階段倒退的通道，而且它必須從 `FINISHED` �
 
 逐項確認 spec 的核心承諾在**部署環境**上真的成立：
 
-| 來源 | 承諾 | 確認 |
-|---|---|---|
-| spec 001 | 測資與系統機密完全隔離於評測沙箱外，惡意程式讀不到、改不到 | [ ] |
-| spec 001 | 超大輸出被截斷，系統不凍結 | [ ] |
-| spec 001 | 換裝置登入需 TA 核准，核准後舊 IP 清除 | [ ] |
-| spec 002 | 後端 16 services + 13 controllers 皆有測試，`pnpm test` 全綠 | [ ] |
-| spec 003 | 編譯階段被 SIGKILL 不再被誤判為 CE | [ ] |
-| spec 003 | 套件 import 時不發網路請求、不印提交內容 | [ ] |
-| spec 003 | 學生輸出無法偽造系統狀態（MLE 誤判） | [ ] |
-| spec 004 | 系統失敗會重試、不計分、不算答錯；真 CE 不重試 | [ ] |
-| spec 004 | 全域併發上限生效，且改設定免重啟 | [ ] |
-| spec 004 | 評測非同步化，請求不會因排隊而 timeout | [ ] |
-| spec 005 | 每個設定值都看得到來源；越界值顯示為被拒絕 | [ ] |
-| spec 005 | 考前一眼看出 Piston 是否可達、缺哪個語言 | [ ] |
-| spec 005 | 不改檔、不重啟即可調參 | [ ] |
-| spec 006 | 壓測可在 Judge 頁面內完成啟動與看結果 | [ ] |
-| spec 006 | C/C++/Python 實際跑得起來（不只是被 advertise） | [ ] |
-| spec 006 | CE/RE/TLE/MLE/OLE 分類正確，且區分學生失敗與基礎設施失敗 | [ ] |
-| spec 006 | 壓測不動到 submissions / scores / 評測歷史 | [ ] |
-| spec 007 | 開考前學生機器上**讀不到任何測資**（已登入也不行） | [ ] |
-| spec 007 | 階段單向不可逆，跳階與回退都被後端拒絕（不只是 UI 不給按） | [ ] |
-| spec 007 | 註冊在學生入場前就關閉，不是等到開考 | [ ] |
-| spec 007 | 機器重開機後經一次助教核准即可回到考試，已提交作答完整復原 | [ ] |
-| spec 007 | **後端關掉也能開考**（監考口令導出同一把金鑰） | [ ] |
-| spec 007 | 斷線期間的作答與分數會補送，不需學生重跑評測 | [ ] |
-| spec 007 | reset 後同一批機器不需人工介入即可再跑一場 | [ ] |
-| spec 007 | 助教不需開別的畫面就能判斷入場申請；換機只需核准一次 | [ ] |
-| spec 007 | 合併還原的考卷通過既有 schema，judger／畫面／規則引擎 0 處修改 | [ ] |
+| 來源     | 承諾                                                                                | 確認                   |
+| -------- | ----------------------------------------------------------------------------------- | ---------------------- |
+| spec 001 | 測資與系統機密完全隔離於評測沙箱外，惡意程式讀不到、改不到                          | [ ]                    |
+| spec 001 | 超大輸出被截斷，系統不凍結                                                          | [ ]                    |
+| spec 001 | 換裝置登入需 TA 核准，核准後舊 IP 清除                                              | [ ]                    |
+| spec 002 | 後端 16 services + 13 controllers 皆有測試，`pnpm test` 全綠                        | [ ]                    |
+| spec 003 | 編譯階段被 SIGKILL 不再被誤判為 CE                                                  | [ ]                    |
+| spec 003 | 套件 import 時不發網路請求、不印提交內容                                            | [ ]                    |
+| spec 003 | 學生輸出無法偽造系統狀態（MLE 誤判）                                                | [ ]                    |
+| spec 004 | 系統失敗會重試、不計分、不算答錯；真 CE 不重試                                      | [ ]                    |
+| spec 004 | 全域併發上限生效，且改設定免重啟                                                    | [ ]                    |
+| spec 004 | 評測非同步化，請求不會因排隊而 timeout                                              | [ ]                    |
+| spec 005 | 每個設定值都看得到來源；越界值顯示為被拒絕                                          | [ ]                    |
+| spec 005 | 考前一眼看出 Piston 是否可達、缺哪個語言                                            | [ ]                    |
+| spec 005 | 不改檔、不重啟即可調參                                                              | [ ]                    |
+| spec 006 | 壓測可在 Judge 頁面內完成啟動與看結果                                               | [ ]                    |
+| spec 006 | C/C++/Python 實際跑得起來（不只是被 advertise）                                     | [ ]                    |
+| spec 006 | CE/RE/TLE/MLE/OLE 分類正確，且區分學生失敗與基礎設施失敗                            | [ ]                    |
+| spec 006 | 壓測不動到 submissions / scores / 評測歷史                                          | [ ]                    |
+| spec 007 | 開考前學生機器上**讀不到任何測資**（已登入也不行）                                  | [ ]                    |
+| spec 007 | 階段單向不可逆，跳階與回退都被後端拒絕（不只是 UI 不給按）                          | [ ]                    |
+| spec 007 | 註冊在學生入場前就關閉，不是等到開考                                                | [ ]                    |
+| spec 007 | 機器重開機後經一次助教核准即可回到考試，已提交作答完整復原                          | [ ]                    |
+| spec 007 | **後端關掉也能開考**（監考口令導出同一把金鑰）                                      | [ ]                    |
+| spec 007 | 斷線期間的作答與分數會補送，不需學生重跑評測                                        | [ ]                    |
+| spec 007 | reset 後同一批機器不需人工介入即可再跑一場                                          | [ ]                    |
+| spec 007 | 助教不需開別的畫面就能判斷入場申請；換機只需核准一次                                | [ ]                    |
+| spec 007 | 合併還原的考卷通過既有 schema，judger／畫面／規則引擎 0 處修改                      | [ ]                    |
 | spec 007 | ⚠️ **已接受的風險**：口令即金鑰，簡短口令可離線暴力破解（攻擊窗口為就座至開考之間） | [ ] 確認此取捨仍被接受 |
-| spec 007 | ⚠️ **已知限制**：後端不可用期間重開的機器無法救回（密文與金鑰皆為 RAM-only） | [ ] 確認 |
-| spec 007 | ⚠️ **已知限制**：後端不可用時無系統層級的結束訊號，需人工逐台收卷 | [ ] 確認 |
-| vision | 高併發下系統穩定不崩潰（併發 20 CE 率 0%） | [ ] |
-| vision | ⚠️ **已知未達成**：測資重複編譯尚未消除，評測速度未改善（僅負載變可承受） | [ ] 確認此限制仍被接受 |
+| spec 007 | ⚠️ **已知限制**：後端不可用期間重開的機器無法救回（密文與金鑰皆為 RAM-only）        | [ ] 確認               |
+| spec 007 | ⚠️ **已知限制**：後端不可用時無系統層級的結束訊號，需人工逐台收卷                   | [ ] 確認               |
+| vision   | 高併發下系統穩定不崩潰（併發 20 CE 率 0%）                                          | [ ]                    |
+| vision   | ⚠️ **已知未達成**：測資重複編譯尚未消除，評測速度未改善（僅負載變可承受）           | [ ] 確認此限制仍被接受 |
 
 ---
 
