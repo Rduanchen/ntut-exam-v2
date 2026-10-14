@@ -84,7 +84,7 @@ export class JudgerService {
       puzzleSpecialRules: puzzle.specialRules || [],
     });
 
-    const evalResults = evaluateSpecialRules(effectiveRules, {
+    const evalResults = await evaluateSpecialRules(effectiveRules, {
       sourceText: submission.codeContent,
       language: submission.language,
     });
