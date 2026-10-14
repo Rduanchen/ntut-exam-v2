@@ -18,7 +18,6 @@ const addRule = () => {
     constraint: 'MUST_HAVE',
     message: '',
     severity: 'warn',
-    multiplier: 1,
     params: {}
   });
   emit('update:modelValue', newRules);
@@ -67,10 +66,6 @@ const onTypeChange = (rule: any) => {
         <v-col cols="9">
           <v-text-field v-model="rule.message" label="Warning Message" density="compact" hide-details :readonly="props.disabled"></v-text-field>
         </v-col>
-        <v-col cols="3">
-          <v-text-field v-model.number="rule.multiplier" type="number" step="0.1" min="0" max="1" label="Multiplier" density="compact" hide-details :readonly="props.disabled"></v-text-field>
-        </v-col>
-
         <!-- Params Editor -->
         <v-col cols="12" v-if="rule.type === 'use'">
           <v-text-field v-model="rule.params.target" label="Target Code String" density="compact" hide-details :readonly="props.disabled"></v-text-field>

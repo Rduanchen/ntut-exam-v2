@@ -17,6 +17,7 @@ const addPuzzle = () => {
     id: `puz-${Date.now()}`,
     title: 'New Puzzle',
     score: 10,
+    multiplier: 0.5,
     language: 'c', // Default language
     subtasks: []
   });
@@ -62,11 +63,14 @@ const checkMemoryLimit = (val: any) => {
             <v-col cols="2">
               <v-text-field v-model="puzzle.language" label="Language" outlined density="compact" :readonly="props.disabled"></v-text-field>
             </v-col>
-            <v-col cols="6">
+            <v-col cols="4">
               <v-text-field v-model.number="puzzle.timeLimit" type="number" label="Time Limit (ms, optional)" outlined density="compact" hide-details></v-text-field>
             </v-col>
-            <v-col cols="6">
+            <v-col cols="4">
               <v-text-field v-model.number="puzzle.memoryLimit" @update:model-value="checkMemoryLimit" type="number" label="Memory Limit (MB, optional)" outlined density="compact" hide-details></v-text-field>
+            </v-col>
+            <v-col cols="4">
+              <v-text-field :model-value="puzzle.multiplier ?? 0.5" @update:model-value="puzzle.multiplier = Number($event)" type="number" step="0.1" min="0" max="1" label="Rule Penalty Multiplier" outlined density="compact" hide-details :readonly="props.disabled"></v-text-field>
             </v-col>
           </v-row>
 
