@@ -1,10 +1,13 @@
 export type LanguageKey = string;
 
 export type RuleConstraint = "MUST_HAVE" | "MUST_NOT_HAVE";
+export type PythonFeature =
+    | "IF" | "FOR" | "WHILE" | "FUNCTION" | "NESTED_LOOP" | "RECURSION"
+    | "LAMBDA" | "LIST" | "DICT" | "SET" | "SORT" | "SORTED";
 
 export interface SpecialRule {
     id: string;
-    type: "regex" | "use" | "composite" | "nestedLoop";
+    type: "regex" | "use" | "composite" | "nestedLoop" | "pythonFeature";
     constraint: RuleConstraint;
     message: string;
     severity?: "info" | "warn";
