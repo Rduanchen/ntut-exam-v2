@@ -18,7 +18,7 @@
 
 跑完之後系統必須回到乾淨狀態，因為它的每一步都在真實系統上留下痕跡。**一次沒有清乾淨的演練，會讓正式考試帶著演練的殘留資料開始**——那比不做演練更危險。
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - 一鍵走完一場最小的考試 (Priority: P1)
 
@@ -136,7 +136,7 @@
 - **連續啟動兩次演練**：第二次被拒絕；前一次的報告不被覆寫直到新演練真正開始。
 - **演練與既有的評測部署測試同時執行**：兩者共用評測引擎，系統必須拒絕其中之一而非讓兩者互相干擾。
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -186,7 +186,7 @@
 - **模擬學生（Simulated Student）**：演練期間由後端扮演的學生身分，走與真實學生相同的對外 API 路徑，於清除時完全移除。
 - **演練報告（Rehearsal Report）**：一次演練的完整結果，獨立於考試資料存放，不隨清除消失。
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
