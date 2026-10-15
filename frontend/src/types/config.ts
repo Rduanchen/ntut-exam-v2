@@ -11,7 +11,6 @@ export interface SpecialRule {
     constraint: RuleConstraint;
     message: string;
     severity?: "info" | "warn";
-    multiplier?: number;
     params: any;
 }
 
@@ -31,6 +30,7 @@ export interface Puzzle {
     id: string;
     title: string;
     score: number;
+    multiplier?: number;
     language: LanguageKey;
     timeLimit?: number;
     memoryLimit?: number;

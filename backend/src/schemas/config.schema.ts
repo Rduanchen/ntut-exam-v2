@@ -21,7 +21,6 @@ const specialRuleSchema: z.ZodType<any> = z.lazy(() => {
         constraint: ruleConstraintSchema,
         message: z.string(),
         severity: z.enum(["info", "warn"]).optional(),
-        multiplier: z.number().min(0).max(1).optional().default(1),
         params: z.unknown(),
     });
 
@@ -61,6 +60,7 @@ const puzzleSchema = z.object({
     id: z.string(),
     title: z.string(),
     score: z.number().min(0),
+    multiplier: z.number().min(0).max(1).optional().default(0.5),
     language: languageSchema,
     timeLimit: z.number().optional(),
     memoryLimit: z.number().optional(),

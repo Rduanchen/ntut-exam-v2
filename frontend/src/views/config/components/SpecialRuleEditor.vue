@@ -23,7 +23,6 @@ const addRule = () => {
     constraint: 'MUST_HAVE',
     message: '',
     severity: 'warn',
-    multiplier: 1,
     params: {}
   });
   emit('update:modelValue', newRules);
@@ -76,9 +75,6 @@ const onTypeChange = (rule: any) => {
         </v-col>
         <v-col cols="3" v-if="rule.type === 'composite'">
           <v-select v-model="rule.params.op" :items="['AND', 'OR']" label="Combine" density="compact" hide-details :disabled="props.disabled"></v-select>
-        </v-col>
-        <v-col cols="3">
-          <v-text-field v-model.number="rule.multiplier" type="number" step="0.1" min="0" max="1" label="Multiplier" density="compact" hide-details :readonly="props.disabled"></v-text-field>
         </v-col>
         <!-- Params Editor -->
         <v-col cols="12" v-if="rule.type === 'use'">
