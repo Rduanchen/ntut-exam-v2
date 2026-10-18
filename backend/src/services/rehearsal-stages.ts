@@ -128,6 +128,7 @@ export async function runEnrolStage(context: StageContext): Promise<StageResult>
      * module's lowercase check statuses. */
     status: "PASSED",
     failedLanguages: [],
+    sequence: 1,
   });
   checks.push(report.status === 200
     ? pass("environment_reported", "200 OK")

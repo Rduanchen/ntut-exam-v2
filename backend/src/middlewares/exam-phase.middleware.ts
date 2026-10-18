@@ -45,6 +45,7 @@ const MATRIX: Record<string, PhaseRule[]> = {
     { path: "/submissions/codes", allowed: [SETUP_FINISHED, IN_PROGRESS, FINISHED] }
   ],
   POST: [
+    { path: "/exam/languages", allowed: [INITIALIZED, SETUP_FINISHED, IN_PROGRESS] },
     { path: "/auth/register-device", allowed: [INITIALIZED, SETUP_FINISHED, IN_PROGRESS] },
     { path: "/auth/login", allowed: [SETUP_FINISHED, IN_PROGRESS] },
     { path: "/exam/config", allowed: [INITIALIZED, SETUP_FINISHED, IN_PROGRESS] },

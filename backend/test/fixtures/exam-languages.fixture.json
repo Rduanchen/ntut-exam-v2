@@ -1,0 +1,48 @@
+{
+  "valid": [
+    {
+      "languages": []
+    },
+    {
+      "languages": [
+        "C",
+        "Cpp",
+        "Python",
+        "JavaScript",
+        "Java"
+      ]
+    },
+    {
+      "languages": [
+        "Cpp",
+        "Java"
+      ]
+    }
+  ],
+  "invalid": [
+    {},
+    {
+      "languages": null
+    },
+    {
+      "languages": "C"
+    },
+    {
+      "languages": [
+        "Rust"
+      ]
+    },
+    {
+      "languages": [
+        "C",
+        "C"
+      ]
+    },
+    {
+      "languages": [
+        "Java",
+        "C"
+      ]
+    }
+  ]
+}

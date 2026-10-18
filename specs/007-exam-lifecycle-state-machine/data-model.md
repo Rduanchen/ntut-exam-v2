@@ -296,3 +296,44 @@ erDiagram
 ```
 
 **重來的清除邊界**：以 `deviceUuid` 為索引的一側全部清除（`DeviceKeyMap` 及桌面版記憶體），以 `testId` 為索引的一側全部保留（`User` / `ScoreBoard` / `Submission`）。
+
+
+## 11. 考前環境檢查增量（2026-10-14）
+
+本節對應 FR-044–049。既有實體維持；DeviceKeyMap 增加 env_check_sequence，啟動時採 additive migration，預設 0。
+
+### ExamLanguagesResponse（新增傳輸 DTO）
+
+| 欄位 | 型別 | 規則 |
+|---|---|---|
+| languages | SupportedLanguage[] | 必填；C / Cpp / Python / JavaScript / Java；不重複、依此順序排列，最多 5 項 |
+
+來源是目前已驗證的 exam_config，各 section/puzzle 的 language 聯集；不得以管理端設定的全部可用 runtime 取代本場實際使用的語言。空考卷可回 []；缺少／無效設定回錯誤，不得假裝空集合。回應只含此欄，不含題號、數量、名單、密文、金鑰或診斷。
+
+### EnvironmentPreparationState（桌面版 RAM-only）
+
+| 欄位 | 型別／語意 | 生命週期 |
+|---|---|---|
+| requiredLanguages | readonly SupportedLanguage[] 或 null | null=尚未成功取得；[]=確定無應試語言；成功後凍結至本次入場結束 |
+| source | online / offline | online 取 API；offline 取檔案 meta，不對後端註冊或上報 |
+| registrationGeneration | 本機遞增整數 | 清身分、換後端、reset 時遞增，隔離舊請求／回報 |
+| runGeneration | 本機遞增整數 | 每次檢查遞增；只有最新 run 可寫本機結果與待回報值 |
+| preparationStatus | IDLE / FETCHING / CHECKING / PASSED / FAILED | FETCHING 失敗不得產生 PASSED；與全域考試階段獨立 |
+| pendingReport | null 或既有 status/failedLanguages 摘要及世代 | 只留最新有效狀態；成功確認後清除；失敗時待重連重送 |
+
+狀態順序：有效註冊 → FETCHING → 驗證成功並保存快照 → CHECKING → PASSED/FAILED。取得或驗證失敗 → FAILED（語言仍 null，可再取）；手動重試若快照存在則 CHECKING，否则 FETCHING。環境狀態不參與登入／全域階段權限判定。
+
+config_update 不修改 online 快照，普通重新連線只補未完成取得或待回報資料。reset／換後端／重來先取消作業並遞增世代，再清空快照、報告與待送狀態；所有非同步完成點需檢查世代。重新啟動無可持久化的快照，必須按入場流程重取。
+
+### DeviceKeyMap 與 StudentReadiness（既有，沿用）
+
+- `envCheckStatus`：UNKNOWN / RUNNING / PASSED / FAILED；後端收報仍只接受 RUNNING/PASSED/FAILED。
+- `envCheckFailedLanguages`：既有 JSON 字串儲存，對外為語言陣列；完整探針診斷只在本機。
+- `envCheckSequence`：該註冊實例最後接受的正整數序號；重註冊歸零，舊／重複回報不覆寫。
+- `envCheckReportedAt`：後端接受回報的時間，不等於語言清單的版本時間。
+- 回報隸屬通過驗證的裝置註冊實例；持久化更新應條件比對該實例（既有 row identity／key），重註冊後不能把舊回報寫入新身分。
+- manage 對應關係沿用 User.deviceUuid → DeviceKeyMap。未綁學生的報告存在裝置層；登入綁定後透過 readiness 查詢呈現，不透過 IP 猜配。
+- `ready` 仍代表已綁定、在線且 PASSED。`ready=false` 僅表示需要關注，不是禁止登入／禁止推進的條件。UNKNOWN/RUNNING 不得計入環境通過。
+- 語言變更但尚未重啟時，這些欄位仍代表上次報告，不新增版本狀態或自動失效事件。
+
+實作對應：EnvironmentCheckService 的 languages 保存快照，session 由 backendUrl 與 AES key 識別註冊，runId 隔離取消／重設。preparation Promise 表示 FETCHING；對 UI 投影為 RUNNING 加「正在取得考試語言」，其餘狀態沿用既有 EnvironmentCheckReport。來源由 ramStore.isOfflineMode 決定，不重複保存另一份狀態。

@@ -211,3 +211,60 @@ cd ~/Documents/ntut-exam-v2/desktop && npm test
 | SC-007 助教不需查詢其他畫面 | B-19 |
 | SC-008 斷線期間結果 100% 補送 | B-15 ~ B-17 |
 | SC-009 下游 0 處修改 | E |
+
+
+## F. 考前語言與環境檢查增量驗收（2026-10-14）
+
+以本節驗收 FR-044–049、SC-015–017；舊 B 段「環境檢查 → 登入」表示會啟動檢查，不表示須通過才能登入。本節在增量實作完成後執行，本次規劃未宣稱下列驗證已通過。
+
+### F1. 準備與自動化
+
+沿用本文件前置條件，host 使用 `feat/007-environment-precheck-plan` 的後續實作，desktop 使用含配套變更的 feat 分支。使用可清空的測試場次、兩台桌面機、一份至少兩種語言的考卷。安裝依賴後依序執行：
+
+```bash
+# host 根目錄；pnpm test 含 fixture 同步檢查與後端測試型別檢查
+pnpm test
+pnpm --filter frontend typecheck
+pnpm --filter frontend test
+pnpm --filter backend test:coverage
+pnpm --filter frontend test:coverage
+pnpm dev:backend
+# 另一終端：pnpm dev:frontend
+
+# desktop 根目錄
+npm run typecheck
+npx vitest run
+RUN_ENVIRONMENT_CHECK_INTEGRATION=1 npx vitest run test/integration/environment-check.runtime.test.ts
+npm run dev
+```
+
+新語言 API 的測試應納入 backend test suite；測試內容見 [契約](contracts/environment-precheck-api.md#5-契約驗證)。核對新增／修改路徑的行覆蓋達 100%，既有全域缺口須如實列出，不以測試綠燈取代覆蓋報告。runtime 測試在缺工具鏈時可能略過，因此仍需 F2 真機驗收，不得把略過當成功。
+
+### F2. 首次註冊與警示鏈
+
+1. 上傳測試考卷並初始化，後端維持 INITIALIZED，不登入學生。
+2. 啟動桌面版，觀察註冊成功後取得語言並自動開始檢查；不得等管理員按「設定完成」。確認 API 僅傳所需語言，無題目、測資、口令或金鑰（SC-015）。
+3. 第二台機器刻意使一個應試語言的編譯器不可用，確認檢查 FAILED 且本機指出問題。
+4. 在檢查 RUNNING 時及 FAILED 後，分別推進至 SETUP_FINISHED 並登入。登入不得被檢查狀態阻擋；入場身分規則仍適用。
+5. 在 manage 學生準備狀況確認已綁定學生的失敗警示與失敗語言；登入成功不能掩蓋。未綁學生前不要求在某位學生列上顯示機器結果。
+6. 修复環境，按 retry。應使用既有快照，不需解密考卷；manage 顯示進行中／尚未通過，成功回報後轉為 PASSED（SC-016）。
+
+### F3. 語言更新採重啟流程
+
+1. 在允許編輯的考前階段，將考卷語言集合改成包含另一語言；若目前 config 編輯 API 禁止此變更，以測試 fixture/mock 驗證該事件，另在新場次驗證真機取得；不得放寬既有考卷編輯規則。
+2. 原桌面版維持啟動：config_update 可更新考卷，檢查清單／已回報結果不自動改變；按 retry 仍檢查原清單。
+3. 重啟桌面版，按既有入場流程註冊；若註冊已關閉，由助教核准。確認取得最新語言、逐項檢查及更新 manage（SC-017）。
+
+### F4. 故障與回歸
+
+- 初次語言請求失敗：本機呈現無法檢查，不以 [] 假裝通過；登入及合法階段切換不因此被擋，恢復連線可重試取得。
+- 回報時斷線：本機結果可見；重連後最新結果送達 manage，不被延遲 RUNNING 覆蓋。
+- 檢查進行中全域 reset：機器回起點；舊 runner 完成／回報不可污染新場次。新場次同 UUID 註冊仍不接受舊金鑰回報。
+- API 安全：透過整合測試傳真實 AES 封包，驗證未註冊、錯 key、重放、過期與禁用階段均被拒；不依賴 pure load-test 模式。
+- 離線考卷載入與監考口令開考、考中重新入場，沿用 B/C/D 回歸；語言新增功能不得移除原流程。
+
+保存測試輸出、覆盖報告及每個人工案例結果；未執行或略過的項目明確標記。
+
+### 本增量配對部署
+
+配對分支：host `feat/007-environment-precheck-plan`（基線 `3d80736ccbaa99a9548dbfa8722c69b540406e79`），desktop `feat/007-environment-precheck`（基線 `c505567a644d6b98172530294c65fca5d115d14a`）。目前是未發佈工作區增量，尚無可宣稱的 release tag。部署需包含兩端本次變更，禁止搭配缺少回報 sequence 的舊桌面版。後端會補 env_check_sequence 欄位；正式部署仍須先備份資料庫。考前變更語言後，重新啟動桌面版並依原規則完成入場審核。

@@ -8,6 +8,7 @@ import { ExamState } from '../../../../src/services/exam-state.service';
 import { SystemSettingsService } from '../../../../src/services/system-settings.service';
 import { MessageSocketService } from '../../../../src/sockets/message-socket.service';
 import { satisfyInitializePreconditions } from '../../../helpers/exam-phase';
+import { DeviceKeyMap } from '../../../../src/models/device-key-map.model';
 import { User } from '../../../../src/models/user.model';
 
 describe('AdminExamStateController (integration)', () => {
@@ -45,6 +46,13 @@ describe('AdminExamStateController (integration)', () => {
 
       const after = await adminRequest(app).get('/admin/exam-state');
       expect(after.body.state).toBe(ExamState.INITIALIZED);
+    });
+
+    it.each(['UNKNOWN', 'RUNNING', 'FAILED'])('does not gate phase changes on environment %s', async status => {
+      await adminRequest(app).post('/admin/exam-state').send({ state: ExamState.INITIALIZED });
+      await DeviceKeyMap.create({ deviceUuid: 'advisory-seat', clientAesKey: 'key', envCheckStatus: status });
+      expect((await adminRequest(app).post('/admin/exam-state').send({ state: ExamState.SETUP_FINISHED })).status).toBe(200);
+      expect((await adminRequest(app).post('/admin/exam-state').send({ state: ExamState.IN_PROGRESS })).status).toBe(200);
     });
 
     it('refuses to skip a phase', async () => {

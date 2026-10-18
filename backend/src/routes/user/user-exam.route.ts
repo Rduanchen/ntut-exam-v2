@@ -3,6 +3,7 @@ import { UserController } from "../../controllers/user/user.controller";
 import { decryptAndVerifyDeviceSession } from "../../middlewares/user-crypto.middleware";
 
 const userExamRouter = Router();
+userExamRouter.post("/languages", UserController.getLanguages);
 
 // Get current exam state
 userExamRouter.get("/status", UserController.getExamStatus);

@@ -38,6 +38,9 @@ export class DeviceKeyMap extends Model {
   })
   declare envCheckStatus: string;
 
+  @Column({ field: "env_check_sequence", type: DataType.INTEGER, defaultValue: 0 })
+  declare envCheckSequence: number;
+
   /** Language names only — never the compiler output, which is unbounded. */
   @Column({ field: "env_check_failed_languages", type: DataType.TEXT, allowNull: true })
   declare envCheckFailedLanguages: string | null;

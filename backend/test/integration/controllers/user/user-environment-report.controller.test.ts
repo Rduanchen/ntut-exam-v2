@@ -6,6 +6,7 @@ import { TestClient } from '../../../helpers/test-client';
 import { seedExamPhase } from '../../../helpers/exam-phase';
 import { ExamState } from '../../../../src/services/exam-state.service';
 import { DeviceKeyMap } from '../../../../src/models/device-key-map.model';
+import { DeviceService } from '../../../../src/services/device.service';
 import { SocketService } from '../../../../src/sockets/socket.service';
 
 describe('POST /user/exam/environment-report (integration)', () => {
@@ -37,6 +38,13 @@ describe('POST /user/exam/environment-report (integration)', () => {
     const device = await DeviceKeyMap.findOne({ where: { deviceUuid } });
     expect(device?.envCheckStatus).toBe('PASSED');
     expect(device?.testId).toBeNull();
+  });
+
+  it('ignores delayed RUNNING and duplicate reports after the terminal sequence', async () => {
+    await client.post('/user/exam/environment-report', { status: 'PASSED', failedLanguages: [], sequence: 2 });
+    await client.post('/user/exam/environment-report', { status: 'RUNNING', failedLanguages: [], sequence: 1 });
+    await client.post('/user/exam/environment-report', { status: 'FAILED', failedLanguages: ['Cpp'], sequence: 2 });
+    expect((await DeviceKeyMap.findByPk(deviceUuid))?.envCheckStatus).toBe('PASSED');
   });
 
   it('records which languages failed', async () => {
@@ -121,4 +129,17 @@ describe('POST /user/exam/environment-report (integration)', () => {
     expect(res.status).toBe(409);
     expect(res.body).toMatchObject({ error: 'phase_not_allowed' });
   });
+  it('rejects an already authenticated old registration at the atomic write', async () => {
+    const old = await DeviceKeyMap.findByPk(deviceUuid);
+    await client.registerDevice(deviceUuid);
+    await expect(DeviceService.recordOrderedEnvironmentReport(deviceUuid, old!.clientAesKey, 99, 'FAILED', ['C'])).rejects.toMatchObject({ statusCode: 401 });
+    const fresh = await DeviceKeyMap.findByPk(deviceUuid);
+    expect(fresh?.envCheckStatus).toBe('UNKNOWN');
+    expect(fresh?.envCheckSequence).toBe(0);
+  });
+
+  it.each([undefined, 0, -1, 1.5, '1', Number.MAX_SAFE_INTEGER + 1])('rejects invalid report sequence %s', async sequence => {
+    expect((await client.post('/user/exam/environment-report', { status: 'PASSED', failedLanguages: [], sequence })).status).toBe(400);
+  });
+
 });

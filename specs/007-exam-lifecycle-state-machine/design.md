@@ -1,5 +1,7 @@
 # 考試生命週期狀態機與考卷加密規格
 
+> **2026-10-14 增量**：考前語言 API、檢查不阻擋登入、語言變更須重啟，依 [plan.md](plan.md) 增量章節及 [environment-precheck-api.md](contracts/environment-precheck-api.md)；本檔原始生命週期設計保留，環境檢查時序衝突處由增量取代。
+
 **Feature Branch**: `007-exam-lifecycle-state-machine`
 
 **Created**: 2026-09-04

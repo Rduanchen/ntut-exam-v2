@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "nodemon --watch src/index.ts --config tsconfig.json",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "pnpm run build && node dist/index.js",
     "lint": "eslint src test",
     "typecheck:test": "tsc -p tsconfig.test.json",
     "test": "tsc -p tsconfig.test.json && vitest run",

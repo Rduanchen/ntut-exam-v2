@@ -1,10 +1,13 @@
 # Implementation Plan: Exam Lifecycle State Machine and Paper Encryption
 
-**Branch**: `feat/007-exam-lifecycle-state-machine` | **Date**: 2026-09-04 | **Spec**: [spec.md](./spec.md)
+**Branch**: `feat/007-environment-precheck-plan` | **Date**: 2026-10-14 | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `/specs/007-exam-lifecycle-state-machine/spec.md`
 
 **Companion repo**: `ntut-exam-v2/desktop` on `feat/003-exam-lifecycle-state-machine`
+
+
+> **2026-10-14 規劃範圍**：本次增量涵蓋 FR-044–FR-049、SC-015–SC-017。既有生命週期與考卷加密已實作；下方原始計畫保留作為基線，不代表全部需要重做。本次以「考前語言 API 與環境檢查增量」及 `contracts/environment-precheck-api.md` 為準；舊文件中把環境檢查當登入前置條件的描述由本次決策取代。`tasks.md` 已追加 T148–T181，本次實作與驗證記於 validation.md。
 
 ## Summary
 
@@ -169,3 +172,62 @@ test/fixtures/exam-config-payload.fixture.json   # 新增 —— 與 host 逐位
 | **C1** — 同一份契約有**三份**定義（後端 zod `^3`、學生端 zod `^4`、管理端 TypeScript type），非單一來源 | 兩個 repo 獨立版控、獨立套件管理，無法共用程式碼；管理端的設定編輯器另需一份可供表單綁定的 TypeScript type。zod 主版本已分歧，統一升級會牽動兩端既有的全部 schema，風險遠大於本功能 | *抽出共用 npm 套件*：需維護第三個發布流程，對兩個結構而言成本過高。*以 JSON Schema 產生 zod*：引入產生步驟與新工具。緩解為 G25/G26 的逐位元組相同 fixture + 三端各自的驗證測試 —— 這是 `experience.md` 第 4 條教訓在跨 repo 情境下的最佳近似。**此缺口已咬過一次**：`frontend/src/types/config.ts` 的註解記載 004 的同類漂移當時被記為 finding 而未處理，本次一併補上 |
 | **C2** — 部分路徑無法達到憲法要求的 100% 自動化覆蓋 | 監考現場宣讀口令、隨身碟佈署、拔網路線、機器重啟，皆涉及人與實體硬體。這些正是本功能最關鍵的路徑（SC-002、SC-003） | *以 mock 模擬*：可覆蓋程式碼行，但無法證明「後端真的關掉時考試能開始」—— 而那正是需求本身。緩解為 `quickstart.md` B/C/D 三段人工走查，每個 SC 皆有對應步驟，且列為每個實作 Phase 的收尾條件 |
 | **C3** — 跨 repo 的破壞性變更，無版本協商 | 考試機器一次性使用，每場重新佈署，因此不需要新舊並存。加入版本協商會為一個不存在的情境增加永久複雜度 | *保留舊 payload 形狀並漸進遷移*：需同時維護兩套考卷下發路徑，而其中一套（明文整份下發）正是本功能要消除的測資外洩面。代價為佈署必須原子化，記於 `EXAM-LIFECYCLE.md` 與 `quickstart.md` 前置條件 |
+
+
+## 考前語言 API 與環境檢查增量（2026-10-14）
+
+### Summary
+
+新增 `POST /user/exam/languages`：已註冊裝置以既有 AES-GCM 封包索取目前考卷的去重語言清單，不需學生 session。桌面版成功註冊後背景取得清單並執行既有合成探針；取語言與執行檢查都不阻擋註冊成功、登入或合法階段切換。manage 沿用現有環境狀態、失敗語言與準備數，只補必要回歸測試及發現的接線缺陷。
+
+線上檢查清單在本次裝置入場期間固定。考卷更新仍可正常下載，但不變更該清單或自動重檢。考前改語言後由現場重啟桌面版，按既有入場流程取得最新清單；已關閉自助註冊時仍需助教核准。離線檔案流程維持原有檢查來源。
+
+### Technical Context
+
+- **Language/Version**：後端 TypeScript ^5.4.5、Node >=20.19；管理端 TypeScript ~6.0.2；桌面版 TypeScript ^5.5.2、Electron ^34.5.8。此處為目前 package.json 宣告，取代基線的 Electron 31 描述。
+- **Dependencies**：沿用 Express 4、Sequelize 6、Socket.IO 4、後端 Zod 3／桌面版 Zod 4、Vue 3、Vuetify；不新增套件。
+- **Storage**：後端由已驗證 exam_config 推導語言，不增加資料表或儲存重複清單。沿用 DeviceKeyMap 環境欄位。桌面版新增 RAM-only 語言快照與檢查世代、待回報資料。
+- **Testing**：後端與管理端 Vitest 4，桌面版 Vitest 3；兩端邊界 schema 加共同契約 fixture；整合驗證須使用真實裝置加密封包，不能只跑 pure load-test 模式。
+- **Target/Scope**：現有 Linux/Docker 後端、Windows/macOS 桌面版，約 40–60 台；一個讀取 API、既有檢查生命週期接線及 readiness 回歸。
+- **Performance**：每次有效裝置入場只接受一次清單；每個檢查 run 單一執行，不並行重複跑。後端僅讀設定與投影語言，不執行編譯器。檢查留在背景，登入不等待。清單大小受五個既有語言限制。
+- **Constraints**：失敗僅提示；不新增設定完成門檻；不擴大題目資訊暴露；語言變更不推播或自動刷新快照；reset／換後端／重新入場須取消舊工作。這次規劃不變更程式或桌面版 repo。
+
+### Constitution Check — Phase 0 與 Phase 1
+
+| Gate | Phase 0 | Phase 1 設計證據 |
+|---|---|---|
+| Type Safety | 可通過 | 封包、解密後請求、語言清單以 schema 驗證；unknown 收窄，新增路徑不得沿用 any 或靜默過濾未知語言；契約 fixture 防止跨 repo 漂移 |
+| Async & Concurrency | 可通過 | 背景檢查、單次執行、取消世代、序列回報、連線恢复重送；不增加全場編譯負載到後端 |
+| Strict Branching | 通過 | 已由 develop 切至 feat/007-environment-precheck-plan，保留工作區修改；未提交 develop。桌面版實作亦須 feat 分支 |
+| Security & Stability | 可通過 | 裝置金鑰驗證＋nonce/timestamp；逐階段拒絕；只投影語言；不讓 reset 前結果寫回新狀態 |
+| Low Coupling | 可通過 | 語言取得與考卷解密分離；保留合成探針與 readiness 模型；不引入新評測器 |
+| Testability | 可通過 | 全專案以 100% 行覆蓋為合併要求，另做真實工具鏈與跨端走查；尚未執行，不宣稱覆蓋已達標 |
+
+Phase 1 設計檢查通過，無新增未解決 gate。原始計畫 C1 的多份 schema 以 fixture 緩解持續適用；人工硬體走查是自動化測試之外的驗收，不取代程式碼覆蓋要求。
+
+### Project Structure 與變更邊界
+
+| 區域 | 預定變更 |
+|---|---|
+| backend/src/routes/user/user-exam.route.ts | 註冊語言路由 |
+| backend/src/middlewares/exam-phase.middleware.ts | 加入語言端點三個允許階段 |
+| backend/src/controllers/user/user.controller.ts、services/exam.service.ts | 具型別的装置驗證、語言投影與加密回應；新路徑不使用 pure 模式免驗證分支 |
+| backend/src/schemas/ | 語言請求／回應 schema，使用既有語言集合；抽取 typed decoder 時回歸現有呼叫者 |
+| backend/test/ | API、schema、階段矩陣、重放與未註冊拒絕、readiness 測試及 fixture |
+| frontend/test/student-readiness.test.ts | FAILED 優先、登入不掩蓋、RUNNING/UNKNOWN 不通過、修復後更新 |
+| ../desktop/src/main/services/api.service.ts | 無學生 session 的裝置加密語言 client，驗證回應 |
+| ../desktop/src/main/ipc/auth.ipc.ts | 成功註冊後啟動背景準備，錯誤不改寫註冊結果 |
+| ../desktop/src/main/services/environment-check.service.ts | typed applyLanguages、快照重試、單次執行、回報重送與世代取消 |
+| ../desktop/src/main/services/config.service.ts | 線上考卷載入不再等待／觸發環境檢查；離線來源保留 |
+| ../desktop/src/main/services/message-sync.service.ts、ramStore.service.ts | reset／重新入場取消舊工作；連線恢复重送；config_update 不刷新快照 |
+| ../desktop/src/renderer/router/environment-check.guard.ts、router/index.ts | 移除環境檢查對登入的限制，保留階段與身分限制 |
+| ../desktop/test/ | 註冊、路由、預檢、回報、reset 競態、離線回歸及共同 fixture |
+
+### 實作順序與驗收
+
+1. API schema、fixture、裝置驗證、語言投影、階段矩陣與安全測試（FR-044、048）。
+2. 桌面版背景取得、RAM 快照與探針啟動、重試、取消與離線隔離（FR-045、049）。
+3. 移除登入環境 gate；回報序列、補送與 manage 全鏈驗證（FR-046、047）。
+4. 執行 quickstart 新增 F 段與既有生命週期回歸；後端與桌面版一起部署。
+
+任務與實作已接續進行；保留舊任務完成狀態，新增工作與實際驗證見 tasks.md、validation.md。

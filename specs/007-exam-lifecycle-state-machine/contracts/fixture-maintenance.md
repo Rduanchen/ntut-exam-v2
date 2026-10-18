@@ -57,3 +57,7 @@ cd ../desktop && npm test
 `frontend/src/types/config.ts` 內留有一段註解，記錄 feature 004 新增 `judgerSettings` 欄位後，該型別描述了舊 schema 一段時間而無人察覺 —— 「nothing binds this type to the backend's. Binding them is recorded as a finding, not attempted here」。
 
 `knowledge/experience.md` 第 4 條記載的是同一類事故的另一次：fixture 與 production schema 脫鉤，紅燈持續約兩個月。其教訓是「fixture 必須型別綁定到 production schema 且只有單一來源」。跨 repo 做不到單一來源，這份檔案與檢查腳本是最接近的替代。
+
+## 語言端點 fixture
+
+`backend/test/fixtures/exam-languages.fixture.json` 是語言回應樣本來源，逐位元組同步到 `desktop/test/fixtures/exam-languages.fixture.json`。兩端 schema 測試均消費此檔；新增語言時同時修改 schema、runner 支援與此 fixture。`scripts/check-contract-fixture.sh` 同時檢查既有考卷三端 fixture 及語言兩端 fixture；來源多題去重／排序另由後端 languages 整合測試驗證。

@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { DataTypes } from "sequelize";
 import { Sequelize } from "sequelize-typescript";
 import path from "path";
 import fs from "fs";
@@ -56,6 +57,13 @@ export async function initDatabase() {
 
     // Sync tables
     await sequelize.sync();
+    const query = sequelize.getQueryInterface();
+    const columns = await query.describeTable('device_key_maps');
+    if (!columns.env_check_sequence) {
+      await query.addColumn('device_key_maps', 'env_check_sequence', {
+        type: DataTypes.INTEGER, allowNull: false, defaultValue: 0
+      });
+    }
     console.log("Database tables synchronized.");
 
     // Insert default exam config if not exists

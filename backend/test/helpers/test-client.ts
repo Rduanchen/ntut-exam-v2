@@ -17,6 +17,7 @@ export class TestClient {
   private aesKey!: Buffer;
   private deviceUuid!: string;
   private sessionToken?: string;
+  private environmentSequence = 0;
 
   /** Corruptions applied to the next request only. */
   private tamperTag = false;
@@ -123,7 +124,8 @@ export class TestClient {
   }
 
   async post(path: string, extra: Record<string, unknown> = {}): Promise<request.Response> {
-    const { body } = this.envelope(extra);
+    const { body } = this.envelope(path.endsWith("/environment-report")
+      ? { sequence: ++this.environmentSequence, ...extra } : extra);
     return request(this.app).post(path).send(body);
   }
 

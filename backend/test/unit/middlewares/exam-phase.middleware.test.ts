@@ -33,6 +33,7 @@ const MATRIX: Array<{
   { method: 'GET', path: '/auth/student-id', allowed: [SETUP_FINISHED, IN_PROGRESS] },
   { method: 'POST', path: '/auth/login', allowed: [SETUP_FINISHED, IN_PROGRESS] },
   { method: 'POST', path: '/exam/config', allowed: [INITIALIZED, SETUP_FINISHED, IN_PROGRESS] },
+  { method: 'POST', path: '/exam/languages', allowed: [INITIALIZED, SETUP_FINISHED, IN_PROGRESS] },
   { method: 'POST', path: '/exam/key', allowed: [IN_PROGRESS] },
   { method: 'POST', path: '/exam/environment-report', allowed: [INITIALIZED, SETUP_FINISHED, IN_PROGRESS] },
   { method: 'POST', path: '/exam/messages', allowed: [INITIALIZED, SETUP_FINISHED, IN_PROGRESS, FINISHED] },

@@ -12,6 +12,8 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 **Organization**: 依 user story 分組。每個 story 可獨立驗證，但**多數 story 同時橫跨兩個 repo** —— 見下方「跨 repo 佈署」。
 
+> **2026-10-15 增量執行入口**：本次 FR-044–FR-049 的新工作由 Phase 11／T148 開始；T001–T147 保留原完成狀態，T117–T126 的未完成驗收仍需追蹤。舊 MVP 與執行順序為原始建置歷史，本次以文件末尾的增量依賴與 MVP 為準。T065 原線上 meta 觸發檢查由 T165 取代，離線路徑保留。
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: 可平行（不同檔案、無未完成相依）
@@ -21,8 +23,8 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 本功能橫跨兩個獨立 repo，路徑一律加上 repo 前綴：
 
-- `host/` → `~/Documents/ntut-exam-v2/host`，分支 `feat/007-exam-lifecycle-state-machine`
-- `desktop/` → `~/Documents/ntut-exam-v2/desktop`，分支 `feat/003-exam-lifecycle-state-machine`
+- `host/` → `~/Documents/ntut-exam-v2/host`，分支 `feat/007-environment-precheck-plan`
+- `desktop/` → `~/Documents/ntut-exam-v2/desktop`，原始分支 `feat/003-exam-lifecycle-state-machine`；本次實作使用含配套基線的 `feat/` 分支
 
 ## 跨 repo 佈署
 
@@ -422,3 +424,138 @@ Phase 8 (US6) 可與 Phase 4 (US2) 同時進行 —— 兩者無共用檔案
 2. quickstart.md §A 的契約 fixture `diff` 無差異
 3. 執行一次 quickstart.md §B 六階段走查
 4. 兩個 repo 的 PR 同時開啟並互相引用
+
+
+---
+
+## Phase 11: Increment Setup — 考前語言檢查（2026-10-15）
+
+**Scope**：依 plan.md 增量章節、research.md R12–R15、data-model.md §11 與 contracts/environment-precheck-api.md。以下路徑沿用 host/、desktop/ 前綴，分別代表本 repo 與相鄰 desktop repo。新增測試是專案憲法與計畫的必要驗收。所有新任務目前未執行，不重做既有已完成的生命週期建置。
+
+- [X] T148 確認 host 使用 feat/007-environment-precheck-plan、desktop 使用 feat 分支，記錄兩端基線 commit、工作區既有修改與本次驗證命令至 `host/specs/007-exam-lifecycle-state-machine/validation.md`；保留現有變更，不重設或覆寫既有工作
+- [X] T149 建立 `host/backend/test/fixtures/exam-languages.fixture.json` 並逐位元組複製到 `desktop/test/fixtures/exam-languages.fixture.json`；包含合法全部語言／空集合、來源多題同語言的預期去重排序，以及未知值、缺欄、null、非陣列的無效回應樣本
+
+## Phase 12: Increment Foundation — 型別與契約錨點
+
+**Gate**：T149 完成後才能開始；T150–T152 可並行，全部完成後進入 US1。無新資料表或套件。
+
+- [X] T150 [P] 在 `host/backend/src/schemas/exam-languages.schema.ts` 定義封包、有限 timestamp／非空 nonce、嚴格語言回應 schema 與推導型別，重用既有語言定義；以 `host/backend/test/unit/schemas/exam-languages.schema.test.ts` 驗證 T149 fixture，unknown 必須收窄，不新增 any
+- [X] T151 [P] 在 `desktop/src/main/schemas/exam-languages.schema.ts` 定義對應 Zod 4 回應 schema，以 `desktop/test/service/exam-languages.schema.test.ts` 驗證 T149 fixture；未知語言不可靜默過濾成空集合，重複／順序違反回應契約須拒絕
+- [X] T152 [P] 擴充 `host/scripts/check-contract-fixture.sh` 比對兩份語言 fixture，同時保留既有三份考卷 fixture 比對；在 `host/specs/007-exam-lifecycle-state-machine/contracts/fixture-maintenance.md` 記錄來源與同步規則，確認既有 package.json test 入口會執行檢查
+
+## Phase 13: US1 — 註冊後背景檢查與 manage 警示 (P1，增量 MVP)
+
+**Goal**：INITIALIZED 即取得語言並檢查；檢查與取得失敗都不阻擋合法登入／階段切換，manage 顯示真實回報。
+
+**Independent Test**：後端維持 INITIALIZED、學生未登入，裝置註冊即自動檢查；缺工具鏈時可切至 SETUP_FINISHED 並登入，對應學生顯示 FAILED；修復後 retry 更新 PASSED（SC-015、SC-016）。
+
+### Tests first
+
+T153–T158 為不同檔案，可在 Foundation 完成後並行撰寫；先觀察新增行為測試失敗，再開始實作。
+
+- [X] T153 [P] [US1] 在 `host/backend/test/integration/controllers/user/user-exam-languages.controller.test.ts` 撰寫真實 AES 封包測試：無學生 session 成功、去重排序、有效 []、缺設定／壞設定、未註冊、冒用 UUID、錯 key、壞 GCM、過期／重播 nonce、pure 模式仍驗證身分，以及讀取途中 reset／重註冊拒絕；對照契約逐項斷言 HTTP 與穩定 code
+- [X] T154 [P] [US1] 擴充 `host/backend/test/unit/middlewares/exam-phase.middleware.test.ts` 的 languages 五階段矩陣，並在 `host/backend/test/integration/controllers/admin/admin-exam-state.controller.test.ts` 驗證 UNKNOWN/RUNNING/FAILED 不阻擋合法階段推進
+- [X] T155 [P] [US1] 在 `desktop/test/service/api.service.test.ts` 與 `desktop/test/ipc/auth.ipc.test.ts` 測試無 session 的語言請求、嚴格解密回應驗證、成功註冊後只啟動一次背景取得，慢 API／檢查失敗不改變註冊成功或拖住登入
+- [X] T156 [P] [US1] 擴充 `desktop/test/service/environment-check.service.test.ts`：null 與 [] 區分、未知資料失敗、單次執行、快照 retry 不依賴完整考卷、首次取得失敗可重抓、RUNNING→終態序列回報、HTTP 或應用 success 失敗保留最新結果、重試使用新 nonce
+- [X] T157 [P] [US1] 在 `desktop/test/ui/environment-check-route.test.ts` 與 `desktop/test/ui/environment-check.ui-mapping.test.ts` 驗證 FETCHING/RUNNING/FAILED/UNKNOWN 不阻擋已獲階段及身分許可的登入，且待命頁呈現取得／檢查失敗；INITIALIZED 仍無學生登入入口
+- [X] T158 [P] [US1] 擴充 `host/backend/test/integration/controllers/user/user-environment-report.controller.test.ts`、`host/backend/test/integration/controllers/admin/admin-readiness.controller.test.ts` 與 `host/frontend/test/student-readiness.test.ts`：回報儲存與 student 更新通知、綁定後顯示原裝置結果、FAILED 優先於已登入、UNKNOWN/RUNNING 不算 ready、retry PASSED 清除警示；未綁學生不可猜配
+
+### Implementation
+
+- [X] T159 [US1] 在 `host/backend/src/services/exam.service.ts` 新增嚴格裝置請求解碼路徑，使用 T150 型別、既有 crypto/replay 驗證，回傳可識別註冊實例的已驗證上下文；不沿用 any 或 pure bypass，新錯誤對應契約 code，既有 config/key/report 呼叫若重構須保留回歸（依賴 T153）
+- [X] T160 [US1] 在 `host/backend/src/services/exam.service.ts` 實作由目前有效 exam_config 投影去重語言、固定排序及加密回應；缺設定不回 []，不得附帶其他考卷欄位，回應前檢查註冊實例／場次有效性（依賴 T159）
+- [X] T161 [US1] 在 `host/backend/src/controllers/user/user.controller.ts`、`host/backend/src/routes/user/user-exam.route.ts` 掛載 POST /user/exam/languages，於 `host/backend/src/middlewares/exam-phase.middleware.ts` 僅開放 INITIALIZED／SETUP_FINISHED／IN_PROGRESS；跑 T153、T154（依賴 T160）
+- [X] T162 [US1] 在 `desktop/src/main/services/api.service.ts` 新增裝置加密 getExamLanguages client，無 session 要求，驗證封包與 T151 schema、對應錯誤碼，重試產生新 timestamp/nonce（依賴 T155；可在後端實作期間用 fixture 驗證）
+- [X] T163 [US1] 在 `desktop/src/main/services/environment-check.service.ts` 與 `desktop/src/main/services/ramStore.service.ts` 實作 data-model.md §11 的語言快照、來源、取得狀態與 run／registration 世代；新增 typed applyLanguages，重用既有 runner，單一執行，取得失敗可重試且 [] 只在有效回應後通過（依賴 T156、T162）
+- [X] T164 [US1] 在 `desktop/src/main/ipc/auth.ipc.ts` 成功註冊後啟動不 await 完成的背景取得與檢查，捕捉錯誤呈現本機狀態；`desktop/src/main/ipc/environment-check.ipc.ts` 的 retry 改用快照或重新取得未成功的清單，不依賴解密考卷（依賴 T163）
+- [X] T165 [US1] 在 `desktop/src/main/services/config.service.ts` 分離線上取卷與環境檢查，不再 await／觸發 applyMeta；`desktop/src/main/services/message-sync.service.ts` 的 config_update 維持取卷但不刷新線上快照，普通登入／重連也不刷新；離線檔案仍由 meta 觸發既有檢查（依賴 T164，FR-045、FR-049）
+- [X] T166 [US1] 在 `desktop/src/renderer/router/environment-check.guard.ts` 與 `desktop/src/renderer/router/index.ts` 移除環境狀態對登入的 veto，保留階段／身分／設定頁限制；核對 `desktop/src/renderer/pages/StandbyPage.vue` 與 `desktop/src/renderer/components/environment-check.presentation.ts` 能呈現取得失敗並重試，只修缺失接線（依賴 T157、T165）
+- [X] T167 [US1] 在 `desktop/src/main/services/environment-check.service.ts` 實作單一序列回報者，每 run 一次 RUNNING 與終態，只留最新待報狀態並確認 HTTP／應用 success；綁定裝置與 run 世代，完整診斷不送後端，本機失敗不阻擋操作（依賴 T163；修改同檔須接續，不與 T163 並行）
+- [X] T168 [US1] 在 `host/backend/src/controllers/user/user.controller.ts` 與 `host/backend/src/services/device.service.ts` 將環境回報更新限制在原驗證的註冊實例，處理驗證後同 UUID 重註冊競態；保留既有環境欄位及 student 更新通知，不新增登入或階段 gate（依賴 T158、T159、T161）
+- [X] T169 [US1] 以 T158 測試核對 `host/backend/src/controllers/admin/admin-readiness.controller.ts`、`host/frontend/src/stores/readiness.store.ts` 與 `host/frontend/src/views/manage/components/StudentReadiness.vue` 全鏈；僅修失敗顯示／刷新缺陷，保留未綁學生語意，將 INITIALIZED→檢查→登入→FAILED→retry PASSED 驗證結果寫入 `host/specs/007-exam-lifecycle-state-machine/validation.md`（依賴 T166–T168）
+
+## Phase 14: US2 — 語言資訊不洩漏考卷 (P1，回歸)
+
+**Goal / Independent Test**：開考前取得語言，只能讀到清單，不能讀到題目、測資、口令或金鑰；原考卷解密流程仍正確。
+
+- [X] T170 [US2] 在 `host/backend/test/integration/controllers/user/user-exam-languages.controller.test.ts` 加入完整考卷 sentinel 測資並斷言解密回應精確只有 languages；確認不得由 config/key 路由繞過階段保護（依賴 T161，與 T153 同檔須依序）
+- [X] T171 [US2] 在 `desktop/test/service/config.service.test.ts` 驗證線上取得／更新密文考卷不重新檢查、不等待 runner，examConfig 開考前仍 null；若回歸失敗修正 `desktop/src/main/services/config.service.ts` 並重跑既有解密測試（依賴 T165、T170）
+
+## Phase 15: US3 — 重啟取得最新語言 (P1)
+
+**Goal / Independent Test**：原入場期間語言不刷新；重啟並經合法入場後取得最新清單、重檢且已提交作答不變（SC-017）。
+
+- [X] T172 [US3] 在 `desktop/test/ipc/auth.ipc.test.ts` 與 `desktop/test/service/environment-check.service.test.ts` 測試語言變更後普通重連／config_update／retry 仍使用舊快照，重啟的新 session 才取得新值；SETUP_FINISHED／IN_PROGRESS 的重新入場須經既有助教核准（依賴 T169、T171）
+- [X] T173 [US3] 在 `desktop/src/main/ipc/auth.ipc.ts` 與 `desktop/src/main/services/ramStore.service.ts` 接通重來／換後端／註冊身分失效的統一清理入口，取消舊工作並清快照，成功重新入場後重取；不得清除已提交作答或改寫既有審核規則，跑 T172（依賴 T172）
+
+## Phase 16: US4 — 斷線補送與離線檔案 (P2)
+
+**Goal / Independent Test**：報告傳送時斷線，本機結果仍可見，恢復後 manage 收到最新終態；完全離線檔案檢查及口令開考可用。
+
+- [X] T174 [US4] 在 `desktop/test/service/connection.service.test.ts`、`desktop/test/service/message-sync.service.test.ts` 與 `desktop/test/service/config.service.test.ts` 測試初次取語言失敗後重連重試、成功快照不刷新、最新回報補送、完全離線不呼叫 API／上報，且仍可口令開考（依賴 T173）
+- [X] T175 [US4] 在 `desktop/src/main/services/connection.service.ts` 與 `desktop/src/main/services/message-sync.service.ts` 的連線恢復接入有效世代的初次取得重試／待回報重送，避免重複 listener 與同時送出；保留既有作答補送順序及離線模式，跑 T174（依賴 T174、T167）
+
+## Phase 17: US5 — reset 不被舊檢查污染 (P2)
+
+**Goal / Independent Test**：刻意延遲語言回應、runner 與回報後 reset，再初始化同 UUID；舊結果不得出現在新場次。
+
+- [X] T176 [US5] 在 `desktop/test/service/message-sync.service.test.ts` 與 `host/backend/test/integration/controllers/user/user-environment-report.controller.test.ts` 測試 reset 途中取得／runner／待送／已驗證未寫入回報的競態，以及同 UUID 新 key 註冊後拒絕舊回報（依賴 T175、T168）
+- [X] T177 [US5] 在 `desktop/src/main/services/message-sync.service.ts`、`desktop/src/main/services/ramStore.service.ts` 的 reset 先停止 runner 並遞增世代再清資料，所有舊完成回呼與待送報告失效；修正 T176 發現的 `host/backend/src/services/device.service.ts` 條件更新缺口並跑回歸（依賴 T176、T173）
+
+## Phase 18: US6 — 助教審核仍有效 (P3，回歸)
+
+**Goal / Independent Test**：設定完成後重啟仍待審，核准後取語言／檢查；即使失敗也可合法登入，manage 警示與三種入場情境仍正常。
+
+- [ ] T178 [US6] 擴充 `host/backend/test/integration/controllers/admin/connection.controller.test.ts` 與 `desktop/test/ipc/auth.ipc.test.ts` 的核准重新入場回歸，確認語言 API 不自動核准、不改綁定／位置規則，核准後檢查失敗不撤銷入場；把 quickstart.md F3 核准走查結果記入 `host/specs/007-exam-lifecycle-state-machine/validation.md`（依賴 T177）
+
+## Phase 19: Increment Polish & Cross-Cutting
+
+- [ ] T179 執行 `host/specs/007-exam-lifecycle-state-machine/quickstart.md` F1 的 fixture、兩端型別與完整測試、backend/frontend coverage，另於 desktop 執行 npx vitest run --coverage；確認新增／修改路徑 100% 行覆蓋，將命令／結果／既有缺口寫入 `host/specs/007-exam-lifecycle-state-machine/validation.md`，失敗須修復後重跑（依賴 T178）
+- [ ] T180 執行 `host/specs/007-exam-lifecycle-state-machine/quickstart.md` F2–F4 真機案例與受影響 B/C/D 回歸，保存前後狀態、步驟、環境資訊到 `host/specs/007-exam-lifecycle-state-machine/validation.md`；runtime 測試略過不可算通過，未完成現場項目保持未勾選（依賴 T179；可與既有 T119–T121 共用驗收證據）
+- [ ] T181 更新 `host/EXAM-LIFECYCLE.md` 的語言取得與提示式檢查流程，於 `host/specs/007-exam-lifecycle-state-machine/quickstart.md` 記錄兩端共同部署版本及「變更語言須重啟」作業，核對 `host/specs/007-exam-lifecycle-state-machine/tasks.md` 的 FR/SC 覆蓋與完成證據；不得把未執行的舊驗收一併勾選（依賴 T180）
+
+## 增量依賴與並行執行
+
+```text
+T148 → T149 → [T150 || T151 || T152]
+  → US1 tests [T153 || T154 || T155 || T156 || T157 || T158]
+  → backend T159 → T160 → T161 → T168
+  → desktop T162 → T163 → T164 → T165 → T166 → T167
+  → T169 → US2 T170 → T171 → US3 T172 → T173
+  → US4 T174 → T175 → US5 T176 → T177 → US6 T178
+  → T179 → T180 → T181
+```
+
+後端 T159–T161 與桌面版 T162–T167 可依共同 fixture 同步實作；T168 與桌面版實作分屬不同 repo，可同時進行。所有共用同一檔案的任務須依序，箭頭表示本次建議執行順序，不代表舊 stories 要重做。
+
+| Story | 可並行範例／限制 |
+|---|---|
+| US1 | T153–T158 六組互不覆蓋的測試檔；後端與桌面版實作各自一條線 |
+| US2 | T170 可在 T161 完成後與桌面版 T163–T167 並行；T171 須等 T165 |
+| US3 | T172–T173 共用 auth／環境服務，依序，不強行並行 |
+| US4 | T174–T175 會改 message-sync/config 回歸，依序 |
+| US5 | T176 的後端競態測試可與該任務的桌面版測試分開執行；T177 須待測試就緒 |
+| US6 | T178 涉及前述 auth 測試檔，安排最後避免衝突 |
+
+## 增量需求覆蓋與交付策略
+
+| 需求 | 任務 | 驗收 |
+|---|---|---|
+| FR-044、FR-048 | T149–T162、T170 | 裝置驗證語言端點、五階段矩陣、無內容洩漏 |
+| FR-045／SC-015 | T155–T157、T163–T166 | INITIALIZED 自動啟動且不等待登入 |
+| FR-046 | T154、T157、T164–T166 | 檢查不阻擋合法登入或階段轉移 |
+| FR-047／SC-016 | T158、T167–T169、T174–T177 | report → 裝置 → readiness → UI，重試更新與防舊結果污染 |
+| FR-049／SC-017 | T165、T171–T173、T178 | 原快照不刷新、重啟後取新值並保留審核 |
+| 舊 US2–US6 回歸 | T170–T178 | 保密、重來、離線、reset、助教入場 |
+
+**最小可驗證增量（MVP）**：Phase 11–13，即 US1 的「註冊→語言→檢查→提示」。可在測試環境驗證，不以只完成 API 代表完整功能完成。
+
+**正式交付門檻**：Phase 14–19 回歸與真機驗收完成，兩端共同部署；原有 T117–T126 保持各自完成標準。本次不新增 PR 任務，避免重複既有 T126；不在任務產生階段開 PR、實作或宣稱測試通過。
+
+本次追加 **34 項（T148–T181）**：Setup/Foundation 5、US1 17、US2 2、US3 2、US4 2、US5 2、US6 1、Polish 3。全檔 181 項，原有 137 項完成、44 項未完成（舊 10＋新 34）。
+
+## 實作追加：分析發現修正
+
+- [X] T182 為兩端新增 quality workflow：全 src coverage 100% gate、獨立安全 audit job；補 60 請求併發驗證、sequence 原子條件更新及舊資料庫 additive migration 測試。修正計畫的舊任務註記並記錄實際 gate 失敗。
+
+**2026-10-15 實作狀態**：T148–T177 與 T182 完成。新增測試部分集中於 `desktop/test/service/environment-precheck.test.ts`，涵蓋原 T156/T172/T174/T176 的服務生命週期案例；不要求重複分散至舊測試檔。證據及未完成範圍見 [validation.md](validation.md)。T178–T181 尚未滿足全部驗收條件；T181 文件已更新。原 T117–T126 不變。目前 182 項，168 完成、14 未完成。

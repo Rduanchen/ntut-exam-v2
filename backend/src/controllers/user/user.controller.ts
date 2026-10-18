@@ -10,6 +10,11 @@ import { HttpError } from "../../utils/http-error";
 import { normalizeIp } from "../../utils/ip.util";
 
 export class UserController {
+  static async getLanguages(req: Request, res: Response, next: NextFunction) {
+    try { res.status(200).json(await ExamService.getLanguages(req.body)); }
+    catch (error) { next(error); }
+  }
+
   /**
    * GET /user/auth/rsa-public-key
    * Retrieve the server's RSA Public Key in PEM format.
@@ -145,9 +150,10 @@ export class UserController {
         throw new HttpError(400, "Bad Request: Missing device_uuid");
       }
 
-      const decrypted = await ExamService.decryptDevicePayload(payload);
-      const status = decrypted?.status;
-      if (!["RUNNING", "PASSED", "FAILED"].includes(status)) {
+      const authenticated = await ExamService.authenticateRegisteredDevice(payload);
+      const decrypted = authenticated.body;
+      const status = decrypted.status;
+      if (status !== "RUNNING" && status !== "PASSED" && status !== "FAILED") {
         throw new HttpError(400, "Bad Request: status must be RUNNING, PASSED or FAILED");
       }
 
@@ -155,7 +161,12 @@ export class UserController {
         ? decrypted.failedLanguages.filter((l: unknown) => typeof l === "string").slice(0, 20)
         : [];
 
-      await DeviceService.recordEnvironmentReport(deviceUuid, status, failed);
+      if (typeof decrypted.sequence !== 'number' || !Number.isSafeInteger(decrypted.sequence) || decrypted.sequence <= 0) {
+        throw new HttpError(400, 'Invalid report sequence');
+      }
+      if (status !== 'RUNNING' && status !== 'PASSED' && status !== 'FAILED') throw new HttpError(400, 'Invalid status');
+      await DeviceService.recordOrderedEnvironmentReport(deviceUuid, authenticated.device.clientAesKey,
+        decrypted.sequence, status, failed);
 
       res.status(200).json({ success: true });
     } catch (error) {

@@ -6,6 +6,7 @@ import { createApp } from '../../../../src/app';
 import { adminRequest } from '../../../helpers/admin-request';
 import { seedExamPhase } from '../../../helpers/exam-phase';
 import { ExamState } from '../../../../src/services/exam-state.service';
+import { TestClient } from '../../../helpers/test-client';
 import { User } from '../../../../src/models/user.model';
 import { DeviceKeyMap } from '../../../../src/models/device-key-map.model';
 
@@ -131,4 +132,21 @@ describe('AdminReadinessController (integration)', () => {
     expect(running.body.isSettlingPhase).toBe(false);
     expect(running.body.phase).toBe(ExamState.IN_PROGRESS);
   });
+  it('keeps the pre-login failure after binding and clears it after a passing retry', async () => {
+    await seedExamPhase(ExamState.INITIALIZED);
+    const client = new TestClient(app);
+    await client.registerDevice('readiness-report-device');
+    await User.create({ testId: 'prechecked', name: 'Student', deviceUuid: null });
+    expect((await client.post('/user/exam/environment-report', { status: 'FAILED', failedLanguages: ['Cpp'] })).status).toBe(200);
+    const unbound = await adminRequest(app).get('/admin/readiness');
+    expect(unbound.body.students[0]).toMatchObject({ isLoggedIn: false, envCheckStatus: 'UNKNOWN' });
+    await seedExamPhase(ExamState.SETUP_FINISHED);
+    expect((await client.login('prechecked')).response.status).toBe(200);
+    const failed = await adminRequest(app).get('/admin/readiness');
+    expect(failed.body.students[0]).toMatchObject({ isLoggedIn: true, ready: false, envCheckStatus: 'FAILED', envCheckFailedLanguages: ['Cpp'] });
+    expect((await client.post('/user/exam/environment-report', { status: 'PASSED', failedLanguages: [] })).status).toBe(200);
+    const passed = await adminRequest(app).get('/admin/readiness');
+    expect(passed.body.students[0]).toMatchObject({ ready: true, envCheckStatus: 'PASSED', envCheckFailedLanguages: [] });
+  });
+
 });

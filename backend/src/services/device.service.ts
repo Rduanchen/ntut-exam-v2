@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import { DeviceKeyMap } from "../models/device-key-map.model";
 import { CryptoService } from "./crypto.service";
 import { HttpError } from "../utils/http-error";
@@ -53,6 +54,10 @@ export class DeviceService {
 
     if (existing) {
       existing.clientAesKey = clientAesKeyBuffer.toString("hex");
+      existing.envCheckSequence = 0;
+      existing.envCheckStatus = 'UNKNOWN';
+      existing.envCheckFailedLanguages = null;
+      existing.envCheckReportedAt = null;
       existing.ipAddress = ipAddress;
       existing.isOnline = true;
       existing.status = existing.testId ? "AWAITING_LOGIN" : "UNBOUND";
@@ -150,6 +155,21 @@ export class DeviceService {
     await device.save();
 
     SocketService.triggerDataUpdateEvent("student");
+  }
+
+  static async recordOrderedEnvironmentReport(
+    deviceUuid: string, clientAesKey: string, sequence: number,
+    status: 'RUNNING' | 'PASSED' | 'FAILED', failedLanguages: string[]
+  ): Promise<void> {
+    const [updated] = await DeviceKeyMap.update({
+      envCheckSequence: sequence, envCheckStatus: status,
+      envCheckFailedLanguages: failedLanguages.length ? JSON.stringify(failedLanguages) : null,
+      envCheckReportedAt: new Date()
+    }, { where: { deviceUuid, clientAesKey, envCheckSequence: { [Op.lt]: sequence } } });
+    if (updated) SocketService.triggerDataUpdateEvent('student');
+    else if (!(await DeviceKeyMap.findOne({ where: { deviceUuid, clientAesKey } }))) {
+      throw new HttpError(401, 'Device registration has changed', 'device_not_registered');
+    }
   }
 
   /**

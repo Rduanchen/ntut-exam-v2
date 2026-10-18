@@ -1,3 +1,7 @@
+import { deviceEnvelopeSchema, deviceRequestSchema, LANGUAGE_ORDER, examLanguagesSchema } from '../schemas/exam-languages.schema';
+import { examConfigSchema } from '../schemas/config.schema';
+import { DeviceKeyMap } from '../models/device-key-map.model';
+import { ExamStateService, ExamState } from './exam-state.service';
 import { SystemSettingsService } from "./system-settings.service";
 import { DeviceService } from "./device.service";
 import { CryptoService } from "./crypto.service";
@@ -8,6 +12,42 @@ import { AesEncryptedPayload } from "../types/crypto.type";
 import logger from "../utils/logger.util";
 
 export class ExamService {
+  static async authenticateRegisteredDevice(input: unknown) {
+    const parsed = deviceEnvelopeSchema.safeParse(input);
+    if (!parsed.success) throw new HttpError(400, 'Invalid encrypted request', 'invalid_language_request');
+    const payload = parsed.data;
+    const device = await DeviceKeyMap.findByPk(payload.device_uuid);
+    if (!device) throw new HttpError(401, 'Device is not registered', 'device_not_registered');
+    const key = Buffer.from(device.clientAesKey, 'hex');
+    let body: ReturnType<typeof deviceRequestSchema.parse>;
+    try {
+      const raw: unknown = JSON.parse(CryptoService.decryptAESGCM(payload, key));
+      body = deviceRequestSchema.parse(raw);
+    } catch {
+      throw new HttpError(400, 'Invalid encrypted request', 'invalid_language_request');
+    }
+    try { ReplayProtectionService.verifyAndSaveNonce(body.nonce, body.timestamp); }
+    catch { throw new HttpError(401, 'Expired or replayed request', 'invalid_request_freshness'); }
+    return { payload, body, device, key };
+  }
+
+  static async getLanguages(input: unknown): Promise<AesEncryptedPayload> {
+    const { payload, device, key } = await this.authenticateRegisteredDevice(input);
+    const raw: unknown = await SystemSettingsService.getExamConfig();
+    if (!raw) throw new HttpError(409, 'Exam languages unavailable', 'exam_languages_unavailable');
+    const parsed = examConfigSchema.safeParse(raw);
+    if (!parsed.success) throw new HttpError(500, 'Invalid exam configuration', 'invalid_exam_languages');
+    const used = new Set(parsed.data.sections.flatMap(section => section.puzzles.map(puzzle => puzzle.language)));
+    const result = examLanguagesSchema.parse({ languages: LANGUAGE_ORDER.filter(language => used.has(language)) });
+    const phase = await ExamStateService.getCurrentState();
+    const current = await DeviceKeyMap.findByPk(payload.device_uuid);
+    if (![ExamState.INITIALIZED, ExamState.SETUP_FINISHED, ExamState.IN_PROGRESS].includes(phase)
+      || current?.clientAesKey !== device.clientAesKey) {
+      throw new HttpError(409, 'Exam languages unavailable', 'exam_languages_unavailable');
+    }
+    return { ...CryptoService.encryptAESGCM(JSON.stringify(result), key), device_uuid: payload.device_uuid };
+  }
+
   /**
    * Decrypt a payload authenticated by device registration alone.
    *

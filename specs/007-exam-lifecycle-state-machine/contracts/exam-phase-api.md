@@ -32,6 +32,7 @@ ExamPhase = "UNINITIALIZED" | "INITIALIZED" | "SETUP_FINISHED" | "IN_PROGRESS" |
 | `POST /user/auth/login` | ✗ | ✗ | ✓ | ✓ | ✗ |
 | `POST /user/exam/config` | ✗ | ✓ | ✓ | ✓ | ✗ |
 | `POST /user/exam/key` | ✗ | ✗ | ✗ | ✓ | ✗ |
+| `POST /user/exam/languages` | ✗ | ✓ | ✓ | ✓ | ✗ |
 | `POST /user/exam/environment-report` | ✗ | ✓ | ✓ | ✓ | ✗ |
 | `POST /user/exam/messages` | ✗ | ✓ | ✓ | ✓ | ✓ |
 | `GET /user/exam/status` | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -258,3 +259,8 @@ host/frontend/test/fixtures/exam-config-payload.fixture.json
 **G27 — 兩條路徑同一把金鑰**：`POST /user/exam/key` 回傳的 `K_exam`，與 `AES-GCM-decrypt(wrappedExamKey, PBKDF2(口令, salt))` 的結果**必須逐位元組相同**。此為可自動測試的斷言。
 
 **G28 — 認證失敗即錯誤**：GCM 認證失敗必須拋出錯誤，不得回退為空考卷或部分考卷。
+
+
+## 11. 考前語言與提示式環境檢查補充
+
+新增端點、裝置驗證、背景檢查、非阻擋登入、重啟才更新語言與回報時序，見 [environment-precheck-api.md](environment-precheck-api.md)（2026-10-14）。

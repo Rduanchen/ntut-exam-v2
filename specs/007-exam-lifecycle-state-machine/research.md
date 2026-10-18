@@ -214,3 +214,38 @@ fixture 內容涵蓋 `config.meta`、`config.cipher` 封包與 `wrappedExamKey` 
 | R5 | `quickstart.md` 的契約驗證步驟 |
 | R7、R8、R9 | `contracts/` 的端點與事件定義 |
 | R11 | `contracts/` 的離線佈署檔格式 |
+
+
+## R12. 考前語言 API 的最小資料與權限（2026-10-14）
+
+**Decision**：新增裝置驗證的 `POST /user/exam/languages`，回傳 AES-GCM 加密的 `{ languages }`；允許 INITIALIZED、SETUP_FINISHED、IN_PROGRESS。語言由目前已驗證考卷 sections[].puzzles[].language 去重，固定排序 C、Cpp、Python、JavaScript、Java。未初始化與已結束拒絕，缺設定不回空陣列。
+
+**Rationale**：backend/src/routes/user/user-exam.route.ts 已有註冊身分的 config/report 通道；exam-phase.middleware.ts 採 fail-closed 白名單。desktop 的合成探針使用固定診斷限制（environment-profiles.ts），只需要語言。小回應無須攜帶每題 meta、名單、測資或密文考卷。新端點須驗證完整 AES 封包、解密 JSON 與 nonce/timestamp，不把僅有 UUID 視為已驗證。
+
+**Alternatives considered**：完整 config API 能提供語言但耦合整份考卷；公開匿名端點與已選裝置驗證不符；加入編譯器版本與每題資源限制無本次需求且增加契約。既有 decryptDevicePayload 回傳 any 且有 pure bypass，不直接當作新端點的安全保證；抽取 typed production decoder 或以新端點 adapter 重用底層 crypto/replay，回歸既有呼叫者。
+
+## R13. 註冊後背景檢查與登入解耦
+
+**Decision**：有效註冊後以主程序背景流程取得一次語言快照，再跑既有 runner；移除 RUNNING 對登入的 veto。初次取得失敗呈現失敗／無法檢查，允許手動或重連重試；成功快照不因普通重連刷新。空清單只有經成功驗證的 [] 才可視為无需語言檢查。
+
+**Rationale**：auth.ipc.ts 目前註冊成功只設身分與 socket；StandbyPage 輪詢結果卻不啟動。config.service.ts 的 applyPaper 會 await applyMeta，而 router/environment-check.guard.ts 在 RUNNING 擋登入，均與 FR-045/046 衝突。environment-check.service.ts 的 retry 依賴尚未解密的 examConfig，須改讀快照。
+
+**Alternatives considered**：在畫面輪詢啟動容易重複且與渲染生命週期耦合；登入時才檢查太晚；以環境報告阻擋階段已由使用者排除。
+
+## R14. 語言變更只在重啟後採用
+
+**Decision**：線上語言快照與 examConfigMeta 分離；config_update 照常更新考卷，但不刷新快照或觸發檢查。重啟、reset、換後端／清除裝置身分使快照失效。手動重試使用同一快照；若尚未成功取得快照，重試可重抓 API。離線檔案仍由本機 meta 取得語言。
+
+**Rationale**：使用者選 C。message-sync.service.ts 的 config_update 現在會呼叫 applyPaper，因而可能自動重檢，必須切斷此連結。重啟後仍依既有助教入場審核規則，不能用重檢繞過它。
+
+**Alternatives considered**：語言版本推播、自動失效與即時重檢為 A/B 選項，本次均不採用。接受重啟前 manage 顯示上次語言檢查結果的限制。
+
+## R15. manage 呈現與回報生命週期
+
+**Decision**：沿用 DeviceKeyMap 的 envCheckStatus/envCheckFailedLanguages/envCheckReportedAt、既有 environment-report API 與 student socket 更新。每次 run 回報一次 RUNNING 和最終 PASSED/FAILED；序列送出且等待應用層 success，失敗保留最新狀態於 RAM，恢復連線後重送。run 世代與裝置 session 綁定；reset 前取消 runner、廢棄舊完成回呼及待回報資料。
+
+**Rationale**：StudentReadiness.vue 已將 FAILED 放在最高優先，admin-readiness.controller.ts 透過學生綁定 device 取得狀態。沒有綁人的機器只能留在裝置層，不能猜學生身分；登入綁定後必須呈現既有報告。現有 desktop 只報終態且忽略 success，reset 沒停止 runner，存在顯示舊結果的風險。
+
+**Alternatives considered**：新增學生欄位或新的管理 UI 會重複既有資料；完整診斷上传不必要且違反輸出截斷教訓；語言版本追蹤不屬本次 restart-only 決策。若同一 UUID 的舊回報已送出，裝置驗證與更新須以同一註冊實例為條件，避免重註冊競態寫入新紀錄，不新增無關分散式協定。
+
+本次增量研究已解決全部設計未知；依據為本機現有程式與使用者決策，未引入外部依賴或升級。

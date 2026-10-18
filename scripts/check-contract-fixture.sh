@@ -40,3 +40,11 @@ else
   checked. Set DESKTOP_REPO=<path>, or SKIP_DESKTOP=1 if it is genuinely
   unavailable (CI without that checkout)."
 fi
+
+LANGUAGE_FIXTURE="test/fixtures/exam-languages.fixture.json"
+if [ -f "$DESKTOP_REPO/$LANGUAGE_FIXTURE" ]; then
+  diff -q "$HOST_ROOT/backend/$LANGUAGE_FIXTURE" "$DESKTOP_REPO/$LANGUAGE_FIXTURE" >/dev/null || fail "language fixtures differ"
+  echo "✓ language contract fixture identical across backend and desktop"
+elif [ "${SKIP_DESKTOP:-0}" != "1" ]; then
+  fail "desktop language fixture missing"
+fi
