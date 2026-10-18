@@ -269,4 +269,4 @@ npm run dev
 
 配對分支：host `feat/007-environment-precheck-plan`（基線 `3d80736ccbaa99a9548dbfa8722c69b540406e79`），desktop `feat/007-environment-precheck`（基線 `c505567a644d6b98172530294c65fca5d115d14a`）。目前是未發佈工作區增量，尚無可宣稱的 release tag。部署需包含兩端本次變更，禁止搭配缺少回報 sequence 的舊桌面版。後端會補 env_check_sequence 欄位；正式部署仍須先備份資料庫。考前變更語言後，重新啟動桌面版並依原規則完成入場審核。
 
-2026-10-19 配對驗證更新：host 使用 `develop`（含遠端主線整合及本規格的非真機補測），desktop 使用 `feat/007-environment-precheck` 的 `7684649`。兩端都尚未推送為配對 release；正式部署前應在 PR／release 紀錄寫入最終兩個 commit SHA，不能只寫分支名。桌面端改考卷語言後不熱更新成功快照；必須重啟，重新註冊，註冊關閉時由助教依原規則核准。此作業不會取消學生位置綁定。
+2026-10-19 配對驗證更新：host 功能版本 `90f7069204a4897ea41dce5e2c79483209e8efd9`，desktop 功能版本 `76846492564d786c838c4f977d9c8fb046df6714`。草稿 [host PR #3](https://github.com/Rduanchen/ntut-exam-v2/pull/3) 與 [desktop PR #6](https://github.com/Rduanchen/NTUT-on-machine-test/pull/6) 必須同步合併；兩端仍無可宣稱的配對 release。正式部署前應在 release 紀錄寫入最終兩個 commit SHA，不能只寫分支名。桌面端改考卷語言後不熱更新成功快照；必須重啟，重新註冊，註冊關閉時由助教依原規則核准。此作業不會取消學生位置綁定。

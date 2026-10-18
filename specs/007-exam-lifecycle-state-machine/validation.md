@@ -83,4 +83,6 @@ coverage 使用 `vitest run --coverage --coverage.include='src/**'`，避免僅�
 
 三端 production build 均通過：`pnpm --filter backend build`、`pnpm --filter frontend build`、desktop `npm run build`。desktop 另以 `RUN_ENVIRONMENT_CHECK_INTEGRATION=1 npx vitest run test/integration/environment-check.runtime.test.ts` 讓 C、Cpp、Python、JavaScript、Java 的 5 項探針全數實際執行並通過。這是開發機工具鏈測試，仍非 F2–F4 考場真機走查。desktop 本輪配對功能已整理為 `7684649`，host 文件／補測仍在 `develop`。重新執行 audit：host 15 項（含 tar 建置鏈與 Sequelize uuid），desktop 36 項（含需主要版本升級的 Electron／Vitest）；兩端 audit job 仍會失敗。
 
-SC-009 的 desktop judger／special rules／UI 測試全通過，但「既有測試 0 處修改」的字面條件不成立：feature 007 開發及已核准的遠端 special-rules-scoring 合併均曾修改這些測試。這些修改並非本輪為了讓 meta/cipher 切分通過而做；T122 保留未勾選，待以雙方同意的基線重新界定 0 處修改的範圍。T119–T121、T180 的現場走查及 T126 的正式雙 repo PR／共同合併也未完成。
+SC-009 的 desktop judger／special rules／UI 測試全通過，但「既有測試 0 處修改」的字面條件不成立：feature 007 開發及已核准的遠端 special-rules-scoring 合併均曾修改這些測試。這些修改並非本輪為了讓 meta/cipher 切分通過而做；T122 保留未勾選，待以雙方同意的基線重新界定 0 處修改的範圍。T119–T121、T180 的現場走查與正式共同合併尚未完成。
+
+已建立互相引用的草稿 PR：[host #3](https://github.com/Rduanchen/ntut-exam-v2/pull/3) 與 [desktop #6](https://github.com/Rduanchen/NTUT-on-machine-test/pull/6)。兩份描述均註明必須同時合併／部署，並列出 coverage、audit 與真機阻礙；T126 的開 PR 步驟已完成，尚未合併。配對程式版本為 host `90f7069204a4897ea41dce5e2c79483209e8efd9`（後續僅補驗證文件）與 desktop `76846492564d786c838c4f977d9c8fb046df6714`。

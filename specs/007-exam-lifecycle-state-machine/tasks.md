@@ -282,7 +282,7 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 - [X] T123 [P] 量測 `POST /user/exam/key` 與 `POST /user/exam/config` 的回應大小比例，確認小於 1%（SC-004；60 題整合測試）
 - [X] T124 [P] 更新 `host/knowledge/vision.md` 的目前狀態與里程碑
 - [X] T125 [P] 將本功能的教訓寫入 `host/knowledge/experience.md`（跨 repo 契約、扣留金鑰的設計取捨）
-- [ ] T126 在兩個 repo 各開 PR，描述互相引用並註明「必須同時 merge」
+- [X] T126 在兩個 repo 各開 PR，描述互相引用並註明「必須同時 merge」（host #3、desktop #6；均為 draft）
 
 ---
 
