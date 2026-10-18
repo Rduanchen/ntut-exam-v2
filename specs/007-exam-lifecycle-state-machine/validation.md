@@ -67,8 +67,8 @@ coverage 使用 `vitest run --coverage --coverage.include='src/**'`，避免僅�
 
 ## 2026-10-19 遠端整合與安全修補
 
-依已確認的規則語意，本機合併 host `origin/main` 與 desktop `origin/develop`；desktop 原有未提交功能修改保留。合併後分別修補有漏洞的相依版本，以及 host ZIP 匯出檔名、desktop 作答暫存路徑的目錄跳脫風險。此輪未推送或部署。
+依已確認的規則語意，本機合併 host `origin/main` 與 desktop `origin/develop`；desktop 原有未提交功能修改保留。合併後分別修補有漏洞的相依版本，以及 host ZIP 匯出檔名、desktop 作答暫存與重新登入後作答復原路徑的目錄跳脫風險。此輪未推送或部署。
 
-驗證：考卷三端與語言兩端 fixture 一致；host backend 74 檔／746 測試、frontend 17 檔／120 測試通過，兩端編譯通過；desktop 型別檢查、39 檔／443 測試通過，另以實際編譯器／runtime 跑 C、Cpp、Python、JavaScript、Java 的 5 個探針案例全通過。安全修補的 ZIP 測試與本機檔名測試另行通過。
+驗證：考卷三端與語言兩端 fixture 一致；host backend 74 檔／746 測試、frontend 17 檔／120 測試通過，兩端編譯通過；desktop 型別檢查、39 檔／443 測試及 electron-vite build 通過，另以實際編譯器／runtime 跑 C、Cpp、Python、JavaScript、Java 的 5 個探針案例全通過。安全修補的 ZIP、本機檔名與登入復原測試另行通過。
 
 相依稽核較 2026-10-15 改善：host 全量 88 → 15 項（生產依賴 14 項），desktop 全量 60 → 36 項（生產依賴 6 項）。host 剩餘高／嚴重項目在 `sqlite3` 的 `node-gyp` → `tar` 建置鏈；desktop 生產項目需 Electron 34 → 44 的主要版本升級，尚缺 Windows 包裝與真機驗證。Vitest 主要版本升級試驗造成既有測試失敗、且產生無法以一般 `npm ci` 安裝的 lockfile，已撤回。T179 的全量安全與 100% coverage gate 仍未達成；現場 F2–F4 與舊驗收項目也維持未完成。
