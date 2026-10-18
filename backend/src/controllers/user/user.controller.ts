@@ -158,7 +158,10 @@ export class UserController {
       }
 
       const failed = Array.isArray(decrypted?.failedLanguages)
-        ? decrypted.failedLanguages.filter((l: unknown) => typeof l === "string").slice(0, 20)
+        ? decrypted.failedLanguages
+          .filter((l: unknown): l is string => typeof l === "string")
+          .slice(0, 20)
+          .map((language: string) => language.slice(0, 32))
         : [];
 
       if (typeof decrypted.sequence !== 'number' || !Number.isSafeInteger(decrypted.sequence) || decrypted.sequence <= 0) {

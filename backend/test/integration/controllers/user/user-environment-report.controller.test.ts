@@ -118,6 +118,15 @@ describe('POST /user/exam/environment-report (integration)', () => {
     expect(JSON.parse(device!.envCheckFailedLanguages!)).toHaveLength(20);
   });
 
+  it('bounds each untrusted failed-language label before storing it', async () => {
+    await client.post('/user/exam/environment-report', {
+      status: 'FAILED', failedLanguages: ['X'.repeat(1000)], sequence: 1,
+    });
+
+    const device = await DeviceKeyMap.findOne({ where: { deviceUuid } });
+    expect(JSON.parse(device!.envCheckFailedLanguages!)).toEqual(['X'.repeat(32)]);
+  });
+
   it('is refused before the machines are meant to be set up', async () => {
     await seedExamPhase(ExamState.UNINITIALIZED);
 

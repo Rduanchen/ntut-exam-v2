@@ -88,3 +88,5 @@ SC-009 的 desktop judger／special rules／UI 測試全通過，但「既有測
 已建立互相引用的草稿 PR：[host #3](https://github.com/Rduanchen/ntut-exam-v2/pull/3) 與 [desktop #6](https://github.com/Rduanchen/NTUT-on-machine-test/pull/6)。兩份描述均註明必須同時合併／部署，並列出 coverage、audit 與真機阻礙；T126 的開 PR 步驟已完成，尚未合併。配對程式版本為 host `90f7069204a4897ea41dce5e2c79483209e8efd9`（後續僅補驗證文件）與 desktop `76846492564d786c838c4f977d9c8fb046df6714`。
 
 PR 建立後的 GitHub checks：host 與 desktop 的 `audit`、`test` 均失敗。這與上述本機全域 coverage／audit gate 結果一致，草稿狀態維持，不視為可合併。
+
+額外輸入邊界修補：環境回報原本只限制最多 20 個失敗語言，現在每個標籤也截為最多 32 字元，避免已註冊裝置回報過長字串進入資料庫。新增整合回歸後重新執行 `pnpm test`：backend 74 檔、750 測試通過，fixture 仍一致。上方 749 為修補前的同日快照；後續以 750 為準。
