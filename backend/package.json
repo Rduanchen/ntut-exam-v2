@@ -15,35 +15,35 @@
     "test:coverage": "tsc -p tsconfig.test.json && vitest run --coverage"
   },
   "dependencies": {
-    "adm-zip": "^0.5.17",
-    "cors": "^2.8.5",
+    "adm-zip": "^0.6.1",
+    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "express": "^4.19.2",
-    "p-limit": "^7.3.1",
+    "express": "^4.22.3",
+    "p-limit": "^7.3.3",
     "piston-judger": "^0.2.0",
     "reflect-metadata": "^0.2.2",
-    "sequelize": "^6.37.3",
+    "sequelize": "^6.37.8",
     "sequelize-typescript": "^2.1.6",
-    "socket.io": "^4.7.5",
-    "special-rule-engine": "git+https://github.com/VerechoTJI/special-rule-engine.git#f4e228002964e36e9b5cf654d050c1856193b700",
+    "socket.io": "^4.8.4",
+    "special-rule-engine": "github:VerechoTJI/special-rule-engine#f4e228002964e36e9b5cf654d050c1856193b700",
     "sqlite3": "^5.1.7",
     "winston": "^3.19.0",
-    "zod": "^3.23.8"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/adm-zip": "^0.5.8",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.12.12",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.25",
+    "@types/node": "^20.19.43",
     "@types/supertest": "^7.2.1",
-    "@vitest/coverage-v8": "4.1.8",
-    "eslint": "^10.4.1",
-    "nodemon": "^3.1.0",
-    "supertest": "^7.2.2",
+    "@vitest/coverage-v8": "4.1.12",
+    "eslint": "^10.13.0",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.3.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.5",
-    "typescript-eslint": "^8.60.1",
-    "vitest": "^4.1.8"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.2",
+    "vitest": "^4.1.12"
   }
 }

@@ -14,24 +14,24 @@
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
-    "axios": "^1.7.9",
+    "axios": "^1.20.0",
     "pinia": "^3.0.4",
-    "socket.io-client": "^4.7.5",
-    "vue": "^3.5.34",
-    "vue-router": "^5.1.0",
-    "vuetify": "^3.7.1"
+    "socket.io-client": "^4.8.4",
+    "vue": "^3.5.44",
+    "vue-router": "^5.4.0",
+    "vuetify": "^3.13.7"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.1.8",
-    "@types/node": "^24.12.3",
-    "@vitejs/plugin-vue": "^6.0.6",
-    "@vue/test-utils": "^2.4.11",
+    "@types/node": "^24.19.2",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "@vitest/coverage-v8": "4.1.12",
+    "@vue/test-utils": "^2.5.1",
     "@vue/tsconfig": "^0.9.1",
-    "happy-dom": "^20.11.8",
-    "sass": "^1.77.8",
-    "typescript": "~6.0.2",
-    "vite": "^8.0.12",
-    "vitest": "^4.1.8",
-    "vue-tsc": "^3.2.8"
+    "happy-dom": "^20.14.6",
+    "sass": "^1.105.2",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.4",
+    "vitest": "^4.1.12",
+    "vue-tsc": "^3.3.13"
   }
 }
