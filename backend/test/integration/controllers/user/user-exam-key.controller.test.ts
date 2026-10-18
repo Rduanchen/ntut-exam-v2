@@ -59,6 +59,29 @@ describe('POST /user/exam/key (integration)', () => {
     expect(secret.puzzles[0].subtasks.length).toBeGreaterThan(0);
   });
 
+  it('sends less than one percent of a full paper when releasing the key', async () => {
+    const config = buildExamConfig();
+    const puzzle = config.sections[0].puzzles[0];
+    config.sections[0].puzzles = Array.from({ length: 60 }, (_, index) => ({
+      ...puzzle,
+      id: `Q${index + 1}`,
+      title: `Question ${index + 1}`,
+    }));
+    const prepared = ExamConfigCryptoService.prepare(config);
+    await SystemSettingsService.upsertSetting('exam_config', config);
+    await SystemSettingsService.upsertSetting('exam_key', prepared.examKey);
+    await SystemSettingsService.upsertSetting('exam_config_meta', prepared.meta);
+    await SystemSettingsService.upsertSetting('exam_config_cipher', prepared.cipher);
+
+    const paper = await client.post('/user/exam/config');
+    const key = await client.post('/user/exam/key');
+    expect(paper.status).toBe(200);
+    expect(key.status).toBe(200);
+    const paperBytes = Buffer.byteLength(JSON.stringify(paper.body));
+    const keyBytes = Buffer.byteLength(JSON.stringify(key.body));
+    expect(keyBytes / paperBytes).toBeLessThan(0.01);
+  });
+
   it('is refused before the exam starts', async () => {
     /* The whole reason the key exists separately. A logged-in student sitting
      * in a room where the exam has not begun must not be able to read it. */

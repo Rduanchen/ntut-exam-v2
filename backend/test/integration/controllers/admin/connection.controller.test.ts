@@ -11,6 +11,11 @@ import { LoginRequest } from '../../../../src/models/login-request.model';
 import { UnblockedDevice } from '../../../../src/models/unblocked-device.model';
 import { SocketService } from '../../../../src/sockets/socket.service';
 import { MessageSocketService } from '../../../../src/sockets/message-socket.service';
+import { TestClient } from '../../../helpers/test-client';
+import { seedExamPhase } from '../../../helpers/exam-phase';
+import { ExamState } from '../../../../src/services/exam-state.service';
+import { SystemSettingsService } from '../../../../src/services/system-settings.service';
+import { buildExamConfig } from '../../../fixtures/exam-config.fixture';
 
 describe('ConnectionController (integration)', () => {
   let app: express.Express;
@@ -96,6 +101,28 @@ describe('ConnectionController (integration)', () => {
   });
 
   describe('POST /admin/connection/requests/:id/approve', () => {
+    it('does not grant entry or alter a seat when a pending machine reads languages', async () => {
+      await seedExamPhase(ExamState.INITIALIZED);
+      await SystemSettingsService.upsertSetting('exam_config', buildExamConfig());
+      const machine = new TestClient(app);
+      await machine.registerDevice('pending-language-device');
+      await User.create({ ...buildUser({ testId: 's-1', deviceUuid: machine.uuid, ipAddress: '10.0.0.1' }) });
+      const pending = await LoginRequest.create({
+        ipAddress: '10.0.0.2', deviceUuid: machine.uuid, testId: 's-1',
+        type: 'SECONDARY', status: 'PENDING',
+      });
+      await seedExamPhase(ExamState.SETUP_FINISHED);
+
+      const languages = await machine.post('/user/exam/languages');
+
+      expect(languages.status).toBe(200);
+      expect(machine.decrypt(languages.body)).toEqual({ languages: ['Python'] });
+      expect((await LoginRequest.findByPk(pending.id))?.status).toBe('PENDING');
+      expect(await UnblockedDevice.count()).toBe(0);
+      expect((await User.findOne({ where: { testId: 's-1' } }))?.deviceUuid).toBe(machine.uuid);
+      expect((await User.findOne({ where: { testId: 's-1' } }))?.ipAddress).toBe('10.0.0.1');
+    });
+
     it('approves a request and issues a single-use unblock pass', async () => {
       const req = await LoginRequest.create({
         ipAddress: '10.0.0.1', deviceUuid: 'dev-1', testId: null, type: 'FIRST_TIME', status: 'PENDING',

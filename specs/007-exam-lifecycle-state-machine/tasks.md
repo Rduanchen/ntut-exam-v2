@@ -273,15 +273,15 @@ description: "Task list for feature 007 — exam lifecycle state machine and pap
 
 ## Phase 9: Polish & Cross-Cutting
 
-- [ ] T117 [P] 在 `host/backend/src/services/exam-state.service.ts` 與 `desktop` 兩端確認 `ExamPhase` 五值完全一致，無殘留的 `NOT_STARTED` 字串
-- [ ] T118 [P] 執行 quickstart.md §A 全部自動化驗證，確認兩端測試皆綠且 fixture `diff` 無差異
+- [X] T117 [P] 在 `host/backend/src/services/exam-state.service.ts` 與 `desktop` 兩端確認 `ExamPhase` 五值完全一致，無殘留的 `NOT_STARTED` 字串（舊值僅留在說明與拒絕測試）
+- [X] T118 [P] 執行 quickstart.md §A 全部自動化驗證，確認兩端測試皆綠且 fixture `diff` 無差異
 - [ ] T119 執行 quickstart.md §B 六階段人工走查 27 步，**第 6、10、26 步不可省**
 - [ ] T120 執行 quickstart.md §C 全程離線走查 11 步
 - [ ] T121 執行 quickstart.md §D 安全性驗證 7 項
 - [ ] T122 執行 quickstart.md §E 回歸驗證，確認 judger／UI／special rules 的既有測試 0 處修改（SC-009）
-- [ ] T123 [P] 量測 `POST /user/exam/key` 與 `POST /user/exam/config` 的回應大小比例，確認小於 1%（SC-004）
-- [ ] T124 [P] 更新 `host/knowledge/vision.md` 的目前狀態與里程碑
-- [ ] T125 [P] 將本功能的教訓寫入 `host/knowledge/experience.md`（跨 repo 契約、扣留金鑰的設計取捨）
+- [X] T123 [P] 量測 `POST /user/exam/key` 與 `POST /user/exam/config` 的回應大小比例，確認小於 1%（SC-004；60 題整合測試）
+- [X] T124 [P] 更新 `host/knowledge/vision.md` 的目前狀態與里程碑
+- [X] T125 [P] 將本功能的教訓寫入 `host/knowledge/experience.md`（跨 repo 契約、扣留金鑰的設計取捨）
 - [ ] T126 在兩個 repo 各開 PR，描述互相引用並註明「必須同時 merge」
 
 ---

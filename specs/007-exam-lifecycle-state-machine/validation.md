@@ -72,3 +72,15 @@ coverage 使用 `vitest run --coverage --coverage.include='src/**'`，避免僅�
 驗證：考卷三端與語言兩端 fixture 一致；host backend 74 檔／746 測試、frontend 17 檔／120 測試通過，兩端編譯通過；desktop 型別檢查、39 檔／443 測試及 electron-vite build 通過，另以實際編譯器／runtime 跑 C、Cpp、Python、JavaScript、Java 的 5 個探針案例全通過。安全修補的 ZIP、本機檔名與登入復原測試另行通過。
 
 相依稽核較 2026-10-15 改善：host 全量 88 → 15 項（生產依賴 14 項），desktop 全量 60 → 36 項（生產依賴 6 項）。host 剩餘高／嚴重項目在 `sqlite3` 的 `node-gyp` → `tar` 建置鏈；desktop 生產項目需 Electron 34 → 44 的主要版本升級，尚缺 Windows 包裝與真機驗證。Vitest 主要版本升級試驗造成既有測試失敗、且產生無法以一般 `npm ci` 安裝的 lockfile，已撤回。T179 的全量安全與 100% coverage gate 仍未達成；現場 F2–F4 與舊驗收項目也維持未完成。
+
+## 2026-10-19 非真機驗收補測
+
+本輪在 host `develop` 與 desktop `feat/007-environment-precheck` 工作區驗證，未以真機畫面代替證據。兩端階段型別均為 `UNINITIALIZED / INITIALIZED / SETUP_FINISHED / IN_PROGRESS / FINISHED`；僅註解和刻意拒絕舊值的測試曾提及 `NOT_STARTED`，桌面 preload 的過期註解已更正。`bash scripts/check-contract-fixture.sh` 確認考卷三端及語言兩端 fixture 相同。`pnpm test`：backend 74 檔、749 測試通過；`pnpm --filter frontend typecheck` 與 `pnpm --filter frontend test`：型別通過，17 檔、120 測試通過。desktop `npm run typecheck` 與 `npx vitest run`：型別通過，39 檔、446 測試通過，另有 runtime 預設略過的 5 項（先前以啟用旗標跑過五種真實工具鏈）。`git diff --check` 兩端通過。
+
+新增整合回歸證明：待助教審核的裝置可讀取語言，但 `LoginRequest` 保持 PENDING、無核准通行證，學生裝置與 IP 綁定不變；桌面端已核准註冊後即使預檢回報 FAILED，仍保有已註冊狀態和原 AES key。F3 跨端 GUI 核准走查仍待真機執行。以 60 題完整測資考卷的真實 `POST /user/exam/config` 與 `POST /user/exam/key` 加密 HTTP 回應 JSON 位元組量測，`keyBytes / paperBytes < 0.01` 的整合斷言通過；小型單題 fixture 不代表正式考卷傳輸比例。
+
+完整 src coverage gate 實跑並**失敗**：backend 2303/2638 行（87.30%），frontend 609/2240 行（27.18%），desktop 39.23%。命令分別為 `pnpm --filter backend exec vitest run --coverage --coverage.include='src/**' --coverage.thresholds.lines=100`、frontend 同式，以及 desktop `npx vitest run --coverage --coverage.include='src/**' --coverage.thresholds.lines=100`。desktop 新增的 `exam-languages.schema.ts` 與 `environment-check.guard.ts` 達 100%，但修改中的 `auth.ipc.ts` 98.06%、`api.service.ts` 95.51%、`environment-check.service.ts` 92.85%；既有 renderer 頁面多為 0%。因此 T179 的新增／修改路徑 100% 與全域 CI gate 尚未滿足，不能把測試通過當成覆蓋合格。
+
+三端 production build 均通過：`pnpm --filter backend build`、`pnpm --filter frontend build`、desktop `npm run build`。desktop 另以 `RUN_ENVIRONMENT_CHECK_INTEGRATION=1 npx vitest run test/integration/environment-check.runtime.test.ts` 讓 C、Cpp、Python、JavaScript、Java 的 5 項探針全數實際執行並通過。這是開發機工具鏈測試，仍非 F2–F4 考場真機走查。desktop 本輪配對功能已整理為 `7684649`，host 文件／補測仍在 `develop`。重新執行 audit：host 15 項（含 tar 建置鏈與 Sequelize uuid），desktop 36 項（含需主要版本升級的 Electron／Vitest）；兩端 audit job 仍會失敗。
+
+SC-009 的 desktop judger／special rules／UI 測試全通過，但「既有測試 0 處修改」的字面條件不成立：feature 007 開發及已核准的遠端 special-rules-scoring 合併均曾修改這些測試。這些修改並非本輪為了讓 meta/cipher 切分通過而做；T122 保留未勾選，待以雙方同意的基線重新界定 0 處修改的範圍。T119–T121、T180 的現場走查及 T126 的正式雙 repo PR／共同合併也未完成。
