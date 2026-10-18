@@ -6,6 +6,7 @@ import { ScoreBoard } from "../models/score-board.model";
 import { SystemSettingsService } from "./system-settings.service";
 import { getEffectiveSpecialRules } from "./special-rules/rule-provider";
 import { evaluateSpecialRules } from "./special-rules/engine";
+import { getPuzzleRuleMultiplier } from "./special-rules/multiplier";
 import { piston, pistonJudger } from "piston-judger";
 import logger from "../utils/logger.util";
 import { ExamConfig, Puzzle } from "../schemas/config.schema";
@@ -84,19 +85,12 @@ export class JudgerService {
       puzzleSpecialRules: puzzle.specialRules || [],
     });
 
-    const evalResults = evaluateSpecialRules(effectiveRules, {
+    const evalResults = await evaluateSpecialRules(effectiveRules, {
       sourceText: submission.codeContent,
       language: submission.language,
     });
 
-    // Calculate multiplier from rules
-    let multiplier = 1;
-    for (const res of evalResults) {
-      if (!res.passed) {
-        const rule = effectiveRules.find(r => r.id === res.ruleId);
-        multiplier *= rule?.multiplier ?? 1;
-      }
-    }
+    const multiplier = getPuzzleRuleMultiplier(evalResults, puzzle.multiplier ?? 0.5);
 
     // Map language to Piston compatible names
     const languageMap: Record<string, string> = {

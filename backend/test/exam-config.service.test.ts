@@ -4,6 +4,7 @@ import { SystemSettings } from "../src/models/system-settings.model";
 import { ExamConfigService } from "../src/services/exam-config.service";
 import { SystemSettingsService } from "../src/services/system-settings.service";
 import { HttpError } from "../src/utils/http-error";
+import { examConfigSchema } from "../src/schemas/config.schema";
 
 describe("ExamConfigService", () => {
   let testSequelize: Sequelize;
@@ -15,6 +16,7 @@ describe("ExamConfigService", () => {
       timeLimit: 5000,
       memoryLimit: 65536
     },
+    environmentVariables: { startPassword: "start" },
     accessibleUsers: [
       { id: "109590001", name: "Alice", ip: "192.168.1.10" },
       { id: "109590002", name: "Bob" }
@@ -86,6 +88,45 @@ describe("ExamConfigService", () => {
         ExamConfigService.validateAndSave(invalidConfig)
       ).rejects.toThrowError(HttpError);
     });
+
+    it("defaults the puzzle multiplier and drops legacy per-rule multipliers", () => {
+      const config = examConfigSchema.parse({
+        ...validConfig,
+        environmentVariables: { startPassword: "start" },
+        sections: [{
+          ...validConfig.sections[0],
+          puzzles: [{
+            ...validConfig.sections[0].puzzles[0],
+            specialRules: [{
+              id: "rule-1",
+              type: "use",
+              constraint: "MUST_HAVE",
+              message: "must use print",
+              multiplier: 0.2,
+              params: { target: "print" },
+            }],
+          }],
+        }],
+      });
+
+      const puzzle = config.sections[0].puzzles[0];
+      expect(puzzle.multiplier).toBe(0.5);
+      expect(puzzle.specialRules?.[0]).not.toHaveProperty("multiplier");
+    });
+
+    it("accepts an explicitly configured puzzle multiplier", () => {
+      const config = examConfigSchema.parse({
+        ...validConfig,
+        environmentVariables: { startPassword: "start" },
+        sections: [{
+          ...validConfig.sections[0],
+          puzzles: [{ ...validConfig.sections[0].puzzles[0], multiplier: 0.25 }],
+        }],
+      });
+
+      expect(config.sections[0].puzzles[0].multiplier).toBe(0.25);
+    });
+
   });
 
   describe("restrictedUpdate", () => {

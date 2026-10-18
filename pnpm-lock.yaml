@@ -41,8 +41,8 @@ importers:
         specifier: ^4.7.5
         version: 4.8.3
       special-rule-engine:
-        specifier: git+https://github.com/Rduanchen/special-rule-engine.git#main
-        version: https://codeload.github.com/Rduanchen/special-rule-engine/tar.gz/4efce0e466f452b242b0c8832748bdbaf00b7301
+        specifier: git+https://github.com/VerechoTJI/special-rule-engine.git#f4e228002964e36e9b5cf654d050c1856193b700
+        version: https://codeload.github.com/VerechoTJI/special-rule-engine/tar.gz/f4e228002964e36e9b5cf654d050c1856193b700
       sqlite3:
         specifier: ^5.1.7
         version: 5.1.7
@@ -2104,9 +2104,14 @@ packages:
     resolution: {integrity: sha512-1POYv7uv2gXoyGFpBCmpDVSNV74IfsWlDW216UPjbWufNf+bSU6GdbDsxdcxtfwb4xlI3yxzOTKClUosxARYrQ==}
     engines: {node: '>=0.10.0'}
 
-  special-rule-engine@https://codeload.github.com/Rduanchen/special-rule-engine/tar.gz/4efce0e466f452b242b0c8832748bdbaf00b7301:
-    resolution: {tarball: https://codeload.github.com/Rduanchen/special-rule-engine/tar.gz/4efce0e466f452b242b0c8832748bdbaf00b7301}
-    version: 0.1.0
+  special-rule-engine@https://codeload.github.com/VerechoTJI/special-rule-engine/tar.gz/f4e228002964e36e9b5cf654d050c1856193b700:
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/VerechoTJI/special-rule-engine/tar.gz/f4e228002964e36e9b5cf654d050c1856193b700}
+    version: 0.2.0
+    dependencies:
+      web-tree-sitter: 0.26.11
+
+  web-tree-sitter@0.26.11:
+    resolution: {integrity: sha512-Q5Dm3YTIXSXuH6FxX6RuzX2Qwpc4DPGiYMU87Wg5Z8OIStiQFiUex4zMDc0vBTw78EphaYJacncJghCHzbZptg==}
 
   sqlite3@5.1.7:
     resolution: {integrity: sha512-GGIyOiFaG+TUra3JIfkI/zGP8yZYLPQ0pl1bH+ODjiX57sPhrLU5sQJn1y9bDKZUFYkX1crlrPfSYt0BKKdkog==}
@@ -4615,7 +4620,11 @@ snapshots:
 
   speakingurl@14.0.1: {}
 
-  special-rule-engine@https://codeload.github.com/Rduanchen/special-rule-engine/tar.gz/4efce0e466f452b242b0c8832748bdbaf00b7301: {}
+  special-rule-engine@https://codeload.github.com/VerechoTJI/special-rule-engine/tar.gz/f4e228002964e36e9b5cf654d050c1856193b700:
+    dependencies:
+      web-tree-sitter: 0.26.11
+
+  web-tree-sitter@0.26.11: {}
 
   sqlite3@5.1.7:
     dependencies:

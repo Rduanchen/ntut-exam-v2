@@ -4,4 +4,4 @@ packages:
 allowBuilds:
   "@parcel/watcher": true
   sqlite3: true
-  "special-rule-engine@https://codeload.github.com/Rduanchen/special-rule-engine/tar.gz/4efce0e466f452b242b0c8832748bdbaf00b7301": true
+  "special-rule-engine@https://codeload.github.com/VerechoTJI/special-rule-engine/tar.gz/f4e228002964e36e9b5cf654d050c1856193b700": true

@@ -52,6 +52,7 @@ describe("JudgerService syncScoreBoard", () => {
       testTitle: "Cap Exam",
       description: "Exam with capped section scores",
       judgerSettings: { timeLimit: 1000, memoryLimit: 64 },
+      environmentVariables: { startPassword: "start" },
       accessibleUsers: [{ id: testId, name: "Student 1" }],
       sections: [
         {
@@ -63,6 +64,7 @@ describe("JudgerService syncScoreBoard", () => {
               id: "Q1",
               title: "Question 1",
               score: 50,
+              multiplier: 0.5,
               language: "Python",
               subtasks: [{ title: "Subtask 1", score: 50, visible: [], hidden: [] }]
             },
@@ -70,6 +72,7 @@ describe("JudgerService syncScoreBoard", () => {
               id: "Q2",
               title: "Question 2",
               score: 50,
+              multiplier: 0.5,
               language: "Python",
               subtasks: [{ title: "Subtask 1", score: 50, visible: [], hidden: [] }]
             }
@@ -84,6 +87,7 @@ describe("JudgerService syncScoreBoard", () => {
               id: "Q3",
               title: "Question 3",
               score: 50,
+              multiplier: 0.5,
               language: "Python",
               subtasks: [{ title: "Subtask 1", score: 50, visible: [], hidden: [] }]
             }
