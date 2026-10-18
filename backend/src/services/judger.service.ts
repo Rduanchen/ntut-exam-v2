@@ -13,6 +13,7 @@ import {
 } from "piston-judger";
 import { applyJudgeSettings } from "./judge-limiter";
 import { valuesOf, type JudgeSettings } from "../config/judge.config";
+import { getPuzzleRuleMultiplier } from "./special-rules/multiplier";
 import logger from "../utils/logger.util";
 import { ExamConfig, Puzzle } from "../schemas/config.schema";
 import { JudgeExecutionService } from "./judge-execution.service";
@@ -172,19 +173,12 @@ export class JudgerService {
       puzzleSpecialRules: puzzle.specialRules || [],
     });
 
-    const evalResults = evaluateSpecialRules(effectiveRules, {
+    const evalResults = await evaluateSpecialRules(effectiveRules, {
       sourceText: submission.codeContent,
       language: submission.language,
     });
 
-    // Calculate multiplier from rules
-    let multiplier = 1;
-    for (const res of evalResults) {
-      if (!res.passed) {
-        const rule = effectiveRules.find(r => r.id === res.ruleId);
-        multiplier *= rule?.multiplier ?? 1;
-      }
-    }
+    const multiplier = getPuzzleRuleMultiplier(evalResults, puzzle.multiplier ?? 0.5);
 
     // Map language to Piston compatible names
     const languageMap: Record<string, string> = {
@@ -294,7 +288,7 @@ export class JudgerService {
     }
 
     // Final Auto Score Calculation
-    const finalAutoScore = Math.floor(totalRawScore * multiplier);
+    const finalAutoScore = totalRawScore * multiplier;
 
     await Submission.update(
       { status: "Graded", autoScore: finalAutoScore },
@@ -397,7 +391,7 @@ export class JudgerService {
         scoreBoard = await ScoreBoard.create(
           {
             testId,
-            score: totalScore,
+            score: Math.round(totalScore),
             lastSubmitTime: new Date(),
             subtaskAmount,
             passedSubtaskAmount,
@@ -410,7 +404,7 @@ export class JudgerService {
       } else {
         await scoreBoard.update(
           {
-            score: totalScore,
+            score: Math.round(totalScore),
             lastSubmitTime: new Date(),
             subtaskAmount,
             passedSubtaskAmount,

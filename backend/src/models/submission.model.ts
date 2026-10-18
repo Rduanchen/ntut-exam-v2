@@ -35,7 +35,7 @@ export class Submission extends Model {
   })
   declare status: SubmissionStatus;
 
-  @Column({ field: "auto_score", type: DataType.INTEGER, allowNull: true })
+  @Column({ field: "auto_score", type: DataType.FLOAT, allowNull: true })
   declare autoScore: number;
   @BelongsTo(() => User, { targetKey: 'testId' })
   declare user: User;

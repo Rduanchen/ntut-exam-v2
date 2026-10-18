@@ -39,6 +39,7 @@ export const buildExamConfig = (overrides: Partial<ExamConfig> = {}): ExamConfig
           id: 'Q1',
           title: 'Two Sum',
           score: 100,
+          multiplier: 0.5,
           language: 'Python',
           timeLimit: 1000,
           memoryLimit: 32768,

@@ -77,6 +77,7 @@ describe("JudgerService syncScoreBoard", () => {
               id: "Q1",
               title: "Question 1",
               score: 50,
+              multiplier: 0.5,
               language: "Python",
               subtasks: [{ title: "Subtask 1", score: 50, visible: [], hidden: [] }]
             },
@@ -84,6 +85,7 @@ describe("JudgerService syncScoreBoard", () => {
               id: "Q2",
               title: "Question 2",
               score: 50,
+              multiplier: 0.5,
               language: "Python",
               subtasks: [{ title: "Subtask 1", score: 50, visible: [], hidden: [] }]
             }
@@ -98,6 +100,7 @@ describe("JudgerService syncScoreBoard", () => {
               id: "Q3",
               title: "Question 3",
               score: 50,
+              multiplier: 0.5,
               language: "Python",
               subtasks: [{ title: "Subtask 1", score: 50, visible: [], hidden: [] }]
             }
@@ -156,6 +159,39 @@ describe("JudgerService syncScoreBoard", () => {
     expect(sb!.passedPuzzleAmount).toBe(3);
     expect(sb!.subtaskAmount).toBe(3);
     expect(sb!.passedSubtaskAmount).toBe(3);
+  });
+
+  it("keeps fractional puzzle scores and rounds only the final total", async () => {
+    const testId = "student-fractional";
+    await User.create({ uuid: testId, testId, name: "Student Fractional" });
+    const config = buildExamConfig({
+      accessibleUsers: [{ id: testId, name: "Student Fractional" }],
+      sections: [{
+        id: "S1",
+        title: "Section 1",
+        maxScore: 2,
+        puzzles: ["Q1", "Q2"].map((id) => ({
+          id,
+          title: id,
+          score: 1,
+          multiplier: 0.5,
+          language: "Python",
+          subtasks: [{ title: "Subtask 1", score: 1, visible: [], hidden: [] }],
+        })),
+      }],
+    });
+
+    for (const questionId of ["Q1", "Q2"]) {
+      await Submission.create({
+        testId, questionId, language: "Python", codeContent: "pass",
+        status: "Graded", autoScore: 0.5,
+      });
+    }
+
+    await JudgerService.syncScoreBoard(testId, {}, config);
+
+    expect((await Submission.findOne({ where: { testId, questionId: "Q1" } }))!.autoScore).toBe(0.5);
+    expect((await ScoreBoard.findOne({ where: { testId } }))!.score).toBe(1);
   });
 });
 
