@@ -86,3 +86,5 @@ coverage 使用 `vitest run --coverage --coverage.include='src/**'`，避免僅�
 SC-009 的 desktop judger／special rules／UI 測試全通過，但「既有測試 0 處修改」的字面條件不成立：feature 007 開發及已核准的遠端 special-rules-scoring 合併均曾修改這些測試。這些修改並非本輪為了讓 meta/cipher 切分通過而做；T122 保留未勾選，待以雙方同意的基線重新界定 0 處修改的範圍。T119–T121、T180 的現場走查與正式共同合併尚未完成。
 
 已建立互相引用的草稿 PR：[host #3](https://github.com/Rduanchen/ntut-exam-v2/pull/3) 與 [desktop #6](https://github.com/Rduanchen/NTUT-on-machine-test/pull/6)。兩份描述均註明必須同時合併／部署，並列出 coverage、audit 與真機阻礙；T126 的開 PR 步驟已完成，尚未合併。配對程式版本為 host `90f7069204a4897ea41dce5e2c79483209e8efd9`（後續僅補驗證文件）與 desktop `76846492564d786c838c4f977d9c8fb046df6714`。
+
+PR 建立後的 GitHub checks：host 與 desktop 的 `audit`、`test` 均失敗。這與上述本機全域 coverage／audit gate 結果一致，草稿狀態維持，不視為可合併。
