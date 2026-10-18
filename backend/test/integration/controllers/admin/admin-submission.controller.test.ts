@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import type express from 'express';
+import AdmZip from 'adm-zip';
 
 import { createApp } from '../../../../src/app';
 import { adminRequest } from '../../../helpers/admin-request';
@@ -82,6 +83,30 @@ describe('AdminSubmissionController (integration)', () => {
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toContain('zip');
       expect(res.headers['content-disposition']).toContain('s-1_codes.zip');
+    });
+
+    it('keeps archive entries inside the extraction directory and gives collisions unique names', async () => {
+      for (const questionId of ['../Q1', '..\\Q1']) {
+        await CodeStorageService.upsertSubmission('s-1', {
+          questionId,
+          language: 'Python',
+          codeContent: 'print(1)',
+        } as any);
+      }
+
+      const res = await adminRequest(app).get('/admin/submissions/s-1/export')
+        .buffer(true)
+        .parse((response, callback) => {
+          const chunks: Buffer[] = [];
+          response.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+          response.on('end', () => callback(null, Buffer.concat(chunks)));
+          response.on('error', callback);
+        });
+      expect(res.status).toBe(200);
+      const entries = new AdmZip(res.body).getEntries().map((entry) => entry.entryName);
+      expect(entries).toHaveLength(2);
+      expect(new Set(entries).size).toBe(2);
+      expect(entries.every((name) => /^[^/\\]+\.py$/.test(name) && !name.startsWith('.'))).toBe(true);
     });
   });
 

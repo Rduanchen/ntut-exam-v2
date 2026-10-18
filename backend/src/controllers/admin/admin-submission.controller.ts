@@ -67,6 +67,7 @@ export class AdminSubmissionController {
       const submissions = await CodeStorageService.getSubmissions(testId);
       
       const zip = new AdmZip();
+      const usedNames = new Set<string>();
       for (const sub of submissions) {
         const extMap: Record<string, string> = {
           Python: 'py',
@@ -76,13 +77,21 @@ export class AdminSubmissionController {
           JavaScript: 'js'
         };
         const ext = extMap[sub.language] || 'txt';
-        zip.addFile(`${sub.questionId}.${ext}`, Buffer.from(sub.codeContent, 'utf-8'));
+        const safeId = String(sub.questionId)
+          .replace(/[^\p{L}\p{N}._-]/gu, '_')
+          .replace(/^\.+/, '_') || 'question';
+        let filename = `${safeId}.${ext}`;
+        for (let suffix = 2; usedNames.has(filename.toLowerCase()); suffix += 1) {
+          filename = `${safeId}_${suffix}.${ext}`;
+        }
+        usedNames.add(filename.toLowerCase());
+        zip.addFile(filename, Buffer.from(sub.codeContent, 'utf-8'));
       }
 
       const zipBuffer = zip.toBuffer();
 
       res.setHeader('Content-Type', 'application/zip');
-      res.setHeader('Content-Disposition', `attachment; filename=${testId}_codes.zip`);
+      res.attachment(`${testId}_codes.zip`);
       res.setHeader('Content-Length', zipBuffer.length);
       
       res.status(200).send(zipBuffer);
