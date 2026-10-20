@@ -55,7 +55,7 @@ const onInput = (value: string) => {
 
     <div v-if="setting.origin === 'clamped'" class="text-caption text-warning mt-1" data-test="clamped-note">
       原設定值超出允許範圍，未被採用。目前實際生效值為 <strong>{{ setting.value }}</strong>。
-      
+
     </div>
     <div v-if="hint" class="text-caption text-medium-emphasis mt-1">{{ hint }}</div>
   </div>
