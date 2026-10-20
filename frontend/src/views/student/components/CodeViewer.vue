@@ -29,7 +29,7 @@ const formatDate = (dateString: string) => {
   <v-card class="mt-4" border elevation="1">
     <v-card-title class="bg-grey-lighten-4 py-3 border-b d-flex align-center">
       <v-icon class="mr-2">mdi-code-braces</v-icon>
-      學生程式碼 (Submissions)
+      學生提交程式碼
       <v-spacer></v-spacer>
       <v-chip size="small" color="primary" variant="flat" class="font-weight-bold">
         {{ submissions.length }} 份提交
@@ -75,7 +75,7 @@ const formatDate = (dateString: string) => {
             :value="idx"
           >
             <div class="pa-2 bg-grey-lighten-4 text-caption text-medium-emphasis d-flex justify-space-between align-center border-b">
-              <span>提交時間: {{ formatDate(sub.submitTime) }}</span>
+              <span>提交時間：{{ formatDate(sub.submitTime) }}</span>
               <v-btn
                 color="error"
                 size="small"

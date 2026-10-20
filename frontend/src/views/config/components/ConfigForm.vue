@@ -90,11 +90,11 @@ const submitForm = async (): Promise<boolean> => {
   // Validate uniqueness and scores
   for (const section of localForm.value.sections || []) {
     if (!section.id?.trim()) {
-      alert(`Section "${section.title}" has an empty ID.`);
+      alert(`區段「${section.title}」尚未填寫 ID。`);
       return false;
     }
     if (sectionIds.has(section.id)) {
-      alert(`Duplicate Section ID found: ${section.id}`);
+      alert(`區段 ID 重複：${section.id}`);
       return false;
     }
     sectionIds.add(section.id);
@@ -102,11 +102,11 @@ const submitForm = async (): Promise<boolean> => {
     let sumPuzzles = 0;
     for (const puzzle of section.puzzles || []) {
       if (!puzzle.id?.trim()) {
-        alert(`Puzzle "${puzzle.title}" has an empty ID.`);
+        alert(`題目「${puzzle.title}」尚未填寫 ID。`);
         return false;
       }
       if (puzzleIds.has(puzzle.id)) {
-        alert(`Duplicate Puzzle ID found: ${puzzle.id}`);
+        alert(`題目 ID 重複：${puzzle.id}`);
         return false;
       }
       puzzleIds.add(puzzle.id);
@@ -123,7 +123,7 @@ const submitForm = async (): Promise<boolean> => {
   try {
     await configStore.saveConfig(localForm.value);
     localStorage.removeItem(DRAFT_KEY); // Clear draft after successful save
-    alert("Configuration saved successfully!");
+    alert("考試設定已儲存。");
     return true;
   } catch (e) {
     console.error(e);
@@ -152,7 +152,7 @@ const importJson = (event: Event) => {
       const parsed = JSON.parse(e.target?.result as string);
       localForm.value = patchConfig(parsed);
     } catch (err) {
-      alert("Invalid JSON file format");
+      alert("JSON 檔案格式無效。");
     }
   };
   reader.readAsText(file);
@@ -168,7 +168,7 @@ defineExpose({ submitForm });
 <template>
   <v-form @submit.prevent="submitForm">
     <v-toolbar color="primary" class="text-white">
-      <v-toolbar-title>Edit Configuration</v-toolbar-title>
+      <v-toolbar-title>編輯考試設定</v-toolbar-title>
       <v-spacer></v-spacer>
       <div v-if="!props.disabled">
         <input
@@ -179,20 +179,20 @@ defineExpose({ submitForm });
           @change="importJson"
         />
         <v-btn prepend-icon="mdi-upload" @click="triggerFileInput"
-          >Import JSON</v-btn
+          >匯入 JSON</v-btn
         >
         <v-btn prepend-icon="mdi-download" @click="exportJson"
-          >Export JSON</v-btn
+          >匯出 JSON</v-btn
         >
       </div>
       <div v-else class="text-caption px-4">
-        Some settings locked (Students, Passwords, IDs, Counts, Languages).
+        部分設定已鎖定（學生、密碼、ID、數量與程式語言）。
       </div>
     </v-toolbar>
 
     <v-tabs v-model="tab" color="primary">
-      <v-tab value="general">General Settings</v-tab>
-      <v-tab value="sections">Sections & Puzzles</v-tab>
+      <v-tab value="general">一般設定</v-tab>
+      <v-tab value="sections">區段與題目</v-tab>
     </v-tabs>
 
     <v-window v-model="tab" class="pa-4">

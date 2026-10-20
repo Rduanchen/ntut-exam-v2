@@ -84,7 +84,7 @@ export const useConnectionStore = defineStore('connection', () => {
       await fetchLoginRequests();
       await fetchDevices();
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to approve request';
+      error.value = err.response?.data?.error || err.message || '無法核准連線請求';
     }
   }
 
@@ -93,7 +93,7 @@ export const useConnectionStore = defineStore('connection', () => {
       await axios.post(`${BACKEND_URL}/admin/connection/requests/${id}/reject`, {}, { headers: getHeaders() });
       await fetchLoginRequests();
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to reject request';
+      error.value = err.response?.data?.error || err.message || '無法拒絕連線請求';
     }
   }
 
@@ -102,7 +102,7 @@ export const useConnectionStore = defineStore('connection', () => {
       await axios.post(`${BACKEND_URL}/admin/connection/devices/${uuid}/unbind`, {}, { headers: getHeaders() });
       await fetchDevices();
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to unbind device';
+      error.value = err.response?.data?.error || err.message || '無法解除設備綁定';
     }
   }
 
@@ -111,7 +111,7 @@ export const useConnectionStore = defineStore('connection', () => {
       await axios.delete(`${BACKEND_URL}/admin/connection/devices/${uuid}`, { headers: getHeaders() });
       await fetchDevices();
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to unregister device';
+      error.value = err.response?.data?.error || err.message || '無法註銷設備';
       throw err;
     }
   }
@@ -120,7 +120,7 @@ export const useConnectionStore = defineStore('connection', () => {
     try {
       await axios.post(`${BACKEND_URL}/admin/connection/unblock`, { targetType, targetValue, action }, { headers: getHeaders() });
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to manually unblock';
+      error.value = err.response?.data?.error || err.message || '無法手動解鎖';
       throw err;
     }
   }

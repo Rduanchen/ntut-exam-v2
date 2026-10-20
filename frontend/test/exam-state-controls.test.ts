@@ -94,24 +94,30 @@ describe('ExamStateControls', () => {
   });
 
   it('asks before advancing, and does nothing when refused', async () => {
-    vi.stubGlobal('confirm', vi.fn(() => false));
+    const confirmSpy = vi.fn(() => false);
+    vi.stubGlobal('confirm', confirmSpy);
     const store = useManageStore();
     const advance = vi.spyOn(store, 'advanceExamState').mockResolvedValue();
     const wrapper = mountAt('IN_PROGRESS');
 
     await wrapper.find('[data-test="advance-phase"]').trigger('click');
 
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('確定要推進到「考試結束」嗎？'));
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('階段是單向的，推進後無法返回'));
     expect(advance).not.toHaveBeenCalled();
   });
 
   it('asks before resetting, and does nothing when refused', async () => {
-    vi.stubGlobal('confirm', vi.fn(() => false));
+    const confirmSpy = vi.fn(() => false);
+    vi.stubGlobal('confirm', confirmSpy);
     const config = useConfigStore();
     const reset = vi.spyOn(config, 'resetDatabase').mockResolvedValue();
     const wrapper = mountAt('IN_PROGRESS');
 
     await wrapper.find('[data-test="reset-exam"]').trigger('click');
 
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('確定要重置嗎？'));
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('這會清空所有考試資料'));
     expect(reset).not.toHaveBeenCalled();
   });
 

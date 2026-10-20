@@ -6,7 +6,7 @@ import { isTerminalRun, type DeploymentTestProfile, type DeploymentTestRun, type
 
 const errorMessage = (error: unknown): string => {
   const shaped = error as { response?: { data?: { error?: string; reason?: string } }; message?: string };
-  return shaped.response?.data?.reason ?? shaped.response?.data?.error ?? shaped.message ?? 'Unknown error';
+  return shaped.response?.data?.reason ?? shaped.response?.data?.error ?? shaped.message ?? '未知錯誤';
 };
 
 const DRAFT_STORAGE_KEY = 'judger-deploy-test-profile-draft';

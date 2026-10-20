@@ -42,7 +42,7 @@ const handleReset = () => {
         <v-col cols="12" sm="3">
           <v-text-field
             v-model="localStudentId"
-            label="學號 (Student ID)"
+            label="學號"
             prepend-inner-icon="mdi-account"
             placeholder="搜尋學號..."
             hide-details
@@ -70,7 +70,7 @@ const handleReset = () => {
         <v-col cols="12" sm="4">
           <v-text-field
             v-model="localSearch"
-            label="關鍵字 (類型/詳情)"
+            label="關鍵字（類型／詳情）"
             prepend-inner-icon="mdi-magnify"
             placeholder="搜尋動作類型或詳細內容..."
             hide-details

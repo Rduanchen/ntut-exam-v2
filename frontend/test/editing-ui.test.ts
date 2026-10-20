@@ -87,7 +87,7 @@ describe('the page is actually editable', () => {
     await wrapper.vm.$nextTick();
 
     expect(update).toHaveBeenCalledWith({ maxConcurrentJobs: 9 });
-    expect(wrapper.text()).toContain('ceiling of 9');
+    expect(wrapper.text()).toContain('同時執行上限為 9');
     expect(wrapper.find('[data-test="dirty-marker"]').exists()).toBe(false);
   });
 

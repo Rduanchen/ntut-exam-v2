@@ -19,16 +19,16 @@ const props = defineProps<{ origin: SettingOrigin | string }>();
 const presentation = computed(() => {
   switch (props.origin) {
     case 'config':
-      return { color: 'primary', icon: 'mdi-check-decagram', label: 'Set in config', hint: 'Chosen deliberately in config.json.' };
+      return { color: 'primary', icon: 'mdi-check-decagram', label: '設定檔指定', hint: '由 config.json 明確指定。' };
     case 'env':
-      return { color: 'info', icon: 'mdi-sprout', label: 'From environment', hint: 'Seeded from the environment on first run.' };
+      return { color: 'info', icon: 'mdi-sprout', label: '環境變數', hint: '首次啟動時從環境變數帶入。' };
     case 'default':
-      return { color: 'grey', icon: 'mdi-circle-outline', label: 'Default', hint: 'Nobody chose this. It is the built-in default.' };
+      return { color: 'grey', icon: 'mdi-circle-outline', label: '預設值', hint: '未手動指定，使用內建預設值。' };
     case 'clamped':
-      return { color: 'warning', icon: 'mdi-alert', label: 'Rejected — clamped', hint: 'The configured value was outside the permitted range and was NOT applied.' };
+      return { color: 'warning', icon: 'mdi-alert', label: '設定值遭拒絕（未採用）', hint: '原設定值超出允許範圍，因此未採用。' };
     default:
       // Unknown origins must not break the page.
-      return { color: 'grey', icon: 'mdi-help-circle-outline', label: String(props.origin), hint: 'Unrecognised origin.' };
+      return { color: 'grey', icon: 'mdi-help-circle-outline', label: `未識別來源（${props.origin}）`, hint: '無法辨識設定來源，請檢查原始值。' };
   }
 });
 </script>

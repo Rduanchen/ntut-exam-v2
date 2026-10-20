@@ -78,7 +78,7 @@ export const useJudgeSettingsStore = defineStore('judge-settings', () => {
     (err as { response?: { data?: { error?: string } }; message?: string })?.response?.data
       ?.error ??
     (err as { message?: string })?.message ??
-    'Unknown error';
+    '未知錯誤';
 
   async function loadSettings() {
     settingsLoading.value = true;

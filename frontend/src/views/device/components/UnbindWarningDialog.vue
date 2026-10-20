@@ -46,17 +46,17 @@ const confirm = () => {
           </v-icon>
         </template>
         <v-card-title class="text-h6 font-weight-bold">
-          {{ action === 'unbind' ? 'Unbind User from Device' : 'Unregister Device Completely' }}
+          {{ action === 'unbind' ? '解除設備學生綁定' : '完全註銷設備' }}
         </v-card-title>
       </v-card-item>
 
       <v-card-text class="pt-6">
         <p v-if="action === 'unbind'" class="mb-4 text-body-1">
-          Are you sure you want to unbind <strong>{{ device?.name || 'Unknown' }}</strong> ({{ device?.id || 'N/A' }}) from this device?
+          確定要將 <strong>{{ device?.name || '未知學生' }}</strong>（{{ device?.id || '—' }}）從此設備解除綁定嗎？
         </p>
         <p v-else class="mb-4 text-body-1">
-          Are you sure you want to completely unregister this device (UUID: <strong>{{ device?.deviceUuid || 'Unknown' }}</strong>)? 
-          Any bound user will be detached.
+          確定要完全註銷此設備（UUID：<strong>{{ device?.deviceUuid || '—' }}</strong>）嗎？
+          任何已綁定的學生都將被解除綁定。
         </p>
 
         <v-alert
@@ -66,8 +66,8 @@ const confirm = () => {
           class="mb-4 border-error font-weight-medium"
           border="start"
         >
-          <div class="text-subtitle-1 font-weight-bold mb-1">⚠️ Critical Warning: Student is taking the exam!</div>
-          This device is currently ONLINE and logged in. Performing this action will <strong>immediately force logout the student</strong>. This may disrupt their exam progress.
+          <div class="text-subtitle-1 font-weight-bold mb-1">⚠️ 嚴重警告：學生正在考試中！</div>
+          此設備目前為線上且已登入。執行此操作將<strong>立即強制登出學生</strong>，這可能會影響其考試作答進度。
         </v-alert>
 
         <v-alert
@@ -77,14 +77,14 @@ const confirm = () => {
           class="mb-4 border-warning"
           border="start"
         >
-          This device is not currently logged in. The student will be prompted to register and bind again upon next launch.
+          此設備目前未登入。學生在下次啟動時將需要重新註冊並綁定。
         </v-alert>
 
         <div v-if="isCritical" class="mt-4">
-          <p class="text-body-2 mb-2 font-weight-medium">To proceed, please type <strong>CONFIRM</strong> below:</p>
+          <p class="text-body-2 mb-2 font-weight-medium">若要繼續，請在下方輸入 <strong>CONFIRM</strong>：</p>
           <v-text-field
             v-model="confirmationText"
-            label="Type CONFIRM to continue"
+            label="輸入 CONFIRM 以繼續"
             variant="outlined"
             density="compact"
             color="error"
@@ -102,7 +102,7 @@ const confirm = () => {
           @click="show = false"
           class="text-none font-weight-bold"
         >
-          Cancel
+          取消
         </v-btn>
         <v-spacer></v-spacer>
         <v-btn
@@ -112,7 +112,7 @@ const confirm = () => {
           :disabled="!isConfirmValid"
           class="text-none font-weight-bold px-4"
         >
-          {{ action === 'unbind' ? 'Unbind User' : 'Unregister Device' }}
+          {{ action === 'unbind' ? '解除綁定' : '註銷設備' }}
         </v-btn>
       </v-card-actions>
     </v-card>

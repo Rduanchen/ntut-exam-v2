@@ -33,15 +33,15 @@ watch(localStatus, (newVal) => { emit('update:status', newVal || ''); });
 
 const warningTypes = [
   { title: '全部警告類型', value: 'ALL' },
-  { title: '應用程式退出 (APP_ON_QUIT)', value: 'APP_ON_QUIT' },
-  { title: '單人多重 IP (MULTIPLE_IPS)', value: 'MULTIPLE_IPS' },
-  { title: '單 IP 多人登入 (MULTIPLE_USERS_ON_IP)', value: 'MULTIPLE_USERS_ON_IP' }
+  { title: '應用程式退出', value: 'APP_ON_QUIT' },
+  { title: '單人多重 IP', value: 'MULTIPLE_IPS' },
+  { title: '單 IP 多人登入', value: 'MULTIPLE_USERS_ON_IP' }
 ];
 
 const statusOptions = [
   { title: '全部狀態', value: 'ALL' },
-  { title: '未處理 (Unresolved)', value: 'UNRESOLVED' },
-  { title: '已處理 (Resolved)', value: 'RESOLVED' }
+  { title: '未處理', value: 'UNRESOLVED' },
+  { title: '已處理', value: 'RESOLVED' }
 ];
 
 const handleReset = () => {
@@ -61,7 +61,7 @@ const handleReset = () => {
         <v-col cols="12" sm="3">
           <v-text-field
             v-model="localStudentId"
-            label="學號 (Student ID)"
+            label="學號"
             prepend-inner-icon="mdi-account"
             placeholder="搜尋學號..."
             hide-details

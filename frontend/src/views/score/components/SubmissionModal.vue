@@ -23,7 +23,7 @@ const isLocked = ref(true);
   <v-dialog v-model="show" max-width="1200px" scrollable>
     <v-card>
       <v-card-title class="d-flex align-center justify-space-between bg-primary text-white">
-        <span>Submission Details: {{ scoreRecord?.user?.name }} ({{ scoreRecord?.user?.testId }})</span>
+        <span>提交詳情： {{ scoreRecord?.user?.name }} ({{ scoreRecord?.user?.testId }})</span>
         <v-btn icon="mdi-close" variant="text" @click="show = false"></v-btn>
       </v-card-title>
 

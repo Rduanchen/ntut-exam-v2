@@ -80,7 +80,7 @@ const importCsv = () => {
 const checkMemoryLimit = (val: any) => {
   const num = Number(val);
   if (!isNaN(num) && num > 1024) {
-    alert("提醒：記憶體限制超過 1GB (1024MB)！請確認您輸入的單位為 MB 而非 Bytes。");
+    alert("提醒：記憶體限制超過 1 GB（1024 MB）！請確認輸入單位為 MB，而非位元組。");
   }
 };
 </script>
@@ -89,24 +89,24 @@ const checkMemoryLimit = (val: any) => {
   <v-container>
     <v-row>
       <v-col cols="12">
-        <h3 class="text-h6 mb-2">Basic Info</h3>
-        <v-text-field v-model="config.testTitle" label="Test Title" outlined></v-text-field>
-        <v-textarea v-model="config.description" label="Description" outlined rows="3"></v-textarea>
+        <h3 class="text-h6 mb-2">基本資訊</h3>
+        <v-text-field v-model="config.testTitle" label="考試名稱" outlined></v-text-field>
+        <v-textarea v-model="config.description" label="說明" outlined rows="3"></v-textarea>
       </v-col>
     </v-row>
 
     <v-row>
       <v-col cols="12">
-        <h3 class="text-h6 mb-2">Judger Settings</h3>
+        <h3 class="text-h6 mb-2">評測設定</h3>
         <v-row v-if="config.judgerSettings">
           <v-col cols="4">
-            <v-text-field v-model.number="config.judgerSettings.timeLimit" label="Time Limit (ms)" type="number" outlined></v-text-field>
+            <v-text-field v-model.number="config.judgerSettings.timeLimit" label="時間限制（ms）" type="number" outlined></v-text-field>
           </v-col>
           <v-col cols="4">
-            <v-text-field v-model.number="config.judgerSettings.memoryLimit" @update:model-value="checkMemoryLimit" label="Memory Limit (MB)" type="number" outlined></v-text-field>
+            <v-text-field v-model.number="config.judgerSettings.memoryLimit" @update:model-value="checkMemoryLimit" label="記憶體限制（MB）" type="number" outlined></v-text-field>
           </v-col>
           <v-col cols="4">
-            <v-select v-model="config.judgerSettings.compareMode" :items="[{title: 'Strict Match (嚴格比對)', value: 'strict'}, {title: 'Whitespace-insensitive (標記忽略比對)', value: 'loose'}]" label="Compare Mode" outlined></v-select>
+            <v-select v-model="config.judgerSettings.compareMode" :items="[{title: '嚴格比對', value: 'strict'}, {title: '忽略空白差異', value: 'loose'}]" label="比對模式" outlined></v-select>
           </v-col>
         </v-row>
       </v-col>
@@ -129,7 +129,7 @@ const checkMemoryLimit = (val: any) => {
     <v-row>
       <v-col cols="12">
         <h3 class="text-h6 mb-2 d-flex align-center">
-          Environment Variables
+          環境變數
           <v-btn v-if="!props.disabled" icon="mdi-plus" size="small" color="primary" class="ml-2" @click="addEnvVar"></v-btn>
         </h3>
         <v-card variant="outlined" class="pa-2" v-if="config.environmentVariables">
@@ -148,7 +148,7 @@ const checkMemoryLimit = (val: any) => {
           </v-alert>
           <v-row class="align-center mt-2">
             <v-col cols="5">
-              <v-text-field model-value="startPassword" label="Key" density="compact" hide-details readonly disabled></v-text-field>
+              <v-text-field model-value="startPassword" label="鍵名" density="compact" hide-details readonly disabled></v-text-field>
             </v-col>
             <v-col cols="6">
               <v-text-field
@@ -167,10 +167,10 @@ const checkMemoryLimit = (val: any) => {
           <template v-for="(_, key) in config.environmentVariables" :key="key">
             <v-row v-if="key !== 'startPassword'" class="align-center mt-2">
               <v-col cols="5">
-                <v-text-field :model-value="key" @change="updateEnvVarKey(key as string, $event)" label="Key" density="compact" hide-details :readonly="props.disabled"></v-text-field>
+                <v-text-field :model-value="key" @change="updateEnvVarKey(key as string, $event)" label="鍵名" density="compact" hide-details :readonly="props.disabled"></v-text-field>
               </v-col>
               <v-col cols="6">
-                <v-text-field v-model="config.environmentVariables[key]" label="Value" density="compact" hide-details :readonly="props.disabled"></v-text-field>
+                <v-text-field v-model="config.environmentVariables[key]" label="數值" density="compact" hide-details :readonly="props.disabled"></v-text-field>
               </v-col>
               <v-col cols="1">
                 <v-btn v-if="!props.disabled" icon="mdi-delete" size="small" color="error" variant="text" @click="removeEnvVar(key as string)"></v-btn>
@@ -184,20 +184,20 @@ const checkMemoryLimit = (val: any) => {
     <v-row>
       <v-col cols="12">
         <h3 class="text-h6 mb-2 d-flex align-center">
-          Accessible Users
+          可登入學生
           <v-btn v-if="!props.disabled" icon="mdi-plus" size="small" color="primary" class="ml-2" @click="addAccessUser"></v-btn>
-          <v-btn v-if="!props.disabled" size="small" color="secondary" variant="tonal" class="ml-2" @click="showCsvDialog = true">Import CSV</v-btn>
+          <v-btn v-if="!props.disabled" size="small" color="secondary" variant="tonal" class="ml-2" @click="showCsvDialog = true">匯入 CSV</v-btn>
         </h3>
         <v-card variant="outlined" class="pa-2" v-if="config.accessibleUsers && config.accessibleUsers.length">
           <v-row v-for="(user, index) in config.accessibleUsers" :key="index" class="align-center mt-2">
             <v-col cols="3">
-              <v-text-field v-model="user.id" label="User ID" density="compact" hide-details :readonly="props.disabled"></v-text-field>
+              <v-text-field v-model="user.id" label="學號" density="compact" hide-details :readonly="props.disabled"></v-text-field>
             </v-col>
             <v-col cols="4">
-              <v-text-field v-model="user.name" label="Name" density="compact" hide-details :readonly="props.disabled"></v-text-field>
+              <v-text-field v-model="user.name" label="姓名" density="compact" hide-details :readonly="props.disabled"></v-text-field>
             </v-col>
             <v-col cols="4">
-              <v-text-field v-model="user.ip" label="IP (Optional)" density="compact" hide-details :readonly="props.disabled"></v-text-field>
+              <v-text-field v-model="user.ip" label="IP（選填）" density="compact" hide-details :readonly="props.disabled"></v-text-field>
             </v-col>
             <v-col cols="1">
               <v-btn v-if="!props.disabled" icon="mdi-delete" size="small" color="error" variant="text" @click="removeAccessUser(index)"></v-btn>
@@ -209,7 +209,7 @@ const checkMemoryLimit = (val: any) => {
 
     <v-row>
       <v-col cols="12">
-        <h3 class="text-h6 mb-2">Global Special Rules</h3>
+        <h3 class="text-h6 mb-2">全域特殊規則</h3>
         <SpecialRuleEditor v-model="config.globalSpecialRules" :disabled="props.disabled" />
       </v-col>
     </v-row>
@@ -217,15 +217,15 @@ const checkMemoryLimit = (val: any) => {
     <!-- CSV Import Dialog -->
     <v-dialog v-model="showCsvDialog" max-width="500px">
       <v-card>
-        <v-card-title>Import Users via CSV</v-card-title>
+        <v-card-title>從 CSV 匯入學生</v-card-title>
         <v-card-text>
-          <p class="text-caption mb-2">Format each line as: <code>id, name, ip</code> (ip is optional). Paste your data below.</p>
-          <v-textarea v-model="csvText" label="CSV Data" outlined rows="10" hide-details></v-textarea>
+          <p class="text-caption mb-2">每行格式： <code>id, name, ip</code> （IP 可省略）。請在下方貼上資料。</p>
+          <v-textarea v-model="csvText" label="CSV 資料" outlined rows="10" hide-details></v-textarea>
         </v-card-text>
         <v-card-actions class="px-4 pb-4">
           <v-spacer></v-spacer>
-          <v-btn color="error" variant="text" @click="showCsvDialog = false">Cancel</v-btn>
-          <v-btn color="primary" variant="elevated" @click="importCsv">Import</v-btn>
+          <v-btn color="error" variant="text" @click="showCsvDialog = false">取消</v-btn>
+          <v-btn color="primary" variant="elevated" @click="importCsv">匯入</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

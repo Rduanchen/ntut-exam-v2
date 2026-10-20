@@ -42,13 +42,13 @@ const customFilter = (_value: any, queryText: string, item: any) => {
   <v-container fluid class="pa-6 h-100 d-flex flex-column">
     <v-row class="mb-2 align-center justify-space-between flex-grow-0">
       <v-col>
-        <h1 class="text-h4 font-weight-bold">Student Management (學生管理)</h1>
+        <h1 class="text-h4 font-weight-bold">學生管理</h1>
         <p class="text-subtitle-1 text-medium-emphasis">管理學生上線狀態、裝置綁定與檢視提交程式碼</p>
       </v-col>
       <v-col cols="auto" class="d-flex align-center gap-4">
         <v-chip color="success" variant="tonal" class="font-weight-bold" size="large">
           <v-icon start>mdi-account-multiple</v-icon>
-          目前上線: {{ onlineCount }} / {{ studentStore.students.length }}
+          目前上線：{{ onlineCount }} / {{ studentStore.students.length }}
         </v-chip>
         <v-btn
           color="primary"
@@ -69,7 +69,7 @@ const customFilter = (_value: any, queryText: string, item: any) => {
           :custom-filter="customFilter"
           item-title="name"
           return-object
-          label="搜尋學生 (學號/姓名)"
+          label="搜尋學生（學號／姓名）"
           prepend-inner-icon="mdi-magnify"
           variant="outlined"
           density="comfortable"

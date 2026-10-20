@@ -73,7 +73,7 @@ const getWarningText = (type: string) => {
   if (t === 'APP_ON_QUIT') return '應用程式異常退出';
   if (t === 'MULTIPLE_IPS') return '單人多重 IP';
   if (t === 'MULTIPLE_USERS_ON_IP') return '單 IP 多人登入';
-  return type;
+  return `未識別警告（${type}）`;
 };
 </script>
 
@@ -84,11 +84,11 @@ const getWarningText = (type: string) => {
         <thead>
           <tr>
             <th class="text-left font-weight-bold" style="width: 180px;">時間</th>
-            <th class="text-left font-weight-bold" style="width: 130px;">學號 (Student ID)</th>
+            <th class="text-left font-weight-bold" style="width: 130px;">學號</th>
             <th class="text-left font-weight-bold" style="width: 140px;">IP 位址</th>
             <th class="text-left font-weight-bold" style="width: 180px;">異常類型</th>
             <th class="text-left font-weight-bold">描述訊息</th>
-            <th class="text-center font-weight-bold" style="width: 120px;">是否正常 (isOk)</th>
+            <th class="text-center font-weight-bold" style="width: 120px;">是否正常</th>
           </tr>
         </thead>
         <tbody>

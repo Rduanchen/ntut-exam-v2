@@ -16,8 +16,8 @@ onMounted(() => {
   <v-container fluid class="pa-6">
     <v-row class="mb-4">
       <v-col cols="12">
-        <h1 class="text-h4 font-weight-bold">Exam Control & Management</h1>
-        <p class="text-subtitle-1 text-medium-emphasis">Control global exam state and broadcast messages</p>
+        <h1 class="text-h4 font-weight-bold">考試管理</h1>
+        <p class="text-subtitle-1 text-medium-emphasis">管理考試階段並廣播訊息</p>
       </v-col>
     </v-row>
 

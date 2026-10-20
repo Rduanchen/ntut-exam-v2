@@ -54,7 +54,7 @@ const handleRefresh = () => {
   <v-container fluid class="pa-6">
     <v-row class="mb-4" align="center" justify="space-between">
       <v-col cols="auto">
-        <h1 class="text-h4 font-weight-bold">系統操作日誌 (System Logs)</h1>
+        <h1 class="text-h4 font-weight-bold">系統操作紀錄</h1>
         <p class="text-subtitle-1 text-medium-emphasis">檢視並搜尋所有學生的操作與系統日誌記錄</p>
       </v-col>
       <v-col cols="auto">

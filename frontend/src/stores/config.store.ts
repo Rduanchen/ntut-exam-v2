@@ -32,7 +32,7 @@ export const useConfigStore = defineStore('config', () => {
           sections: []
         };
       } else {
-        error.value = err.response?.data?.error || err.message || 'Failed to load config';
+        error.value = err.response?.data?.error || err.message || '無法載入設定';
       }
     } finally {
       loading.value = false;
@@ -46,7 +46,7 @@ export const useConfigStore = defineStore('config', () => {
       const res = await axios.put(`${BACKEND_URL}/admin/config`, newConfig);
       config.value = res.data;
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to save config';
+      error.value = err.response?.data?.error || err.message || '無法儲存設定';
       throw err;
     } finally {
       loading.value = false;
@@ -73,7 +73,7 @@ export const useConfigStore = defineStore('config', () => {
        * disagreeing with the server about where the exam is. */
       await useManageStore().fetchExamState();
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to initialize database';
+      error.value = err.response?.data?.error || err.message || '無法初始化資料庫';
       throw err;
     } finally {
       loading.value = false;
@@ -90,7 +90,7 @@ export const useConfigStore = defineStore('config', () => {
       isInitialized.value = false;
       await useManageStore().fetchExamState();
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to reset database';
+      error.value = err.response?.data?.error || err.message || '無法重設資料庫';
       throw err;
     } finally {
       loading.value = false;

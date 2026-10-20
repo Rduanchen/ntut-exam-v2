@@ -25,7 +25,7 @@ export const useStudentStore = defineStore('student', () => {
       const res = await axios.get(`${BACKEND_URL}/admin/device`);
       students.value = res.data;
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to fetch students';
+      error.value = err.response?.data?.error || err.message || '無法取得學生名單';
     } finally {
       if (!silent) loading.value = false;
     }
@@ -38,7 +38,7 @@ export const useStudentStore = defineStore('student', () => {
       await axios.put(`${BACKEND_URL}/admin/users/${testId}/reset-device`);
       await fetchStudents();
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to reset device';
+      error.value = err.response?.data?.error || err.message || '無法重設設備';
       throw err;
     } finally {
       loading.value = false;
@@ -52,7 +52,7 @@ export const useStudentStore = defineStore('student', () => {
       const res = await axios.get(`${BACKEND_URL}/admin/submissions/${testId}/code`);
       return res.data;
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to fetch student code';
+      error.value = err.response?.data?.error || err.message || '無法取得學生程式碼';
       throw err;
     } finally {
       loading.value = false;
@@ -75,17 +75,16 @@ export const useStudentStore = defineStore('student', () => {
       const job = await waitForJudging(handle.jobId);
 
       if (job.state === 'failed') {
-        error.value = job.error || 'Judging failed';
+        error.value = job.error || '評測失敗';
       } else if (job.outcome && job.outcome.systemFailures > 0) {
         /* Surfaced rather than swallowed: these are the machine's failures, not
          * the student's, and an operator needs to know the machine is sick. */
         error.value =
-          `${job.outcome.systemFailures} submission(s) could not be judged ` +
-          `for system reasons and were not scored.`;
+          `有 ${job.outcome.systemFailures} 筆提交因系統錯誤無法完成評測，未予計分。`;
       }
       return job;
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to re-evaluate student code';
+      error.value = err.response?.data?.error || err.message || '無法重新評測學生程式碼';
       throw err;
     } finally {
       loading.value = false;
@@ -108,7 +107,7 @@ export const useStudentStore = defineStore('student', () => {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      error.value = 'Failed to export student code zip';
+      error.value = '無法匯出學生程式碼壓縮檔';
       throw err;
     } finally {
       loading.value = false;
@@ -125,7 +124,7 @@ export const useStudentStore = defineStore('student', () => {
       }
       await axios.delete(url.toString());
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to delete student code';
+      error.value = err.response?.data?.error || err.message || '無法刪除學生程式碼';
       throw err;
     } finally {
       loading.value = false;

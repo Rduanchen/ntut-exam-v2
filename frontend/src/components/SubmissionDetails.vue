@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { verdictLabel } from '../utils/presentation-labels';
 import { computed, ref } from 'vue';
 
 const props = defineProps<{
@@ -89,7 +90,7 @@ const getStatus = (tcRes: any) => {
       <template v-for="(section, sIdx) in examConfig.sections" :key="'section-'+sIdx">
         <div class="mb-8">
           <h1 class="text-h4 font-weight-bold mb-4 text-primary d-flex align-center">
-            Section {{ Number(sIdx) + 1 }}: {{ section.title }}
+            區段 {{ Number(sIdx) + 1 }}：{{ section.title }}
             <v-chip class="ml-4 font-weight-bold" color="primary" variant="flat">
               總分: {{ section.maxScore }}
             </v-chip>
@@ -107,7 +108,7 @@ const getStatus = (tcRes: any) => {
               
               <template v-if="getPuzzleResult(puzzle.id)">
                 <div v-if="getPuzzleResult(puzzle.id).specialRuleResults?.length" class="mb-4">
-                  <h3 class="text-subtitle-1 font-weight-bold mb-2">Special Judge (特殊規則)</h3>
+                  <h3 class="text-subtitle-1 font-weight-bold mb-2">特殊規則</h3>
                   <v-card variant="outlined" class="bg-grey-lighten-4">
                     <v-list density="compact" class="bg-transparent">
                       <v-list-item v-for="(sr, srIdx) in getPuzzleResult(puzzle.id).specialRuleResults" :key="'sr-'+srIdx">
@@ -139,28 +140,28 @@ const getStatus = (tcRes: any) => {
                         size="small"
                         class="font-weight-bold"
                       >
-                        {{ checkSubtaskPassed(getPuzzleResult(puzzle.id).subtasks?.[stIdx], subtask) ? '通過 (Passed)' : '未通過 (Failed)' }}
+                        {{ checkSubtaskPassed(getPuzzleResult(puzzle.id).subtasks?.[stIdx], subtask) ? '通過' : '未通過' }}
                       </v-chip>
                     </v-card-title>
                     <v-card-text class="pa-0">
                       <v-table density="compact" hover>
                         <thead>
                           <tr>
-                            <th class="font-weight-bold bg-grey-lighten-4" style="width: 80px">Type</th>
-                            <th class="font-weight-bold bg-grey-lighten-4" style="width: 100px">Status</th>
-                            <th class="font-weight-bold bg-grey-lighten-4" style="width: 25%">Input</th>
-                            <th class="font-weight-bold bg-grey-lighten-4" style="width: 25%">Expected Output</th>
-                            <th class="font-weight-bold bg-grey-lighten-4" style="width: 25%">Actual Output</th>
+                            <th class="font-weight-bold bg-grey-lighten-4" style="width: 80px">類型</th>
+                            <th class="font-weight-bold bg-grey-lighten-4" style="width: 100px">狀態</th>
+                            <th class="font-weight-bold bg-grey-lighten-4" style="width: 25%">輸入</th>
+                            <th class="font-weight-bold bg-grey-lighten-4" style="width: 25%">預期輸出</th>
+                            <th class="font-weight-bold bg-grey-lighten-4" style="width: 25%">實際輸出</th>
                           </tr>
                         </thead>
                         <tbody>
                           <!-- Visible Testcases -->
                           <template v-for="(tc, tcIdx) in subtask.visible" :key="'tc-v-'+tcIdx">
                             <tr v-if="getPuzzleResult(puzzle.id).subtasks?.[stIdx]?.visible?.[tcIdx]">
-                              <td><v-chip size="x-small" color="info">Visible</v-chip></td>
+                              <td><v-chip size="x-small" color="info">公開測資</v-chip></td>
                               <td>
                                 <v-chip size="small" :color="statusColor(getStatus(getPuzzleResult(puzzle.id).subtasks[stIdx].visible[tcIdx]))" variant="flat" class="font-weight-bold">
-                                  {{ getStatus(getPuzzleResult(puzzle.id).subtasks[stIdx].visible[tcIdx]) }}
+                                  {{ getStatus(getPuzzleResult(puzzle.id).subtasks[stIdx].visible[tcIdx]) }}（{{ verdictLabel(getStatus(getPuzzleResult(puzzle.id).subtasks[stIdx].visible[tcIdx])) }}）
                                 </v-chip>
                                 <div class="text-caption mt-1 text-grey-darken-1">{{ getPuzzleResult(puzzle.id).subtasks[stIdx].visible[tcIdx].time }}s / {{ (getPuzzleResult(puzzle.id).subtasks[stIdx].visible[tcIdx].memory / 1024 / 1024).toFixed(1) }}MB</div>
                               </td>
@@ -179,10 +180,10 @@ const getStatus = (tcRes: any) => {
                           <!-- Hidden Testcases -->
                           <template v-for="(tc, tcIdx) in subtask.hidden" :key="'tc-h-'+tcIdx">
                             <tr v-if="getPuzzleResult(puzzle.id).subtasks?.[stIdx]?.hidden?.[tcIdx]">
-                              <td><v-chip size="x-small" color="grey">Hidden</v-chip></td>
+                              <td><v-chip size="x-small" color="grey">隱藏測資</v-chip></td>
                               <td>
                                 <v-chip size="small" :color="statusColor(getStatus(getPuzzleResult(puzzle.id).subtasks[stIdx].hidden[tcIdx]))" variant="flat" class="font-weight-bold">
-                                  {{ getStatus(getPuzzleResult(puzzle.id).subtasks[stIdx].hidden[tcIdx]) }}
+                                  {{ getStatus(getPuzzleResult(puzzle.id).subtasks[stIdx].hidden[tcIdx]) }}（{{ verdictLabel(getStatus(getPuzzleResult(puzzle.id).subtasks[stIdx].hidden[tcIdx])) }}）
                                 </v-chip>
                                 <div class="text-caption mt-1 text-grey-darken-1">{{ getPuzzleResult(puzzle.id).subtasks[stIdx].hidden[tcIdx].time }}s / {{ (getPuzzleResult(puzzle.id).subtasks[stIdx].hidden[tcIdx].memory / 1024 / 1024).toFixed(1) }}MB</div>
                               </td>

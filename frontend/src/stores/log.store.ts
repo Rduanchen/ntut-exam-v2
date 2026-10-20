@@ -33,7 +33,7 @@ export const useLogStore = defineStore('log', () => {
       logs.value = res.data.logs || res.data;
       totalItems.value = res.data.total || logs.value.length;
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to fetch logs';
+      error.value = err.response?.data?.error || err.message || '無法取得日誌';
     } finally {
       if (!silent) loading.value = false;
     }

@@ -85,8 +85,8 @@ describe('US4 - the replacement rule is stated where settings are edited', () =>
   it('appears in BOTH editable groups, since it applies to both', async () => {
     const wrapper = await mountView();
 
-    expect(wrapper.find('[data-test="replacement-warning-exam"]').text()).toContain('replaces');
-    expect(wrapper.find('[data-test="replacement-warning-machine"]').text()).toContain('replaced');
+    expect(wrapper.find('[data-test="replacement-warning-exam"]').text()).toContain('取代');
+    expect(wrapper.find('[data-test="replacement-warning-machine"]').text()).toContain('取代');
   });
 
   it('separates settings that follow the exam from those describing the machine', async () => {
@@ -102,8 +102,8 @@ describe('US5 - capacity is measured, not guessed', () => {
     const wrapper = await mountView();
     const machine = wrapper.find('[data-test="machine-panel"]').text();
 
-    expect(machine).toContain('Measure this machine');
-    expect(machine).toContain('re-measure it whenever a paper moves to a different machine');
+    expect(machine).toContain('測量本機容量');
+    expect(machine).toContain('考卷移到其他機器時須重新測量');
   });
 });
 
@@ -116,7 +116,7 @@ describe('US6 - settings changed elsewhere show no value', () => {
     expect(wrapper.text()).toContain('docker-compose.yml');
     // A guess about a running container is worse than an honest gap.
     wrapper.findAll('[data-test="container-value"]').forEach((cell) => {
-      expect(cell.text()).toBe('Not reportable');
+      expect(cell.text()).toBe('無法取得');
     });
   });
 });

@@ -58,15 +58,15 @@ const formattedDevices = computed(() => {
   <v-container fluid class="pa-6">
     <v-row class="mb-4 align-center">
       <v-col cols="12" sm="6">
-        <h1 class="text-h4 font-weight-bold">Device Monitor</h1>
-        <p class="text-subtitle-1 text-medium-emphasis">Live view of student IP and device bindings</p>
+        <h1 class="text-h4 font-weight-bold">設備監控</h1>
+        <p class="text-subtitle-1 text-medium-emphasis">即時查看學生 IP 與設備綁定狀態</p>
       </v-col>
       
       <v-col cols="12" sm="6" class="d-flex justify-sm-end align-center">
         <!-- Slider to control column count -->
         <div class="mr-6 flex-grow-1 max-width-slider">
           <div class="text-caption text-medium-emphasis mb-1 font-weight-bold">
-            Devices Per Row: {{ itemsPerRow }}
+            每列設備數： {{ itemsPerRow }}
           </div>
           <v-slider
             v-model="itemsPerRow"
@@ -88,7 +88,7 @@ const formattedDevices = computed(() => {
           @click="refreshDevices"
           class="rounded-lg"
         >
-          Refresh
+          重新整理
         </v-btn>
       </v-col>
     </v-row>
@@ -97,7 +97,7 @@ const formattedDevices = computed(() => {
     <v-alert
       v-if="connectionStore.error"
       type="error"
-      title="Error Loading Devices"
+      title="無法載入設備"
       class="mb-6 rounded-lg"
       closable
       @click:close="connectionStore.error = null"
@@ -112,7 +112,7 @@ const formattedDevices = computed(() => {
         color="primary"
         size="64"
       ></v-progress-circular>
-      <div class="text-subtitle-1 text-medium-emphasis mt-4">Scanning lab network status...</div>
+      <div class="text-subtitle-1 text-medium-emphasis mt-4">正在檢查考場網路狀態…</div>
     </div>
 
     <!-- Empty State -->
@@ -123,7 +123,7 @@ const formattedDevices = computed(() => {
     >
       <v-card-text>
         <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-monitor-off</v-icon>
-        <div class="text-h6 text-grey-darken-1 font-weight-bold">No Devices Found</div>
+        <div class="text-h6 text-grey-darken-1 font-weight-bold">找不到設備</div>
       </v-card-text>
     </v-card>
 

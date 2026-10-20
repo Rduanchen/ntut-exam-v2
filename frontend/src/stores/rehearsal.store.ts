@@ -5,7 +5,7 @@ import { isTerminalRehearsal, type RehearsalDescriptor, type RehearsalRun } from
 
 const errorMessage = (error: unknown): string => {
   const shaped = error as { response?: { data?: { error?: string; reason?: string } }; message?: string };
-  return shaped.response?.data?.reason ?? shaped.response?.data?.error ?? shaped.message ?? 'Unknown error';
+  return shaped.response?.data?.reason ?? shaped.response?.data?.error ?? shaped.message ?? '未知錯誤';
 };
 
 export const useRehearsalStore = defineStore('rehearsal', () => {

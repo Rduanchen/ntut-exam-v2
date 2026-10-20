@@ -4,10 +4,10 @@ import { CONTAINER_SETTINGS } from '../../../types/judge-settings';
 
 <template>
   <v-card class="mb-6" data-test="container-panel">
-    <v-card-title>Execution Backend Container</v-card-title>
+    <v-card-title>執行後端容器</v-card-title>
     <v-card-text>
       <v-alert type="info" variant="tonal" class="mb-4">
-        These are read at container startup and cannot be changed from here.
+        這些值在容器啟動時讀取，無法在此頁修改。
       </v-alert>
 
       <!--
@@ -22,16 +22,16 @@ import { CONTAINER_SETTINGS } from '../../../types/judge-settings';
       <v-table density="compact" data-test="container-table">
         <thead>
           <tr>
-            <th>Setting</th>
-            <th>Current value</th>
-            <th>Changed in</th>
+            <th>設定</th>
+            <th>目前數值</th>
+            <th>修改位置</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="item in CONTAINER_SETTINGS" :key="item.key" data-test="container-row">
             <td><code>{{ item.key }}</code></td>
             <td class="text-medium-emphasis" data-test="container-value">
-              Not reportable
+              無法取得
             </td>
             <td><code>{{ item.governedBy }}</code></td>
           </tr>
@@ -39,8 +39,8 @@ import { CONTAINER_SETTINGS } from '../../../types/judge-settings';
       </v-table>
 
       <div class="text-caption text-medium-emphasis mt-3">
-        The backend does not report these, so no value is shown rather than a value that
-        might be wrong. Edit <code>docker-compose.yml</code> and redeploy to change them.
+        後端未回報這些數值，畫面不顯示可能
+        錯誤的數值。請編輯 <code>docker-compose.yml</code> 並重新部署以變更設定。
       </div>
     </v-card-text>
   </v-card>
