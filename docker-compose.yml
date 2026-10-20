@@ -31,7 +31,7 @@ services:
         - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:${ADMIN_PORT:-${APP_PORT:-3000}}}
         - VITE_ADMIN_TOKEN=${ADMIN_TOKEN:-${ADMIN_SECRET:-}}
     container_name: ntut-frontend
-    command: npx --yes serve -s frontend/dist -l 5173
+    command: pnpm --filter frontend exec vite preview --host 0.0.0.0 --port 5173 --strictPort
     ports:
       - "${FRONTEND_BIND_HOST:-127.0.0.1}:${FRONTEND_PORT:-5173}:5173"
     depends_on:
