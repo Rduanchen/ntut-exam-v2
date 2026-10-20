@@ -10,6 +10,8 @@ docker compose up -d           # 完整堆疊
 
 ## 執行環境需求
 
+環境變數範本：Compose 複製根目錄 `.env.example` 為 `.env`；直接啟動則分別複製 `backend/.env.example`、`frontend/.env.example` 為各自的 `.env`。啟動前填入 `ADMIN_TOKEN`，直接啟動時也要讓 `VITE_ADMIN_TOKEN` 使用相同值。範本不包含實際憑證。
+
 **Node.js >= 20.19.0**（宣告於 `backend/package.json` 的 `engines`）。
 
 這不是偏好，是正確性需求。後端以 CommonJS 編譯，而 `p-limit@7` 是 ESM-only；從 CommonJS `require()` 一個 ESM 套件的能力在 Node 20.19 才出現。實測：**20.20.2 可以，20.18.0 失敗**並拋出 `ERR_REQUIRE_ESM`。
@@ -92,7 +94,9 @@ GET /admin/judger/settings
 
 報告的 lifecycle 與結果要分開解讀：`completed` 只代表測試流程正常收尾；`passed` 才是全數成功，`warning` 代表例如送入的併發高於生效 ceiling、但已安全排隊，`failed` 代表 probe 或基礎設施證據不符，`interrupted` 則會附上 deadline、考試開始或 process restart 原因。所有診斷最多保留 5,000 字元、每個併發層級最多 10 筆錯誤樣本。
 
-部署時必須設定 `ADMIN_TOKEN`；Compose 仍接受既有 `ADMIN_SECRET` 作為相容 fallback，但新部署應使用前者。Piston 的 `PISTON_COMPILE_TIMEOUT` 必須不小於後端實際使用的 compile timeout；本專案 Compose 預設為 30 秒。若連到 stock Piston（上限通常為 10 秒），請同步將 Judger Settings 的 compile timeout 調到 10 秒或提高 Piston 上限，否則健康的編譯會被 Piston 拒絕。
+後端分別監聽管理 API 與學生 API：`ADMIN_PORT` 預設 3000（相容舊 `PORT`），`USER_PORT` 預設 3001。兩個值不能相同。`/admin/*` 與管理 Socket.IO `/admin` 只在管理埠；`/user/*` 與學生 Socket.IO `/user` 只在學生埠。桌面端必須連到學生埠。直接啟動時在 `backend/.env` 設定 `ADMIN_PORT`、`USER_PORT`、`ADMIN_TOKEN`；管理埠預設只監聽 `127.0.0.1`，遠端管理時才設定 `ADMIN_LISTEN_HOST` 並限制防火牆。Compose 則在根目錄 `.env` 設定 `ADMIN_PORT`（舊 `APP_PORT` 仍可用）、`USER_PORT`、`ADMIN_TOKEN`；管理 API 與前端的主機埠預設只綁定 `127.0.0.1`，需遠端管理時設定 `ADMIN_BIND_HOST`、`FRONTEND_BIND_HOST`，並限制學生網段存取。
+
+前端不再要求輸入憑證。直接啟動時在 `frontend/.env` 設定 `VITE_BACKEND_URL=http://localhost:3000` 與 `VITE_ADMIN_TOKEN`（必須和直接啟動的後端 `ADMIN_TOKEN` 相同）；Compose 會把根目錄 `.env` 的 `ADMIN_TOKEN` 傳給前端建置。遠端管理時，`VITE_BACKEND_URL` 必須改成管理員電腦可連到的主機位址與管理埠，然後重新建置。`VITE_` 值會寫入公開的瀏覽器 JavaScript，因此**不能只靠 token 保護管理 API**：管理 API 和管理前端都必須限制在管理員可存取的網路範圍。修改前端環境變數後須重新建置。Piston 的 `PISTON_COMPILE_TIMEOUT` 必須不小於後端實際使用的 compile timeout；本專案 Compose 預設為 30 秒。若連到 stock Piston（上限通常為 10 秒），請同步將 Judger Settings 的 compile timeout 調到 10 秒或提高 Piston 上限，否則健康的編譯會被 Piston 拒絕。
 
 profile 的伺服器端安全範圍為：併發 1–64、最多 8 個遞增且不重複的層級、工作數 1–500、deadline 60–1,800 秒。deadline 到達後報告立即凍結，尚未完成的工作列入 `interrupted`，但目前 Piston client 沒有 transport abort；已送出的 HTTP 工作仍會 draining 到真正結束，這段期間不會虛假釋放 limiter，也不能開始下一次部署測試。最新報告由後端保存，重新整理 `/judge` 後會恢復，瀏覽器 localStorage 不作為結果真相。
 

@@ -19,15 +19,15 @@ import adminRouter from "./routes/admin";
  * Keeping composition separate is what allows tests to drive the real
  * application in-process via supertest.
  */
-export function createApp(): express.Express {
+export function createApp(audience: "admin" | "user" | "both" = "both"): express.Express {
   const app = express();
 
   app.use(cors());
   app.use(express.json({ limit: "5mb" }));
   app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 
-  app.use("/user", userRouter);
-  app.use("/admin", adminRouter);
+  if (audience !== "admin") app.use("/user", userRouter);
+  if (audience !== "user") app.use("/admin", adminRouter);
 
   app.get("/health", async (req, res) => {
     try {

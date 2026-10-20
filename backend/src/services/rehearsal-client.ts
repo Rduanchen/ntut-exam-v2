@@ -33,8 +33,8 @@ export interface RehearsalRequest {
 
 export type RehearsalTransport = (request: RehearsalRequest) => Promise<RehearsalResponse>;
 
-export const rehearsalBaseUrl = (): string =>
-  `http://127.0.0.1:${process.env.PORT || 3000}`;
+export const rehearsalBaseUrl = (path = "/admin"): string =>
+  `http://127.0.0.1:${path.startsWith("/user/") ? (process.env.USER_PORT || 3001) : (process.env.ADMIN_PORT || process.env.PORT || 3000)}`;
 
 /**
  * The production transport: a real request over the loopback interface.
@@ -48,7 +48,7 @@ export const loopbackTransport: RehearsalTransport = async ({ method, path, body
   if (admin) headers["x-admin-token"] = process.env.ADMIN_TOKEN || "admin-secret";
 
   try {
-    const response = await fetch(`${rehearsalBaseUrl()}${path}`, {
+    const response = await fetch(`${rehearsalBaseUrl(path)}${path}`, {
       method,
       headers,
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),

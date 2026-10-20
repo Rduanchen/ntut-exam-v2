@@ -1,8 +1,8 @@
 /**
  * Where the backend lives.
  *
- * The fallback is not optional. This project ships no .env, so
- * VITE_BACKEND_URL is undefined in a plain `npm run dev`; without a fallback
+ * The fallback is not optional. VITE_BACKEND_URL may be absent in a plain
+ * `npm run dev`; without a fallback
  * every request becomes the relative path "undefined/admin/...", which the dev
  * server answers with index.html. axios then hands the caller an HTML string
  * that is truthy, so nothing throws at the fetch — the page breaks later, when

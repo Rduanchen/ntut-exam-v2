@@ -36,7 +36,9 @@ describe('the loopback transport against a real socket', () => {
     });
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const previous = process.env.PORT;
+    const previousUserPort = process.env.USER_PORT;
     process.env.PORT = String((server.address() as AddressInfo).port);
+    process.env.USER_PORT = process.env.PORT;
 
     try {
       const response = await loopbackTransport({ method: 'POST', path: '/admin/rehearsal', body: { acknowledgeWipe: true }, admin: true });
@@ -50,6 +52,7 @@ describe('the loopback transport against a real socket', () => {
       expect(seen.auth).toBeUndefined();
     } finally {
       if (previous === undefined) delete process.env.PORT; else process.env.PORT = previous;
+      if (previousUserPort === undefined) delete process.env.USER_PORT; else process.env.USER_PORT = previousUserPort;
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
   });

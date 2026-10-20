@@ -24,6 +24,7 @@ COPY . .
 
 # Pass VITE_BACKEND_URL for frontend build if needed
 ARG VITE_BACKEND_URL
+ARG VITE_ADMIN_TOKEN
 ENV VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:3000}
 
 # Build both backend and frontend

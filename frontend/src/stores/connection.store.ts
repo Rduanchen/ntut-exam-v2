@@ -21,7 +21,7 @@ export const useConnectionStore = defineStore('connection', () => {
   });
 
   const getHeaders = () => {
-    const token = localStorage.getItem('adminToken');
+    const token = import.meta.env.VITE_ADMIN_TOKEN;
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 

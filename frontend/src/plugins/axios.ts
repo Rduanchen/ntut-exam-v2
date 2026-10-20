@@ -2,10 +2,9 @@ import axios from 'axios';
 
 // Interceptor to automatically attach the admin token to every request
 axios.interceptors.request.use((config) => {
-  // Try to get token from localStorage, fallback to the default 'admin-secret'
-  const token = localStorage.getItem('adminToken') || 'admin-secret';
+  const token = import.meta.env.VITE_ADMIN_TOKEN;
   
-  if (config.url?.includes('/admin/')) {
+  if (token && config.url?.includes('/admin/')) {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
   

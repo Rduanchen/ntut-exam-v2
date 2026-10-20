@@ -6,12 +6,17 @@ services:
     container_name: ntut-backend
     command: pnpm --filter backend run start
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "${ADMIN_BIND_HOST:-127.0.0.1}:${ADMIN_PORT:-${APP_PORT:-3000}}:${ADMIN_PORT:-${APP_PORT:-3000}}"
+      - "${USER_PORT:-3001}:${USER_PORT:-3001}"
     environment:
-      - PORT=3000
+      - ADMIN_PORT=${ADMIN_PORT:-${APP_PORT:-3000}}
+      - USER_PORT=${USER_PORT:-3001}
+      - ADMIN_LISTEN_HOST=0.0.0.0
       - PISTON_URL=${PISTON_URL:-http://piston:2000}
-      - ADMIN_TOKEN=${ADMIN_TOKEN:-${ADMIN_SECRET:-admin}}
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-${ADMIN_SECRET:-}}
       - DB_STORAGE=/app/data/database.sqlite
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ntut-data:/app/data
     depends_on:
@@ -23,11 +28,12 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:3000}
+        - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:${ADMIN_PORT:-${APP_PORT:-3000}}}
+        - VITE_ADMIN_TOKEN=${ADMIN_TOKEN:-${ADMIN_SECRET:-}}
     container_name: ntut-frontend
     command: npx --yes serve -s frontend/dist -l 5173
     ports:
-      - "${FRONTEND_PORT:-5173}:5173"
+      - "${FRONTEND_BIND_HOST:-127.0.0.1}:${FRONTEND_PORT:-5173}:5173"
     depends_on:
       - backend
     restart: unless-stopped
