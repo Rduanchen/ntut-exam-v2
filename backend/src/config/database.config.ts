@@ -17,6 +17,9 @@ import { UnblockedDevice } from "../models/unblocked-device.model";
 const dbStorage =
   process.env.DB_STORAGE || path.join(__dirname, "../../database.sqlite");
 
+/** Resolved once so backup and Sequelize always refer to the same database. */
+export const databaseStorage = dbStorage;
+
 // Ensure database parent directory exists
 const dbDir = path.dirname(dbStorage);
 if (!fs.existsSync(dbDir)) {

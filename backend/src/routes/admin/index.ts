@@ -14,6 +14,7 @@ import adminConnectionRouter from "./connection.route";
 import adminSystemInfoRouter from "./admin-system-info.route";
 import adminReadinessRouter from "./admin-readiness.route";
 import adminRehearsalRouter from "./admin-rehearsal.route";
+import adminBackupRouter from "./admin-backup.route";
 
 const adminRouter = Router();
 
@@ -37,5 +38,6 @@ adminRouter.use("/connection", adminConnectionRouter);
 adminRouter.use("/system-info", adminSystemInfoRouter);
 adminRouter.use("/readiness", adminReadinessRouter);
 adminRouter.use("/rehearsal", adminRehearsalRouter);
+adminRouter.use("/backup", adminBackupRouter);
 
 export default adminRouter;

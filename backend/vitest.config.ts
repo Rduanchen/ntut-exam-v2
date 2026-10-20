@@ -22,6 +22,9 @@ export default defineConfig({
         'src/types/rehearsal.type.ts',
         'src/services/rehearsal*.ts',
         'src/controllers/admin/admin-rehearsal.controller.ts',
+        'src/services/database-backup.service.ts',
+        'src/controllers/admin/admin-backup.controller.ts',
+        'src/routes/admin/admin-backup.route.ts',
       ],
       thresholds: { lines: 100 },
     }
