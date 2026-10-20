@@ -28,7 +28,8 @@ describe('deploy test inside the Judge page', () => {
     expect(wrapper.find('[data-test="judge-tab-settings"]').exists()).toBe(true);
     await wrapper.find('[data-test="judge-tab-deploy-test"]').trigger('click'); await wrapper.vm.$nextTick();
     expect(wrapper.find('[data-test="deploy-test-panel"]').exists()).toBe(true);
-    expect(wrapper.find('[data-test="deploy-test-probe-row"]').text()).toContain('AC / submission');
+    expect(wrapper.find('[data-test="deploy-test-probe-row"]').text()).toContain('AC');
+    expect(wrapper.find('[data-test="deploy-test-probe-row"]').text()).toContain('學生作答錯誤');
     expect(wrapper.find('[data-test="deploy-test-export"]').exists()).toBe(true);
     await wrapper.find('[data-test="deploy-test-profile"]').trigger('focusout');
     expect(save).toHaveBeenCalledWith('judger-deploy-test-profile-draft', expect.any(String));
@@ -37,7 +38,7 @@ describe('deploy test inside the Judge page', () => {
     vi.spyOn(deployApi, 'fetchLatestDeployTest').mockResolvedValue(envelope(deployRun({ overallOutcome: 'failed', interruptionReason: 'process_restart' })));
     const wrapper = mount(JudgeSettingsView, { global: { plugins: [vuetify] } }); await settle(); await wrapper.vm.$nextTick();
     await wrapper.find('[data-test="judge-tab-deploy-test"]').trigger('click'); await wrapper.vm.$nextTick();
-    expect(wrapper.find('[data-test="deploy-test-outcome"]').text()).toContain('failed');
+    expect(wrapper.find('[data-test="deploy-test-outcome"]').text()).toContain('失敗');
     expect(wrapper.text()).toContain('process_restart');
   });
 });

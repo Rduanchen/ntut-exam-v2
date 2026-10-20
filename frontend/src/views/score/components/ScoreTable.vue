@@ -207,7 +207,7 @@ const copyToClipboard = async () => {
         :model-value="props.search"
         @update:model-value="(val) => emit('update:search', val as string)"
         append-inner-icon="mdi-magnify"
-        label="搜尋學生 (學號/姓名)"
+          label="搜尋學生（學號／姓名）"
         single-line
         hide-details
         density="compact"
@@ -384,7 +384,7 @@ const copyToClipboard = async () => {
                       variant="flat"
                       style="min-width: 28px; height: 22px"
                     >
-                      {{ getSubtaskStatus(item, puzzle.id, idx) }}
+                      {{ getSubtaskStatus(item, puzzle.id, idx) === 'T' ? '通過' : '未通過' }}
                     </v-chip>
                   </td>
                   <td

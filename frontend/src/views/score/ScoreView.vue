@@ -44,7 +44,7 @@ const openModal = (item: any) => {
   <v-container fluid class="pa-6">
     <v-row class="mb-4 align-center justify-space-between">
       <v-col>
-        <h1 class="text-h4 font-weight-bold">Score Board (成績看板)</h1>
+        <h1 class="text-h4 font-weight-bold">成績看板</h1>
         <p class="text-subtitle-1 text-medium-emphasis">檢視所有學生的作答狀態、子任務（測資組）得分與詳細作答紀錄</p>
       </v-col>
       <v-col cols="auto">

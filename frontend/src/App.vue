@@ -9,15 +9,15 @@ const systemWarnings = ref<string[]>([]);
 const loadTestMode = ref<string>('disabled');
 
 const navItems = [
-  { title: 'Manage', icon: 'mdi-monitor-dashboard', to: '/manage' },
-  { title: 'Config', icon: 'mdi-cog', to: '/config' },
-  { title: 'Judge', icon: 'mdi-gavel', to: '/judge' },
-  { title: 'Score', icon: 'mdi-format-list-numbered', to: '/score' },
-  { title: 'Student', icon: 'mdi-account-group', to: '/student' },
-  { title: 'Anti-Cheat', icon: 'mdi-shield-alert', to: '/anticheat' },
-  { title: 'Logs', icon: 'mdi-text-box-search', to: '/log' },
-  { title: 'Connection', icon: 'mdi-desktop-classic', to: '/connection' },
-  { title: 'Device', icon: 'mdi-monitor-dashboard', to: '/device' },
+  { title: '考試管理', icon: 'mdi-monitor-dashboard', to: '/manage' },
+  { title: '考試設定', icon: 'mdi-cog', to: '/config' },
+  { title: '評測', icon: 'mdi-gavel', to: '/judge' },
+  { title: '成績', icon: 'mdi-format-list-numbered', to: '/score' },
+  { title: '學生', icon: 'mdi-account-group', to: '/student' },
+  { title: '防作弊', icon: 'mdi-shield-alert', to: '/anticheat' },
+  { title: '紀錄', icon: 'mdi-text-box-search', to: '/log' },
+  { title: '連線管理', icon: 'mdi-desktop-classic', to: '/connection' },
+  { title: '設備監控', icon: 'mdi-monitor-dashboard', to: '/device' },
 ];
 
 onMounted(async () => {
@@ -35,8 +35,8 @@ onMounted(async () => {
   <v-app>
     <v-navigation-drawer v-model="drawer" app theme="dark">
       <v-list-item
-        title="Admin Control Panel"
-        subtitle="NTUT Exam System"
+        title="管理控制台"
+        subtitle="北科大考試系統"
         class="py-4"
       ></v-list-item>
       <v-divider></v-divider>
@@ -55,7 +55,7 @@ onMounted(async () => {
 
     <v-app-bar app elevation="1">
       <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
-      <v-app-bar-title>NTUT Exam Platform</v-app-bar-title>
+      <v-app-bar-title>北科大考試管理系統</v-app-bar-title>
     </v-app-bar>
 
     <!-- System Warning Banner -->

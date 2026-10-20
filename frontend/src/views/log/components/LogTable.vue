@@ -78,7 +78,7 @@ const getActionColor = (actionType: string) => {
         <thead>
           <tr>
             <th class="text-left font-weight-bold" style="width: 180px;">時間</th>
-            <th class="text-left font-weight-bold" style="width: 130px;">學號 (Student ID)</th>
+            <th class="text-left font-weight-bold" style="width: 130px;">學號</th>
             <th class="text-left font-weight-bold" style="width: 140px;">IP 位址</th>
             <th class="text-left font-weight-bold" style="width: 160px;">動作類型</th>
             <th class="text-left font-weight-bold">說明/詳情</th>

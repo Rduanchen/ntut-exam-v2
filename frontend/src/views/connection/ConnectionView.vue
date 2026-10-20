@@ -11,12 +11,12 @@ const manualUnblockAction = ref<'KEEP_USER' | 'UNBIND_USER'>('KEEP_USER');
 const isUnblocking = ref(false);
 
 const headers = [
-  { title: 'Device UUID', key: 'deviceUuid', align: 'start' },
-  { title: 'IP Address', key: 'ipAddress' },
-  { title: 'Student ID', key: 'user.testId' },
-  { title: 'Student Name', key: 'user.name' },
-  { title: 'Status', key: 'isOnline' },
-  { title: 'Actions', key: 'actions', align: 'end', sortable: false }
+  { title: '設備 UUID', key: 'deviceUuid', align: 'start' },
+  { title: 'IP 位址', key: 'ipAddress' },
+  { title: '學號', key: 'user.testId' },
+  { title: '學生姓名', key: 'user.name' },
+  { title: '狀態', key: 'isOnline' },
+  { title: '操作', key: 'actions', align: 'end', sortable: false }
 ] as const;
 
 const requestHeaders = [
@@ -133,8 +133,8 @@ async function unbindDevice(uuid: string) {
   <v-container fluid class="pa-6">
     <v-row class="mb-4 align-center">
       <v-col cols="12" sm="6">
-        <h1 class="text-h4 font-weight-bold">Connection Management</h1>
-        <p class="text-subtitle-1 text-medium-emphasis">Manage device registrations and login requests</p>
+        <h1 class="text-h4 font-weight-bold">連線管理</h1>
+        <p class="text-subtitle-1 text-medium-emphasis">管理設備註冊與登入申請</p>
       </v-col>
       <v-col cols="12" sm="6" class="d-flex justify-sm-end align-center">
         <v-btn
@@ -145,7 +145,7 @@ async function unbindDevice(uuid: string) {
           @click="refreshData"
           class="rounded-lg"
         >
-          Refresh Data
+          重新整理資料
         </v-btn>
       </v-col>
     </v-row>
@@ -166,7 +166,7 @@ async function unbindDevice(uuid: string) {
         <v-card class="rounded-xl mb-6 shadow-card" elevation="2">
           <v-card-title class="font-weight-bold pt-4 px-6 d-flex align-center">
             <v-icon color="primary" class="mr-2">mdi-cog</v-icon>
-            Global Settings
+              全域設定
           </v-card-title>
           <v-card-text class="px-6 pb-6">
             <v-switch
@@ -177,11 +177,11 @@ async function unbindDevice(uuid: string) {
               hide-details
             >
               <template v-slot:label>
-                <span class="font-weight-medium">Allow New Device Registration</span>
+                <span class="font-weight-medium">允許新設備註冊</span>
               </template>
             </v-switch>
             <div class="text-caption text-medium-emphasis mt-2">
-              When disabled, new devices cannot bind. Existing bound devices require TA approval for secondary logins.
+              關閉後新設備無法綁定；已綁定設備再次登入仍須由助教核准。
             </div>
           </v-card-text>
         </v-card>
@@ -189,32 +189,32 @@ async function unbindDevice(uuid: string) {
         <v-card class="rounded-xl shadow-card" elevation="2">
           <v-card-title class="font-weight-bold pt-4 px-6 d-flex align-center">
             <v-icon color="secondary" class="mr-2">mdi-lock-open-variant</v-icon>
-            Manual Unblock
+            手動解除封鎖
           </v-card-title>
           <v-card-text class="px-6 pb-6">
             <p class="text-body-2 text-medium-emphasis mb-4">
-              Manually allow a specific device to log in or re-bind.
+              手動允許指定設備登入或重新綁定。
             </p>
             <v-form @submit.prevent="submitManualUnblock">
               <v-select
                 v-model="manualUnblockType"
                 :items="['UUID', 'IP']"
-                label="Target Type"
+                label="解除封鎖對象"
                 variant="outlined"
                 density="compact"
                 class="mb-2"
               ></v-select>
               <v-text-field
                 v-model="manualUnblockValue"
-                label="Target Value"
+                label="對象值"
                 variant="outlined"
                 density="compact"
                 class="mb-2"
-                :placeholder="manualUnblockType === 'IP' ? 'e.g. 192.168.1.10' : 'e.g. 123e4567-e89b...'"
+                :placeholder="manualUnblockType === 'IP' ? '例如 192.168.1.10' : '例如 123e4567-e89b...'"
               ></v-text-field>
               <v-radio-group v-model="manualUnblockAction" density="compact" class="mb-2" hide-details>
-                <v-radio label="Allow Original User" value="KEEP_USER" color="secondary"></v-radio>
-                <v-radio label="Unbind & Allow New User" value="UNBIND_USER" color="error"></v-radio>
+                <v-radio label="允許原學生登入" value="KEEP_USER" color="secondary"></v-radio>
+                <v-radio label="解除原綁定並允許新學生" value="UNBIND_USER" color="error"></v-radio>
               </v-radio-group>
               <v-btn
                 type="submit"
@@ -225,7 +225,7 @@ async function unbindDevice(uuid: string) {
                 :loading="isUnblocking"
                 :disabled="!manualUnblockValue"
               >
-                Add to Allowed List
+                加入允許清單
               </v-btn>
             </v-form>
           </v-card-text>
@@ -238,7 +238,7 @@ async function unbindDevice(uuid: string) {
           <v-card-title class="font-weight-bold pt-4 px-6 d-flex align-center justify-space-between">
             <div>
               <v-icon color="warning" class="mr-2">mdi-shield-alert</v-icon>
-              Pending Login Requests
+              待處理登入申請
               <v-chip color="warning" size="small" class="ml-2 font-weight-bold" v-if="connectionStore.loginRequests.length">
                 {{ connectionStore.loginRequests.length }}
               </v-chip>
@@ -296,7 +296,7 @@ async function unbindDevice(uuid: string) {
             <template v-slot:no-data>
               <div class="py-8 text-center text-medium-emphasis">
                 <v-icon size="48" color="grey-lighten-2" class="mb-2">mdi-check-all</v-icon>
-                <div>No pending login requests</div>
+                <div>目前沒有待處理登入申請</div>
               </div>
             </template>
           </v-data-table>
@@ -310,7 +310,7 @@ async function unbindDevice(uuid: string) {
         <v-card class="rounded-xl shadow-card" elevation="2">
           <v-card-title class="font-weight-bold pt-4 px-6 d-flex align-center">
             <v-icon color="primary" class="mr-2">mdi-desktop-mac</v-icon>
-            All Registered Devices
+            所有已註冊設備
           </v-card-title>
 
           <v-data-table
@@ -322,12 +322,12 @@ async function unbindDevice(uuid: string) {
           >
             <template v-slot:item.isOnline="{ item }">
               <v-chip :color="item.isOnline ? 'success' : 'grey'" size="small" variant="flat">
-                {{ item.isOnline ? 'Online' : 'Offline' }}
+                {{ item.isOnline ? '線上' : '離線' }}
               </v-chip>
             </template>
             <template v-slot:item.user.testId="{ item }">
               <span v-if="item.user" class="font-weight-medium">{{ item.user.testId }}</span>
-              <span v-else class="text-medium-emphasis text-caption">Not Bound</span>
+              <span v-else class="text-medium-emphasis text-caption">未綁定</span>
             </template>
             <template v-slot:item.user.name="{ item }">
               <span v-if="item.user">{{ item.user.name }}</span>
@@ -335,7 +335,7 @@ async function unbindDevice(uuid: string) {
             </template>
             <template v-slot:item.actions="{ item }">
               <div class="d-flex justify-end gap-2">
-                <v-tooltip text="Allow Secondary Login" location="top">
+                <v-tooltip text="允許再次登入" location="top">
                   <template v-slot:activator="{ props }">
                     <v-btn 
                       v-bind="props"
@@ -347,7 +347,7 @@ async function unbindDevice(uuid: string) {
                     ></v-btn>
                   </template>
                 </v-tooltip>
-                <v-tooltip text="Unbind Device from Student" location="top">
+                <v-tooltip text="解除設備與學生的綁定" location="top">
                   <template v-slot:activator="{ props }">
                     <v-btn 
                       v-bind="props"
@@ -365,7 +365,7 @@ async function unbindDevice(uuid: string) {
             <template v-slot:no-data>
               <div class="py-8 text-center text-medium-emphasis">
                 <v-icon size="48" color="grey-lighten-2" class="mb-2">mdi-monitor-off</v-icon>
-                <div>No devices registered yet</div>
+                <div>尚無已註冊設備</div>
               </div>
             </template>
           </v-data-table>

@@ -6,6 +6,25 @@ const pythonFeatures: PythonFeature[] = [
   'IF', 'FOR', 'WHILE', 'FUNCTION', 'NESTED_LOOP', 'RECURSION',
   'LAMBDA', 'LIST', 'DICT', 'SET', 'SORT', 'SORTED'
 ];
+const ruleTypes = [
+  { title: '正規表示式', value: 'regex' },
+  { title: '指定文字', value: 'use' },
+  { title: '複合規則', value: 'composite' },
+  { title: '巢狀迴圈', value: 'nestedLoop' },
+  { title: 'Python 語法', value: 'pythonFeature' }
+];
+const constraints = [
+  { title: '必須包含', value: 'MUST_HAVE' },
+  { title: '不得包含', value: 'MUST_NOT_HAVE' }
+];
+const severities = [
+  { title: '提示', value: 'info' },
+  { title: '警告', value: 'warn' }
+];
+const operators = [
+  { title: '全部符合（AND）', value: 'AND' },
+  { title: '任一符合（OR）', value: 'OR' }
+];
 
 const props = defineProps<{ modelValue?: SpecialRule[], disabled?: boolean }>();
 const emit = defineEmits(['update:modelValue']);
@@ -52,43 +71,43 @@ const onTypeChange = (rule: any) => {
 <template>
   <div>
     <v-btn v-if="!props.disabled" size="small" color="primary" variant="tonal" prepend-icon="mdi-plus" @click="addRule" class="mb-2">
-      Add Rule
+      新增規則
     </v-btn>
     
     <v-card v-for="(rule, index) in rules" :key="index" variant="outlined" class="pa-2 mb-2">
       <div class="d-flex justify-space-between align-center mb-2">
-        <span class="text-caption font-weight-bold">Rule: {{ rule.id }}</span>
+        <span class="text-caption font-weight-bold">規則：{{ rule.id }}</span>
         <v-btn v-if="!props.disabled" size="x-small" icon="mdi-delete" color="error" variant="text" @click="removeRule(index)"></v-btn>
       </div>
       <v-row dense>
         <v-col cols="4">
-          <v-select v-model="rule.type" :items="['regex', 'use', 'composite', 'nestedLoop', 'pythonFeature']" label="Type" density="compact" hide-details :disabled="props.disabled" @update:model-value="onTypeChange(rule)"></v-select>
+          <v-select v-model="rule.type" :items="ruleTypes" label="類型" density="compact" hide-details :disabled="props.disabled" @update:model-value="onTypeChange(rule)"></v-select>
         </v-col>
         <v-col cols="4">
-          <v-select v-model="rule.constraint" :items="['MUST_HAVE', 'MUST_NOT_HAVE']" label="Constraint" density="compact" hide-details :disabled="props.disabled"></v-select>
+          <v-select v-model="rule.constraint" :items="constraints" label="條件" density="compact" hide-details :disabled="props.disabled"></v-select>
         </v-col>
         <v-col cols="4">
-          <v-select v-model="rule.severity" :items="['info', 'warn']" label="Severity" density="compact" hide-details :disabled="props.disabled"></v-select>
+          <v-select v-model="rule.severity" :items="severities" label="嚴重程度" density="compact" hide-details :disabled="props.disabled"></v-select>
         </v-col>
         <v-col :cols="rule.type === 'composite' ? 6 : 9">
-          <v-text-field v-model="rule.message" label="Warning Message" density="compact" hide-details :readonly="props.disabled"></v-text-field>
+          <v-text-field v-model="rule.message" label="警告訊息" density="compact" hide-details :readonly="props.disabled"></v-text-field>
         </v-col>
         <v-col cols="3" v-if="rule.type === 'composite'">
-          <v-select v-model="rule.params.op" :items="['AND', 'OR']" label="Combine" density="compact" hide-details :disabled="props.disabled"></v-select>
+          <v-select v-model="rule.params.op" :items="operators" label="組合方式" density="compact" hide-details :disabled="props.disabled"></v-select>
         </v-col>
         <!-- Params Editor -->
         <v-col cols="12" v-if="rule.type === 'use'">
-          <v-text-field v-model="rule.params.target" label="Target Code String" density="compact" hide-details :readonly="props.disabled"></v-text-field>
+          <v-text-field v-model="rule.params.target" label="目標程式碼文字" density="compact" hide-details :readonly="props.disabled"></v-text-field>
         </v-col>
         <v-col cols="12" v-if="rule.type === 'regex'">
-          <v-text-field v-model="rule.params.pattern" label="Regex Pattern" density="compact" hide-details :readonly="props.disabled"></v-text-field>
+          <v-text-field v-model="rule.params.pattern" label="正規表示式" density="compact" hide-details :readonly="props.disabled"></v-text-field>
         </v-col>
         <v-col cols="12" v-if="rule.type === 'composite'">
-          <div class="text-caption font-weight-bold mb-1 ml-1">Sub Rules</div>
+          <div class="text-caption font-weight-bold mb-1 ml-1">子規則</div>
           <SpecialRuleEditor v-model="rule.params.rules" :disabled="props.disabled" class="pl-4 ml-2 border-s-sm border-primary" />
         </v-col>
         <v-col cols="12" v-if="rule.type === 'pythonFeature'">
-          <v-select v-model="rule.params.features" :items="pythonFeatures" label="Required Python Features" multiple chips density="compact" hide-details :disabled="props.disabled"></v-select>
+          <v-select v-model="rule.params.features" :items="pythonFeatures" label="必要的 Python 語法" multiple chips density="compact" hide-details :disabled="props.disabled"></v-select>
         </v-col>
       </v-row>
     </v-card>

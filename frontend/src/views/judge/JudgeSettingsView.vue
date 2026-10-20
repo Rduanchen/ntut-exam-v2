@@ -25,10 +25,10 @@ onBeforeUnmount(() => { deploy.teardown(); rehearsal.teardown(); });
 
 <template>
   <v-container fluid data-test="judge-settings-view">
-    <h1 class="text-h5 mb-4">Judge</h1>
+    <h1 class="text-h5 mb-4">評測</h1>
     <v-tabs v-model="tab" class="mb-5">
-      <v-tab value="settings" data-test="judge-tab-settings">Settings</v-tab>
-      <v-tab value="deploy-test" data-test="judge-tab-deploy-test">Deploy Test</v-tab>
+      <v-tab value="settings" data-test="judge-tab-settings">設定</v-tab>
+      <v-tab value="deploy-test" data-test="judge-tab-deploy-test">部署測試</v-tab>
       <v-tab value="rehearsal" data-test="judge-tab-rehearsal">部署後測試</v-tab>
     </v-tabs>
     <v-window v-model="tab">

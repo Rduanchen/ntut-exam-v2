@@ -57,7 +57,7 @@ const handleRefresh = () => {
   <v-container fluid class="pa-6">
     <v-row class="mb-4" align="center" justify="space-between">
       <v-col cols="auto">
-        <h1 class="text-h4 font-weight-bold">防作弊監控面板 (Anti-Cheat)</h1>
+        <h1 class="text-h4 font-weight-bold">防作弊監控面板</h1>
         <p class="text-subtitle-1 text-medium-emphasis">即時監控所有學生的異常行為警告與操作紀錄</p>
       </v-col>
       <v-col cols="auto">

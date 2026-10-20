@@ -31,7 +31,7 @@ const onInput = (value: string) => {
     <div class="d-flex align-center mb-1">
       <span class="text-subtitle-2">{{ label }}</span>
       <OriginChip :origin="setting.origin" />
-      <!-- Unsaved edits must be distinguishable from what is actually in force. -->
+      <!-- Unsaved edits must be distinguishable from  -->
       <v-chip
         v-if="dirty"
         color="orange"
@@ -40,7 +40,7 @@ const onInput = (value: string) => {
         class="ml-2"
         data-test="dirty-marker"
       >
-        Unsaved
+        未儲存
       </v-chip>
     </div>
 
@@ -54,8 +54,8 @@ const onInput = (value: string) => {
     />
 
     <div v-if="setting.origin === 'clamped'" class="text-caption text-warning mt-1" data-test="clamped-note">
-      The configured value was outside the permitted range. <strong>{{ setting.value }}</strong> is
-      what is actually in force.
+      原設定值超出允許範圍，未被採用。目前實際生效值為 <strong>{{ setting.value }}</strong>。
+      
     </div>
     <div v-if="hint" class="text-caption text-medium-emphasis mt-1">{{ hint }}</div>
   </div>

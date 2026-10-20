@@ -29,7 +29,7 @@ const filteredStudents = computed(() => {
       <v-text-field
         v-model="search"
         prepend-inner-icon="mdi-magnify"
-        label="搜尋學生 (學號/姓名)"
+        label="搜尋學生（學號／姓名）"
         variant="outlined"
         density="compact"
         hide-details
@@ -62,7 +62,7 @@ const filteredStudents = computed(() => {
         </template>
         
         <v-list-item-title class="font-weight-medium">
-          {{ student.name || 'Unknown' }}
+          {{ student.name || '未知學生' }}
         </v-list-item-title>
         <v-list-item-subtitle class="text-caption mt-1">
           <v-icon size="small" class="mr-1">mdi-card-account-details</v-icon>

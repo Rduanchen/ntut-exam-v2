@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { INVERTED_CHECKS, STAGE_TITLES, type RehearsalCheck, type RehearsalStage } from '../../../types/rehearsal';
+import { stageStatusLabel } from '../../../utils/presentation-labels';
 
 defineProps<{ stages: RehearsalStage[]; currentStage?: string }>();
 
 const STAGE_COLOR: Record<string, string> = {
   pending: 'grey', running: 'info', passed: 'success', failed: 'error', skipped: 'grey',
-};
-const STAGE_LABEL: Record<string, string> = {
-  pending: '未開始', running: '進行中', passed: '通過', failed: '失敗', skipped: '未執行',
 };
 
 const duration = (stage: RehearsalStage): string =>
@@ -39,7 +37,7 @@ const checkNote = (check: RehearsalCheck): string | undefined => {
     >
       <template #prepend>
         <v-chip :color="STAGE_COLOR[stage.status]" size="small" variant="flat" class="mr-3" :data-test="`rehearsal-stage-status-${stage.id}`">
-          {{ STAGE_LABEL[stage.status] }}
+          {{ stageStatusLabel(stage.status) }}
         </v-chip>
       </template>
 
@@ -48,7 +46,7 @@ const checkNote = (check: RehearsalCheck): string | undefined => {
       <v-list-item-subtitle>
         耗時 {{ duration(stage) }}（上限 {{ (stage.timeoutMs / 1000).toFixed(0) }}s）
         <span v-if="stage.failureReason" class="text-error" :data-test="`rehearsal-stage-reason-${stage.id}`">
-          — {{ stage.failureReason }}
+          — 失敗原因：{{ stage.failureReason }}
         </span>
       </v-list-item-subtitle>
 

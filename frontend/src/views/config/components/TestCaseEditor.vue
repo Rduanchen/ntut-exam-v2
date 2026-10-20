@@ -27,11 +27,11 @@ const removeTestCase = (index: number) => {
     </div>
     
     <div v-for="(tc, index) in testcases" :key="index" class="d-flex align-start mb-2">
-      <v-textarea v-model="tc.input" label="Input" density="compact" rows="1" auto-grow hide-details class="mr-1"></v-textarea>
-      <v-textarea v-model="tc.output" label="Output" density="compact" rows="1" auto-grow hide-details class="mr-1"></v-textarea>
+      <v-textarea v-model="tc.input" label="輸入" density="compact" rows="1" auto-grow hide-details class="mr-1"></v-textarea>
+      <v-textarea v-model="tc.output" label="輸出" density="compact" rows="1" auto-grow hide-details class="mr-1"></v-textarea>
       <v-btn v-if="!props.disabled" size="small" icon="mdi-close" color="error" variant="text" @click="removeTestCase(index)" class="mt-1"></v-btn>
     </div>
     
-    <div v-if="!testcases.length" class="text-caption text-medium-emphasis">No cases.</div>
+    <div v-if="!testcases.length" class="text-caption text-medium-emphasis">尚無測資。</div>
   </div>
 </template>

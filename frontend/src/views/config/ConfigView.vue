@@ -53,8 +53,8 @@ const handleInit = async () => {
   <v-container fluid>
     <v-row class="mb-4">
       <v-col cols="12">
-        <h1 class="text-h4 font-weight-bold">Exam Configuration Dashboard</h1>
-        <p class="text-subtitle-1 text-medium-emphasis">Configure and initialize global exam settings</p>
+        <h1 class="text-h4 font-weight-bold">考試設定</h1>
+        <p class="text-subtitle-1 text-medium-emphasis">設定並初始化考試環境</p>
       </v-col>
     </v-row>
 

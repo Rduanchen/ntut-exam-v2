@@ -137,17 +137,17 @@ const handleDeleteCode = async (questionId: string) => {
         
         <div class="flex-grow-1">
           <div class="d-flex align-center mb-1">
-            <h2 class="text-h4 font-weight-bold mb-0 mr-4">{{ student.name || 'Unknown' }}</h2>
+            <h2 class="text-h4 font-weight-bold mb-0 mr-4">{{ student.name || '未知學生' }}</h2>
             <v-chip
               :color="student.isOnline ? 'success' : 'grey'"
               size="small"
               variant="flat"
               class="font-weight-bold"
             >
-              {{ student.isOnline ? '上線中 (Online)' : '離線 (Offline)' }}
+              {{ student.isOnline ? '線上' : '離線' }}
             </v-chip>
           </div>
-          <div class="text-subtitle-1 text-medium-emphasis mb-4">學號: {{ student.id }}</div>
+          <div class="text-subtitle-1 text-medium-emphasis mb-4">學號：{{ student.id }}</div>
           
           <v-row dense>
             <v-col cols="12" sm="6">
@@ -204,7 +204,7 @@ const handleDeleteCode = async (questionId: string) => {
             variant="flat"
             width="160"
           >
-            匯出學生程式碼 (ZIP)
+            匯出學生程式碼（ZIP）
           </v-btn>
         </div>
       </v-card-text>

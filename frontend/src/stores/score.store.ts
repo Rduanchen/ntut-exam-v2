@@ -32,7 +32,7 @@ export const useScoreStore = defineStore('score', () => {
       const res = await axios.get(`${BACKEND_URL}/admin/submissions`);
       submissions.value = res.data.submissions || res.data;
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to fetch submissions';
+      error.value = err.response?.data?.error || err.message || '無法取得提交紀錄';
     } finally {
       loading.value = false;
     }
@@ -53,17 +53,16 @@ export const useScoreStore = defineStore('score', () => {
       const job = await waitForJudging(handle.jobId);
 
       if (job.state === 'failed') {
-        error.value = job.error || 'Rejudge failed';
+        error.value = job.error || '重新評測失敗';
       } else if (job.outcome && job.outcome.systemFailures > 0) {
         error.value =
-          `${job.outcome.systemFailures} submission(s) could not be judged ` +
-          `for system reasons and were not scored.`;
+          `有 ${job.outcome.systemFailures} 筆提交因系統錯誤無法完成評測，未予計分。`;
       }
 
       await fetchSubmissions();
       await fetchScores(true);
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to trigger rejudge';
+      error.value = err.response?.data?.error || err.message || '無法發起重新評測';
     } finally {
       loading.value = false;
     }
@@ -76,7 +75,7 @@ export const useScoreStore = defineStore('score', () => {
       const res = await axios.get(`${BACKEND_URL}/admin/scores`);
       scores.value = res.data;
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to fetch scores';
+      error.value = err.response?.data?.error || err.message || '無法取得成績';
     } finally {
       if (!silent) loading.value = false;
     }

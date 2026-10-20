@@ -24,7 +24,7 @@ export const useAnticheatStore = defineStore('anticheat', () => {
       const res = await axios.get(`${BACKEND_URL}/admin/anticheat/logs`);
       alerts.value = Array.isArray(res.data) ? res.data : (res.data.alerts || res.data || []);
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to fetch alerts';
+      error.value = err.response?.data?.error || err.message || '無法取得警告紀錄';
     } finally {
       loading.value = false;
     }
@@ -42,7 +42,7 @@ export const useAnticheatStore = defineStore('anticheat', () => {
         alerts.value[index].isOk = isOk;
       }
     } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || 'Failed to update alert status';
+      error.value = err.response?.data?.error || err.message || '無法更新警告狀態';
       throw err;
     }
   }

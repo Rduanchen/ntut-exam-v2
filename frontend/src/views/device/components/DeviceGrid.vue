@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { deviceStatusLabel } from '../../../utils/presentation-labels';
 
 interface DeviceItem {
   id: string;          // Student ID
@@ -69,10 +70,7 @@ const getDeviceDotClass = (device: DeviceItem) => {
 };
 
 const getDeviceStatusText = (device: DeviceItem) => {
-  if (!device.isOnline) return 'Offline';
-  if (device.status === 'ONLINE') return 'Logged In';
-  if (device.status === 'AWAITING_LOGIN') return 'Waiting for Login';
-  return 'Unbound Device';
+  return deviceStatusLabel(device.status, device.isOnline);
 };
 </script>
 
@@ -103,7 +101,7 @@ const getDeviceStatusText = (device: DeviceItem) => {
           </v-icon>
         </template>
         <v-card-title class="font-weight-bold text-subtitle-1 d-flex align-center justify-space-between">
-          <span>{{ device.name || 'Unknown Student' }}</span>
+          <span>{{ device.name || '未知學生' }}</span>
           <span class="d-flex align-center">
             <span :class="['status-dot', getDeviceDotClass(device)]"></span>
             <span class="text-caption ml-1 font-weight-medium text-grey-darken-1">
@@ -120,19 +118,19 @@ const getDeviceStatusText = (device: DeviceItem) => {
 
       <v-card-text class="py-3 flex-grow-1">
         <div class="d-flex align-center justify-space-between mb-2">
-          <span class="text-caption text-grey-darken-1 font-weight-medium">IP Address</span>
+          <span class="text-caption text-grey-darken-1 font-weight-medium">IP 位址</span>
           <span class="text-body-2 font-weight-bold text-mono">
-            {{ device.ipAddress || 'Not Assigned' }}
+            {{ device.ipAddress || '未分配' }}
           </span>
         </div>
         
         <div class="d-flex align-center justify-space-between">
-          <span class="text-caption text-grey-darken-1 font-weight-medium">Device UUID</span>
+          <span class="text-caption text-grey-darken-1 font-weight-medium">設備 UUID</span>
           <span 
             class="text-caption text-mono text-grey-darken-2 text-truncate ml-4 max-width-uuid" 
-            :title="device.deviceUuid || 'No Device Registered'"
+            :title="device.deviceUuid || '未註冊設備'"
           >
-            {{ device.deviceUuid ? device.deviceUuid.substring(0, 8) + '...' : 'None' }}
+            {{ device.deviceUuid ? device.deviceUuid.substring(0, 8) + '...' : '無' }}
           </span>
         </div>
       </v-card-text>
@@ -146,7 +144,7 @@ const getDeviceStatusText = (device: DeviceItem) => {
           :disabled="device.status === 'UNBOUND'"
           @click="emit('unbind', device)"
         >
-          Unbind User
+          解除學生綁定
         </v-btn>
         <v-spacer></v-spacer>
         <v-btn 
@@ -155,7 +153,7 @@ const getDeviceStatusText = (device: DeviceItem) => {
           variant="flat" 
           @click="emit('unregister', device)"
         >
-          Unregister
+          註銷設備
         </v-btn>
       </v-card-actions>
     </v-card>
