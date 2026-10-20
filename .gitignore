@@ -1,5 +1,6 @@
 node_modules
 dist/
+build/
 .env*
 !.env.example
 database.sqlite
@@ -8,5 +9,10 @@ database.sqlite-*
 *.sqlite-wal
 *.sqlite-shm
 .DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
 *.log
 coverage/
