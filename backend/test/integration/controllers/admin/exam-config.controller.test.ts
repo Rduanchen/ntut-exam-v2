@@ -9,6 +9,8 @@ import { SystemSettings } from '../../../../src/models/system-settings.model';
 import { User } from '../../../../src/models/user.model';
 import { ScoreBoard } from '../../../../src/models/score-board.model';
 import { MessageSocketService } from '../../../../src/sockets/message-socket.service';
+import { SystemSettingsService } from '../../../../src/services/system-settings.service';
+import { ExamConfigCryptoService } from '../../../../src/services/exam-config-crypto.service';
 
 /**
  * Covers both `admin-config.route.ts` (3 endpoints) and `admin-init.route.ts`
@@ -90,6 +92,26 @@ describe('ExamConfigController (integration)', () => {
       const res = await adminRequest(app).put('/admin/config').send(updated);
 
       expect(res.status).toBe(400);
+    });
+
+    it('publishes an updated paper with the original exam key after initialization', async () => {
+      await adminRequest(app).post('/admin/config').send(buildExamConfig());
+      await adminRequest(app).post('/admin/init');
+      const examKey = await SystemSettingsService.getSetting<string>('exam_key');
+      const originalBundle = await adminRequest(app).get('/admin/config/offline-bundle');
+
+      const updated = cloneExamConfig(buildExamConfig());
+      updated.sections[0].puzzles[0].subtasks[0].hidden[0].output = 'new answer';
+      updated.environmentVariables.EXTRA_FLAG = 'new value';
+      const res = await adminRequest(app).put('/admin/config').send(updated);
+
+      expect(res.status).toBe(200);
+      expect(res.body.environmentVariables.EXTRA_FLAG).toBe('new value');
+      expect(await SystemSettingsService.getSetting('exam_key')).toBe(examKey);
+      const bundle = await adminRequest(app).get('/admin/config/offline-bundle');
+      expect(bundle.body.meta.wrappedExamKey).toEqual(originalBundle.body.meta.wrappedExamKey);
+      const secret = ExamConfigCryptoService.decryptSecret(bundle.body.cipher, examKey!);
+      expect(secret.puzzles[0].subtasks[0].hidden[0].output).toBe('new answer');
     });
   });
 

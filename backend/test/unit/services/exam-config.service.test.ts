@@ -3,7 +3,7 @@ import { SystemSettings } from "../../../src/models/system-settings.model";
 import { ExamConfigService } from "../../../src/services/exam-config.service";
 import { SystemSettingsService } from "../../../src/services/system-settings.service";
 import { HttpError } from "../../../src/utils/http-error";
-import { buildExamConfig } from "../../fixtures/exam-config.fixture";
+import { buildExamConfig, buildSpecialRule } from "../../fixtures/exam-config.fixture";
 
 describe("ExamConfigService", () => {
 
@@ -54,7 +54,7 @@ describe("ExamConfigService", () => {
   });
 
   describe("restrictedUpdate", () => {
-    it("should apply the new config while force-retaining users and env vars", async () => {
+    it("updates existing questions, test cases and settings after initialization", async () => {
       await ExamConfigService.validateAndSave(validConfig);
 
       const updatedConfig = JSON.parse(JSON.stringify(validConfig));
@@ -65,11 +65,13 @@ describe("ExamConfigService", () => {
       updatedConfig.sections[0].puzzles[0].timeLimit = 2000;
       updatedConfig.sections[0].puzzles[0].memoryLimit = 64000;
       updatedConfig.sections[0].puzzles[0].score = 150;
+      updatedConfig.sections[0].puzzles[0].multiplier = 0.8;
       updatedConfig.sections[0].puzzles[0].subtasks[0].score = 75;
-
-      // These two are force-retained from the stored config, whatever the payload says.
-      updatedConfig.accessibleUsers = [{ id: "999999999", name: "Injected" }];
-      updatedConfig.environmentVariables = { startPassword: "injected-password" };
+      updatedConfig.sections[0].puzzles[0].subtasks[0].visible[0].input = "updated input";
+      updatedConfig.sections[0].puzzles[0].subtasks[0].hidden[0].output = "updated output";
+      updatedConfig.environmentVariables.EXTRA_FLAG = "updated";
+      updatedConfig.globalSpecialRules = [buildSpecialRule()];
+      updatedConfig.sections[0].puzzles[0].specialRules = [buildSpecialRule({ id: "puzzle-rule" })];
 
       const result = await ExamConfigService.restrictedUpdate(updatedConfig);
 
@@ -78,16 +80,18 @@ describe("ExamConfigService", () => {
       expect(result.sections[0].puzzles[0].timeLimit).toBe(2000);
       expect(result.sections[0].puzzles[0].memoryLimit).toBe(64000);
       expect(result.sections[0].puzzles[0].score).toBe(150);
+      expect(result.sections[0].puzzles[0].multiplier).toBe(0.8);
       expect(result.sections[0].puzzles[0].subtasks[0].score).toBe(75);
-
-      // Security-critical: the roster and the start password cannot be swapped
-      // through a restricted update.
-      expect(result.accessibleUsers).toHaveLength(2);
-      expect(result.accessibleUsers[0].id).toBe("109590001");
+      expect(result.sections[0].puzzles[0].subtasks[0].visible[0].input).toBe("updated input");
+      expect(result.sections[0].puzzles[0].subtasks[0].hidden[0].output).toBe("updated output");
+      expect(result.environmentVariables.EXTRA_FLAG).toBe("updated");
+      expect(result.globalSpecialRules?.[0].id).toBe("rule-no-eval");
+      expect(result.sections[0].puzzles[0].specialRules?.[0].id).toBe("puzzle-rule");
       expect(result.environmentVariables.startPassword).toBe("exam-start-password");
+      expect((await SystemSettingsService.getExamConfig()).environmentVariables.EXTRA_FLAG).toBe("updated");
     });
 
-    it("should reject structural changes once a config exists", async () => {
+    it("rejects locked fields once a config exists", async () => {
       await ExamConfigService.validateAndSave(validConfig);
 
       const structuralChanges: Array<[string, (config: any) => void]> = [
@@ -104,8 +108,14 @@ describe("ExamConfigService", () => {
         ["section count", (c) =>
           c.sections.push(JSON.parse(JSON.stringify(c.sections[0])))],
         ["section id", (c) => { c.sections[0].id = "S99"; }],
+        ["section title", (c) => { c.sections[0].title = "Changed section"; }],
+        ["section description", (c) => { c.sections[0].description = "Changed"; }],
+        ["section max score", (c) => { c.sections[0].maxScore = 500; }],
         ["puzzle id", (c) => { c.sections[0].puzzles[0].id = "Q99"; }],
         ["puzzle language", (c) => { c.sections[0].puzzles[0].language = "Cpp"; }],
+        ["student name", (c) => { c.accessibleUsers[0].name = "Changed"; }],
+        ["student IP", (c) => { c.accessibleUsers[0].ip = "10.0.0.10"; }],
+        ["start password", (c) => { c.environmentVariables.startPassword = "changed"; }],
       ];
 
       for (const [label, mutate] of structuralChanges) {
@@ -119,6 +129,7 @@ describe("ExamConfigService", () => {
           expect(err, label).toBeInstanceOf(HttpError);
           expect(err.statusCode, label).toBe(400);
         }
+        expect(await SystemSettingsService.getExamConfig()).toEqual(validConfig);
       }
     });
 

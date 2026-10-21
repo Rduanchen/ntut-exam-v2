@@ -130,7 +130,7 @@ const checkMemoryLimit = (val: any) => {
       <v-col cols="12">
         <h3 class="text-h6 mb-2 d-flex align-center">
           環境變數
-          <v-btn v-if="!props.disabled" icon="mdi-plus" size="small" color="primary" class="ml-2" @click="addEnvVar"></v-btn>
+          <v-btn icon="mdi-plus" size="small" color="primary" class="ml-2" @click="addEnvVar"></v-btn>
         </h3>
         <v-card variant="outlined" class="pa-2" v-if="config.environmentVariables">
           <v-alert
@@ -167,13 +167,13 @@ const checkMemoryLimit = (val: any) => {
           <template v-for="(_, key) in config.environmentVariables" :key="key">
             <v-row v-if="key !== 'startPassword'" class="align-center mt-2">
               <v-col cols="5">
-                <v-text-field :model-value="key" @change="updateEnvVarKey(key as string, $event)" label="鍵名" density="compact" hide-details :readonly="props.disabled"></v-text-field>
+                <v-text-field :model-value="key" @change="updateEnvVarKey(key as string, $event)" label="鍵名" density="compact" hide-details></v-text-field>
               </v-col>
               <v-col cols="6">
-                <v-text-field v-model="config.environmentVariables[key]" label="數值" density="compact" hide-details :readonly="props.disabled"></v-text-field>
+                <v-text-field v-model="config.environmentVariables[key]" label="數值" density="compact" hide-details></v-text-field>
               </v-col>
               <v-col cols="1">
-                <v-btn v-if="!props.disabled" icon="mdi-delete" size="small" color="error" variant="text" @click="removeEnvVar(key as string)"></v-btn>
+                <v-btn icon="mdi-delete" size="small" color="error" variant="text" @click="removeEnvVar(key as string)"></v-btn>
               </v-col>
             </v-row>
           </template>
@@ -210,7 +210,7 @@ const checkMemoryLimit = (val: any) => {
     <v-row>
       <v-col cols="12">
         <h3 class="text-h6 mb-2">全域特殊規則</h3>
-        <SpecialRuleEditor v-model="config.globalSpecialRules" :disabled="props.disabled" />
+        <SpecialRuleEditor v-model="config.globalSpecialRules" />
       </v-col>
     </v-row>
 

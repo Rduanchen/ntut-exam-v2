@@ -13,6 +13,32 @@ const configStore = useConfigStore();
 
 const DRAFT_KEY = "draft_exam_config";
 
+// A draft made before initialization may contain fields that are now locked.
+// Do not let those stale values block every later edit with a 400 response.
+const lockedFields = (config: ExamConfig) => ({
+  accessibleUsers: config.accessibleUsers?.map((user) => ({
+    id: user.id,
+    name: user.name,
+    ip: user.ip,
+  })),
+  startPassword: config.environmentVariables?.startPassword,
+  sections: config.sections?.map((section) => ({
+    id: section.id,
+    title: section.title,
+    description: section.description,
+    maxScore: section.maxScore,
+    puzzles: section.puzzles?.map((puzzle) => ({
+      id: puzzle.id,
+      language: puzzle.language,
+      visibleCounts: puzzle.subtasks?.map((subtask) => subtask.visible?.length),
+      hiddenCounts: puzzle.subtasks?.map((subtask) => subtask.hidden?.length),
+    })),
+  })),
+});
+
+const isCompatibleDraft = (draft: ExamConfig) =>
+  JSON.stringify(lockedFields(draft)) === JSON.stringify(lockedFields(props.initialData));
+
 const patchConfig = (data: any) => {
   if (!data) data = {};
   if (!data.environmentVariables) {
@@ -27,7 +53,9 @@ const loadInitialData = () => {
   const draft = localStorage.getItem(DRAFT_KEY);
   if (draft) {
     try {
-      return patchConfig(JSON.parse(draft));
+      const parsed = patchConfig(JSON.parse(draft));
+      if (!props.disabled || isCompatibleDraft(parsed)) return parsed;
+      localStorage.removeItem(DRAFT_KEY);
     } catch (e) {
       console.error("Failed to parse draft config");
     }
@@ -57,6 +85,16 @@ watch(
   { deep: true },
 );
 
+watch(
+  () => props.disabled,
+  (disabled) => {
+    if (disabled && !isCompatibleDraft(localForm.value)) {
+      localStorage.removeItem(DRAFT_KEY);
+      localForm.value = patchConfig(JSON.parse(JSON.stringify(props.initialData)));
+    }
+  },
+);
+
 const tab = ref("general");
 const fileInput = ref<HTMLInputElement | null>(null);
 
@@ -77,7 +115,7 @@ const submitForm = async (): Promise<boolean> => {
    *
    * A short password is a decision the operator is allowed to make. Making it
    * without knowing what it now protects is not. */
-  if (startPassword.length < WEAK_PASSWORD_LENGTH) {
+  if (!props.disabled && startPassword.length < WEAK_PASSWORD_LENGTH) {
     const proceed = confirm(
       `開考口令只有 ${startPassword.length} 個字元。\n\n` +
         "這組口令現在是考卷的解密金鑰：考卷會在開考前就送到每台學生機器上（以密文保存），" +
@@ -149,13 +187,18 @@ const importJson = (event: Event) => {
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
-      const parsed = JSON.parse(e.target?.result as string);
+      const parsed = patchConfig(JSON.parse(e.target?.result as string));
+      if (props.disabled && !isCompatibleDraft(parsed)) {
+        alert("匯入的設定包含已鎖定欄位的變更；請保留學生、開考密碼、區段、ID、數量與程式語言。");
+        return;
+      }
       localForm.value = patchConfig(parsed);
     } catch (err) {
       alert("JSON 檔案格式無效。");
     }
   };
   reader.readAsText(file);
+  (event.target as HTMLInputElement).value = "";
 };
 
 const triggerFileInput = () => {
@@ -170,7 +213,7 @@ defineExpose({ submitForm });
     <v-toolbar color="primary" class="text-white">
       <v-toolbar-title>編輯考試設定</v-toolbar-title>
       <v-spacer></v-spacer>
-      <div v-if="!props.disabled">
+      <div>
         <input
           type="file"
           ref="fileInput"
@@ -185,8 +228,8 @@ defineExpose({ submitForm });
           >匯出 JSON</v-btn
         >
       </div>
-      <div v-else class="text-caption px-4">
-        部分設定已鎖定（學生、密碼、ID、數量與程式語言）。
+      <div v-if="props.disabled" class="text-caption px-4">
+        學生、開考密碼、區段、ID、數量與程式語言已鎖定；其他設定可修改。
       </div>
     </v-toolbar>
 
@@ -220,7 +263,7 @@ defineExpose({ submitForm });
       >
         {{
           props.disabled
-            ? "Update Test Cases Only"
+            ? "儲存考試設定變更"
             : "Save Configuration to Backend"
         }}
       </v-btn>

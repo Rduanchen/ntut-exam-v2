@@ -70,7 +70,7 @@ const checkMemoryLimit = (val: any) => {
               <v-text-field v-model.number="puzzle.memoryLimit" @update:model-value="checkMemoryLimit" type="number" label="記憶體限制（MB，選填）" outlined density="compact" hide-details></v-text-field>
             </v-col>
             <v-col cols="4">
-              <v-text-field :model-value="puzzle.multiplier ?? 0.5" @update:model-value="puzzle.multiplier = Number($event)" type="number" step="0.1" min="0" max="1" label="規則扣分倍率" outlined density="compact" hide-details :readonly="props.disabled"></v-text-field>
+              <v-text-field :model-value="puzzle.multiplier ?? 0.5" @update:model-value="puzzle.multiplier = Number($event)" type="number" step="0.1" min="0" max="1" label="規則扣分倍率" outlined density="compact" hide-details></v-text-field>
             </v-col>
           </v-row>
 
@@ -81,7 +81,7 @@ const checkMemoryLimit = (val: any) => {
           <v-divider class="my-4"></v-divider>
           
           <h4 class="text-subtitle-1 mb-2">特殊規則（選填）</h4>
-          <SpecialRuleEditor v-model="puzzle.specialRules" :disabled="props.disabled" />
+          <SpecialRuleEditor v-model="puzzle.specialRules" />
 
           <div class="d-flex justify-end mt-4" v-if="!props.disabled">
             <v-btn color="error" variant="text" size="small" @click="removePuzzle(index)">刪除題目</v-btn>

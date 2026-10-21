@@ -39,10 +39,7 @@ export class ExamConfigService {
     return examConfig;
   }
 
-  /**
-   * Performs a restricted update of the configuration.
-   * Only allows merging specific fields if the system has already been initialized.
-   */
+  /** Update an initialized exam without changing its roster or score structure. */
   static async restrictedUpdate(newPayload: any): Promise<ExamConfig> {
     const oldConfig = await SystemSettingsService.getExamConfig();
     if (!oldConfig) {
@@ -54,29 +51,33 @@ export class ExamConfigService {
       throw new HttpError(400, `Bad Request: ${JSON.stringify(errors)}`);
     }
 
-    // Clone the new config to act as the baseline
-    const mergedConfig: ExamConfig = JSON.parse(JSON.stringify(verifiedNewConfig));
+    const newConfig = verifiedNewConfig;
+    if (newConfig.accessibleUsers.length !== oldConfig.accessibleUsers.length ||
+        newConfig.accessibleUsers.some((user, index) =>
+          user.id !== oldConfig.accessibleUsers[index].id ||
+          user.name !== oldConfig.accessibleUsers[index].name ||
+          user.ip !== oldConfig.accessibleUsers[index].ip)) {
+      throw new HttpError(400, "Bad Request: Cannot change accessible users after initialization");
+    }
+    if (newConfig.environmentVariables.startPassword !== oldConfig.environmentVariables.startPassword) {
+      throw new HttpError(400, "Bad Request: Cannot change startPassword after initialization");
+    }
 
-    mergedConfig.accessibleUsers = oldConfig.accessibleUsers;
-    mergedConfig.environmentVariables = oldConfig.environmentVariables;
-    /* judgerSettings is deliberately NOT preserved here.
-     *
-     * Adding it to this list would quietly defeat the deployment model: an
-     * uploaded configuration is meant to replace judging settings wholesale,
-     * so that one file fully defines one machine. Preserving them would make
-     * an omitted field keep its previous value, which is the merge behaviour
-     * that was explicitly rejected. */
-
-    if (mergedConfig.sections.length !== oldConfig.sections.length) {
+    if (newConfig.sections.length !== oldConfig.sections.length) {
       throw new HttpError(400, "Bad Request: Cannot change the number of sections after initialization");
     }
 
-    for (let i = 0; i < mergedConfig.sections.length; i++) {
-      const newSection = mergedConfig.sections[i];
+    for (let i = 0; i < newConfig.sections.length; i++) {
+      const newSection = newConfig.sections[i];
       const oldSection = oldConfig.sections[i];
 
       if (newSection.id !== oldSection.id) {
         throw new HttpError(400, `Bad Request: Cannot change section ID from ${oldSection.id} to ${newSection.id}`);
+      }
+      if (newSection.title !== oldSection.title ||
+          newSection.description !== oldSection.description ||
+          newSection.maxScore !== oldSection.maxScore) {
+        throw new HttpError(400, `Bad Request: Cannot change section settings after initialization (${oldSection.id})`);
       }
 
       if (newSection.puzzles.length !== oldSection.puzzles.length) {
@@ -113,8 +114,8 @@ export class ExamConfigService {
       }
     }
 
-    await SystemSettingsService.saveExamConfig(mergedConfig);
-    await reissuePreparedPaper(mergedConfig);
-    return mergedConfig;
+    await SystemSettingsService.saveExamConfig(newConfig);
+    await reissuePreparedPaper(newConfig);
+    return newConfig;
   }
 }
