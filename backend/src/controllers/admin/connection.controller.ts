@@ -177,87 +177,55 @@ export class ConnectionController {
     }
   }
 
-  /**
-   * POST /admin/connection/requests/:id/approve
-   *
-   * Let a machine in, optionally handing it to a different student.
-   *
-   * `targetTestId` names who will sit here. When it differs from whoever the
-   * machine was bound to, both bindings have to go: this machine's old one and
-   * the new student's hold on whatever machine they were using. Undoing only
-   * the first — which is all this used to do — leaves the student blocked on
-   * their own previous seat, so the TA has to run the whole approval again
-   * after the student fails to log in. Twice, for one swapped machine.
-   */
+  /** Approve one machine for its current student or for an unpaired student. */
   static async approveRequest(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const { action, targetTestId } = req.body;
+      const { mode } = req.body;
+      if (mode !== "SAME_USER" && mode !== "NEW_USER") {
+        throw new HttpError(400, "Approval mode must be SAME_USER or NEW_USER");
+      }
       const request = await LoginRequest.findByPk(id);
       if (!request) {
         throw new HttpError(404, "Login request not found");
       }
-
-      request.status = "ALLOWED";
-      /* Who the seat was handed to, kept on the request itself. Without it the
-       * console can show that a machine was approved but not for whom, which is
-       * the one thing a second TA looking at the same queue needs to know. */
-      if (targetTestId) request.testId = targetTestId;
-      await request.save();
-
-      const unbound: string[] = [];
-      const previousTestId = request.previousTestId ?? request.testId ?? null;
-
-      /* Reassigning the seat. Both sides are released in this one call so the
-       * student can simply log in. */
-      if (targetTestId && targetTestId !== previousTestId) {
-        if (previousTestId) {
-          await BindingService.unbindUser(previousTestId);
-          unbound.push(previousTestId);
-        }
-        await BindingService.unbindUser(targetTestId);
-        unbound.push(targetTestId);
-      } else if (action === "UNBIND_USER") {
-        if (previousTestId) {
-          await BindingService.unbindUser(previousTestId);
-          unbound.push(previousTestId);
-        } else {
-          await BindingService.unregisterDevice(request.deviceUuid);
-        }
+      if (request.status !== "PENDING") {
+        throw new HttpError(409, "Login request has already been handled");
       }
 
-      // Add to unblocked devices (target device UUID)
+      const device = await DeviceKeyMap.findOne({ where: { deviceUuid: request.deviceUuid } });
+      let expectedTestId: string | null = null;
+      if (mode === "SAME_USER") {
+        expectedTestId = device?.testId ?? null;
+        const user = expectedTestId
+          ? await User.findOne({ where: { testId: expectedTestId } })
+          : null;
+        if (!user || user.deviceUuid !== request.deviceUuid) {
+          throw new HttpError(409, "This machine has no current student; choose NEW_USER");
+        }
+      } else if (device?.testId) {
+        // Release this machine's student only. Never unbind another seat.
+        await BindingService.unbindDevice(request.deviceUuid);
+      }
+
+      await UnblockedDevice.destroy({ where: { targetType: "UUID", targetValue: request.deviceUuid } });
       await UnblockedDevice.create({
         targetType: "UUID",
         targetValue: request.deviceUuid,
+        approvalMode: mode,
+        expectedTestId,
+        approvedIpAddress: request.ipAddress || null,
       });
-
-      /* A one-shot pass for the address this request came from.
-       *
-       * The roster pins each student to a seat, and login refuses an address
-       * that is not theirs. Approving a machine used to work around that by
-       * clearing the student's seat outright, which disarmed the check for the
-       * rest of the exam — one approval and that ID could sign in anywhere.
-       * The pass lets exactly this entry through instead, and is consumed by
-       * the login that uses it. */
-      if (request.ipAddress) {
-        const existingIpPass = await UnblockedDevice.findOne({
-          where: { targetType: "IP", targetValue: request.ipAddress }
-        });
-        if (!existingIpPass) {
-          await UnblockedDevice.create({
-            targetType: "IP",
-            targetValue: request.ipAddress
-          });
-        }
-      }
+      request.status = "ALLOWED";
+      request.testId = expectedTestId;
+      await request.save();
 
       SocketService.triggerDataUpdateEvent("connection");
       SocketService.triggerDataUpdateEvent("student");
 
       res.status(200).json({
-        message: "Request approved and device unblocked",
-        unbound
+        message: "Request approved",
+        mode
       });
     } catch (error) {
       next(error);
@@ -287,39 +255,4 @@ export class ConnectionController {
     }
   }
 
-  /**
-   * POST /admin/connection/unblock
-   * Manually unblock a specific IP or UUID
-   */
-  static async manualUnblock(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { targetType, targetValue, action } = req.body;
-      if (!["IP", "UUID"].includes(targetType) || !targetValue) {
-        throw new HttpError(400, "Invalid targetType or targetValue");
-      }
-
-      if (action === "UNBIND_USER") {
-        if (targetType === "UUID") {
-          await BindingService.unregisterDevice(targetValue);
-        } else if (targetType === "IP") {
-          const user = await User.findOne({ where: { ipAddress: targetValue } });
-          if (user) {
-            await BindingService.unbindUser(user.testId);
-          }
-        }
-      }
-
-      await UnblockedDevice.create({
-        targetType,
-        targetValue,
-      });
-
-      SocketService.triggerDataUpdateEvent("connection");
-      SocketService.triggerDataUpdateEvent("student");
-
-      res.status(200).json({ message: "Successfully added to unblocked list" });
-    } catch (error) {
-      next(error);
-    }
-  }
 }

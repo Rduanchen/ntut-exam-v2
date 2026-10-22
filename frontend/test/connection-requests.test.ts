@@ -129,52 +129,49 @@ describe('pending entry requests', () => {
 });
 
 describe('approving an entry request', () => {
-  it('defaults to the student the machine already belonged to', async () => {
-    // The common case is a restart, not a swap.
+  it('defaults to same-user mode for a previously bound machine', async () => {
     const wrapper = await mountWith([request()]);
 
     await wrapper.find('[data-test="open-approve"]').trigger('click');
     await wrapper.vm.$nextTick();
 
-    expect((wrapper.vm as any).targetTestId).toBe('s-1');
+    expect((wrapper.vm as any).approveMode).toBe('SAME_USER');
   });
 
-  it('approves with the chosen student', async () => {
+  it('sends the selected mode without a target student', async () => {
     const store = useConnectionStore();
-    const approve = vi.spyOn(store, 'approveRequest').mockResolvedValue();
+    const approve = vi.spyOn(store, 'approveRequest').mockResolvedValue(true);
     const wrapper = await mountWith([request()]);
 
     await wrapper.find('[data-test="open-approve"]').trigger('click');
-    (wrapper.vm as any).targetTestId = 's-2';
+    (wrapper.vm as any).approveMode = 'NEW_USER';
     await (wrapper.vm as any).confirmApprove();
 
-    expect(approve).toHaveBeenCalledWith(1, 'KEEP_USER', 's-2');
+    expect(approve).toHaveBeenCalledWith(1, 'NEW_USER');
   });
 
-  it('spells out what a reassignment releases', async () => {
-    /* Both bindings go in one call. Undoing only this machine's leaves the
-     * incoming student held by their own seat, so they fail to log in and the
-     * TA runs the whole approval again. */
+  it('explains that an incoming student must be unpaired', async () => {
     const wrapper = await mountWith([request()]);
 
     await wrapper.find('[data-test="open-approve"]').trigger('click');
-    (wrapper.vm as any).targetTestId = 's-2';
+    (wrapper.vm as any).approveMode = 'NEW_USER';
     await wrapper.vm.$nextTick();
 
-    /* The dialog is teleported, so it lives on document.body rather than
-     * inside the wrapper — the negative case below would pass for the wrong
-     * reason if it read the wrapper. */
     const text = document.body.textContent ?? '';
-    expect(text).toContain('兩邊一次解完');
-    expect(text).toContain('作答都不受影響');
+    expect(text).toContain('即使離線');
+    expect(text).toContain('先到該機器解除綁定');
   });
 
-  it('says nothing about unbinding when the same student returns', async () => {
-    const wrapper = await mountWith([request()]);
+  it('defaults to new-user mode when the machine has no previous student', async () => {
+    const wrapper = await mountWith([request({ previousTestId: null, type: 'NEW_DEVICE' })]);
 
     await wrapper.find('[data-test="open-approve"]').trigger('click');
-    await wrapper.vm.$nextTick();
+    expect((wrapper.vm as any).approveMode).toBe('NEW_USER');
+  });
 
-    expect(document.body.textContent ?? '').not.toContain('兩邊一次解完');
+  it('does not offer the old arbitrary IP or UUID unblock form', async () => {
+    const wrapper = await mountWith([request()]);
+    expect(wrapper.text()).not.toContain('手動解除封鎖');
+    expect(wrapper.text()).not.toContain('加入允許清單');
   });
 });

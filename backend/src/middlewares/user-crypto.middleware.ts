@@ -4,6 +4,8 @@ import { CryptoService } from "../services/crypto.service";
 import { ReplayProtectionService } from "../services/replay-protection.service";
 import { HttpError } from "../utils/http-error";
 import { AesEncryptedPayload } from "../types/crypto.type";
+import { DeviceKeyMap } from "../models/device-key-map.model";
+import { User } from "../models/user.model";
 
 if (process.env.LOAD_TEST_MODE === 'pure') {
   console.warn(`[WARNING] LOAD_TEST_MODE is set to 'pure'. User Crypto Verification is BYPASSED. This should not be used in production.`);
@@ -50,6 +52,11 @@ export async function decryptAndVerifyDeviceSession(req: Request, res: Response,
     const tokenPayload = CryptoService.verifySessionToken(session_token, aesKey);
     if (tokenPayload.deviceUuid !== device_uuid) {
       return next(new HttpError(401, "Unauthorized: Session token does not match device UUID"));
+    }
+    const device = await DeviceKeyMap.findOne({ where: { deviceUuid: device_uuid } });
+    const user = await User.findOne({ where: { testId: tokenPayload.testId } });
+    if (device?.testId !== tokenPayload.testId || user?.deviceUuid !== device_uuid) {
+      return next(new HttpError(401, "Device binding has been revoked", "SESSION_REVOKED"));
     }
 
     // 4. Enforce Replay Protection

@@ -74,7 +74,7 @@ export class BindingService {
     const user = await User.findOne({ where: { deviceUuid } });
 
     // Force logout if online
-    if (device.status === "ONLINE") {
+    if (device.socketId) {
       await this.forceLogoutDevice(deviceUuid, "Your device binding has been removed by the TA.");
     }
 
@@ -86,6 +86,7 @@ export class BindingService {
     // Unbind User
     if (user) {
       user.deviceUuid = null;
+      user.ipAddress = await this.rosterIpFor(user.testId);
       await user.save();
     }
 
@@ -111,7 +112,7 @@ export class BindingService {
     if (deviceUuid) {
       const device = await DeviceKeyMap.findOne({ where: { deviceUuid } });
       if (device) {
-        if (device.status === "ONLINE") {
+        if (device.socketId) {
           await this.forceLogoutDevice(deviceUuid, "Your device binding has been removed by the TA.");
         }
         device.testId = null;

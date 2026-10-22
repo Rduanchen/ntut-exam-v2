@@ -12,7 +12,7 @@ export class LoginRequest extends Model {
   declare ipAddress: string;
 
   @Column({ field: "test_id", type: DataType.STRING, allowNull: true })
-  declare testId: string;
+  declare testId: string | null;
 
   /**
    * What kind of machine is asking to come in.

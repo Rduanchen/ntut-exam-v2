@@ -43,12 +43,14 @@ describe('AuthService - IP Fallback', () => {
       .rejects.toThrowError(new HttpError(403, "Your device ip is not match with the preset ip, please contact the TA", "IP_MISMATCH"));
   });
 
-  it('should allow login and consume approval state when TA approves new IP', async () => {
+  it('allows a different roster IP only with an approval for that device and address', async () => {
     await User.create({ testId: 'test_ip', name: 'IP User', ipAddress: '192.168.1.100' });
     await DeviceKeyMap.create({ deviceUuid: 'device_ip_1', clientAesKey: 'mock-key' });
 
-    // TA approves new IP
-    await UnblockedDevice.create({ targetType: 'IP', targetValue: '192.168.1.200' });
+    await UnblockedDevice.create({
+      targetType: 'UUID', targetValue: 'device_ip_1', approvalMode: 'NEW_USER',
+      approvedIpAddress: '192.168.1.200'
+    });
 
     const payload = { device_uuid: 'device_ip_1' } as any;
 
@@ -56,7 +58,7 @@ describe('AuthService - IP Fallback', () => {
     expect(token).toBe('mock-token');
 
     // Verify approval state was consumed
-    const approval = await UnblockedDevice.findOne({ where: { targetType: 'IP', targetValue: '192.168.1.200' } });
+    const approval = await UnblockedDevice.findOne({ where: { targetType: 'UUID', targetValue: 'device_ip_1' } });
     expect(approval).toBeNull();
   });
 });
@@ -132,26 +134,42 @@ describe('AuthService - Device Rebinding', () => {
     await expect(AuthService.loginAndBind(payload, '192.168.1.100')).rejects.toMatchObject({
       statusCode: 403,
       code: 'BINDING_LOCKED',
-      message: expect.stringContaining('offline device')
+      message: expect.stringContaining('another device')
     });
   });
 
-  it('should allow device rebinding and consume approval state when TA approves', async () => {
+  it('does not evict another student even with an old UUID pass', async () => {
     await User.create({ testId: 'test_old_student', name: 'Old Student' });
     await User.create({ testId: 'test_new_student', name: 'New Student' });
 
     await DeviceKeyMap.create({ deviceUuid: 'device_rebind_1', testId: 'test_old_student', clientAesKey: 'key' });
 
-    // TA approves rebinding
-    await UnblockedDevice.create({ targetType: 'UUID', targetValue: 'device_rebind_1' });
+    await UnblockedDevice.create({
+      targetType: 'UUID', targetValue: 'device_rebind_1', approvalMode: 'NEW_USER'
+    });
 
     const payload = { device_uuid: 'device_rebind_1' } as any;
 
-    const token = await AuthService.loginAndBind(payload, '192.168.1.100');
-    expect(token).toBe('mock-token');
-
-    // Verify approval state was consumed
+    await expect(AuthService.loginAndBind(payload, '192.168.1.100'))
+      .rejects.toMatchObject({ statusCode: 403, code: 'BINDING_LOCKED' });
     const approval = await UnblockedDevice.findOne({ where: { targetType: 'UUID', targetValue: 'device_rebind_1' } });
-    expect(approval).toBeNull();
+    expect(approval).not.toBeNull();
+  });
+
+  it('permits only the original user in same-user mode', async () => {
+    await DeviceKeyMap.create({ deviceUuid: 'device_rebind_1', testId: 'test_old_student', clientAesKey: 'key' });
+    await User.create({ testId: 'test_old_student', name: 'Old Student', deviceUuid: 'device_rebind_1' });
+    await User.create({ testId: 'test_new_student', name: 'New Student' });
+    await UnblockedDevice.create({
+      targetType: 'UUID', targetValue: 'device_rebind_1', approvalMode: 'SAME_USER',
+      expectedTestId: 'test_old_student'
+    });
+
+    const payload = { device_uuid: 'device_rebind_1' } as any;
+    await expect(AuthService.loginAndBind(payload, '192.168.1.100'))
+      .rejects.toMatchObject({ statusCode: 403, code: 'BINDING_LOCKED' });
+    cryptoState.testId = 'test_old_student';
+    expect(await AuthService.loginAndBind(payload, '192.168.1.100')).toBe('mock-token');
+    expect(await UnblockedDevice.count()).toBe(0);
   });
 });

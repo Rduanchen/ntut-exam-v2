@@ -1,14 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useConnectionStore } from '../../stores/connection.store';
 
 const connectionStore = useConnectionStore();
-
-// Manual Unblock Form
-const manualUnblockType = ref<'IP' | 'UUID'>('UUID');
-const manualUnblockValue = ref('');
-const manualUnblockAction = ref<'KEEP_USER' | 'UNBIND_USER'>('KEEP_USER');
-const isUnblocking = ref(false);
 
 const headers = [
   { title: '設備 UUID', key: 'deviceUuid', align: 'start' },
@@ -63,29 +57,24 @@ const elapsed = (iso: string | null): string => {
   return `${Math.round(seconds / 3600)} 小時前`;
 };
 
-/* Approval dialog: who sits here next. */
+/* Approval applies to this machine only; it never releases another seat. */
 const approveDialog = ref(false);
 const approving = ref<any>(null);
-const targetTestId = ref('');
+const approveMode = ref<'SAME_USER' | 'NEW_USER'>('NEW_USER');
 
 const openApprove = (item: any) => {
   approving.value = item;
-  /* Defaults to whoever the machine already belonged to, because that is the
-   * common case — a restart. Changing it is the swapped-seat case. */
-  targetTestId.value = item.previousTestId ?? item.testId ?? '';
+  approveMode.value = item.previousTestId ? 'SAME_USER' : 'NEW_USER';
   approveDialog.value = true;
 };
 
 const confirmApprove = async () => {
   if (!approving.value) return;
-  await connectionStore.approveRequest(approving.value.id, 'KEEP_USER', targetTestId.value || undefined);
-  approveDialog.value = false;
-  approving.value = null;
+  if (await connectionStore.approveRequest(approving.value.id, approveMode.value)) {
+    approveDialog.value = false;
+    approving.value = null;
+  }
 };
-
-const studentOptions = computed(() =>
-  connectionStore.devices.map((d: any) => ({ title: `${d.id} ${d.name ?? ''}`.trim(), value: d.id }))
-);
 
 onMounted(() => {
   refreshData();
@@ -103,23 +92,6 @@ async function toggleRegistration(val: boolean | null) {
   if (val !== null) {
     await connectionStore.updateSettings(val);
   }
-}
-
-async function submitManualUnblock() {
-  if (!manualUnblockValue.value) return;
-  isUnblocking.value = true;
-  try {
-    await connectionStore.manualUnblock(manualUnblockType.value, manualUnblockValue.value, manualUnblockAction.value);
-    manualUnblockValue.value = '';
-    // Show success snackbar if needed
-  } finally {
-    isUnblocking.value = false;
-  }
-}
-
-async function allowSecondaryLogin(uuid: string) {
-  await connectionStore.manualUnblock('UUID', uuid, 'KEEP_USER');
-  // Optional: show snackbar
 }
 
 async function unbindDevice(uuid: string) {
@@ -161,7 +133,7 @@ async function unbindDevice(uuid: string) {
     </v-alert>
 
     <v-row>
-      <!-- Left Column: Settings & Unblock -->
+      <!-- Left Column: Settings -->
       <v-col cols="12" md="4">
         <v-card class="rounded-xl mb-6 shadow-card" elevation="2">
           <v-card-title class="font-weight-bold pt-4 px-6 d-flex align-center">
@@ -186,50 +158,6 @@ async function unbindDevice(uuid: string) {
           </v-card-text>
         </v-card>
 
-        <v-card class="rounded-xl shadow-card" elevation="2">
-          <v-card-title class="font-weight-bold pt-4 px-6 d-flex align-center">
-            <v-icon color="secondary" class="mr-2">mdi-lock-open-variant</v-icon>
-            手動解除封鎖
-          </v-card-title>
-          <v-card-text class="px-6 pb-6">
-            <p class="text-body-2 text-medium-emphasis mb-4">
-              手動允許指定設備登入或重新綁定。
-            </p>
-            <v-form @submit.prevent="submitManualUnblock">
-              <v-select
-                v-model="manualUnblockType"
-                :items="['UUID', 'IP']"
-                label="解除封鎖對象"
-                variant="outlined"
-                density="compact"
-                class="mb-2"
-              ></v-select>
-              <v-text-field
-                v-model="manualUnblockValue"
-                label="對象值"
-                variant="outlined"
-                density="compact"
-                class="mb-2"
-                :placeholder="manualUnblockType === 'IP' ? '例如 192.168.1.10' : '例如 123e4567-e89b...'"
-              ></v-text-field>
-              <v-radio-group v-model="manualUnblockAction" density="compact" class="mb-2" hide-details>
-                <v-radio label="允許原學生登入" value="KEEP_USER" color="secondary"></v-radio>
-                <v-radio label="解除原綁定並允許新學生" value="UNBIND_USER" color="error"></v-radio>
-              </v-radio-group>
-              <v-btn
-                type="submit"
-                color="secondary"
-                block
-                variant="flat"
-                class="rounded-lg text-none font-weight-bold mt-2"
-                :loading="isUnblocking"
-                :disabled="!manualUnblockValue"
-              >
-                加入允許清單
-              </v-btn>
-            </v-form>
-          </v-card-text>
-        </v-card>
       </v-col>
 
       <!-- Right Column: Login Requests -->
@@ -335,18 +263,6 @@ async function unbindDevice(uuid: string) {
             </template>
             <template v-slot:item.actions="{ item }">
               <div class="d-flex justify-end gap-2">
-                <v-tooltip text="允許再次登入" location="top">
-                  <template v-slot:activator="{ props }">
-                    <v-btn 
-                      v-bind="props"
-                      icon="mdi-lock-open-variant" 
-                      color="secondary" 
-                      size="small" 
-                      variant="tonal" 
-                      @click="allowSecondaryLogin(item.deviceUuid)"
-                    ></v-btn>
-                  </template>
-                </v-tooltip>
                 <v-tooltip text="解除設備與學生的綁定" location="top">
                   <template v-slot:activator="{ props }">
                     <v-btn 
@@ -382,25 +298,16 @@ async function unbindDevice(uuid: string) {
           機器 <code>{{ approving?.deviceUuid }}</code>
         </div>
 
-        <v-select
-          v-model="targetTestId"
-          :items="studentOptions"
-          label="這台機器接下來給哪個學號"
-          density="comfortable"
-          data-test="approve-target"
-        ></v-select>
-
-        <v-alert
-          v-if="approving?.previousTestId && targetTestId && targetTestId !== approving.previousTestId"
-          type="warning"
-          variant="tonal"
-          density="comfortable"
-          class="mt-2"
-        >
-          換人使用。核准時會同時解除
-          <strong>{{ approving.previousTestId }}</strong> 與這台機器的綁定，以及
-          <strong>{{ targetTestId }}</strong> 與其原本機器的綁定 ——
-          兩邊一次解完，學生才能直接登入。兩人已提交的作答都不受影響。
+        <v-radio-group v-model="approveMode" data-test="approve-mode">
+          <v-radio
+            value="SAME_USER"
+            :disabled="!approving?.previousTestId"
+            :label="`允許原使用者 ${approving?.previousTestId ?? ''} 再次登入`"
+          />
+          <v-radio value="NEW_USER" label="允許新的未配對使用者登入這台機器" />
+        </v-radio-group>
+        <v-alert v-if="approveMode === 'NEW_USER'" type="info" variant="tonal" density="comfortable">
+          這台機器原有的綁定會解除。若要登入的學號仍綁在其他機器（即使離線），請先到該機器解除綁定。
         </v-alert>
       </v-card-text>
       <v-card-actions>

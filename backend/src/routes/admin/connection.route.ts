@@ -17,6 +17,4 @@ router.get("/requests", ConnectionController.getRequests);
 router.post("/requests/:id/approve", ConnectionController.approveRequest);
 router.post("/requests/:id/reject", ConnectionController.rejectRequest);
 
-router.post("/unblock", ConnectionController.manualUnblock);
-
 export default router;

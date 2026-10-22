@@ -4,6 +4,7 @@ import { User } from "../models/user.model";
 import { ViolationLog } from "../models/violation-log.model";
 import logger from "../utils/logger.util";
 import { SocketService } from "./socket.service";
+import { CryptoService } from "../services/crypto.service";
 
 export class MessageSocketService {
   private io: Namespace;
@@ -44,7 +45,29 @@ export class MessageSocketService {
           const device = await DeviceKeyMap.findByPk(device_uuid);
           if (!device) {
             logger.warn(`Device ${device_uuid} not found for socket ${socket.id}`);
+            if (data?.session_token) {
+              MessageSocketService.sendForceLogout(socket.id, "Your device registration has been removed by the TA.");
+            }
             return;
+          }
+
+          if (data?.session_token) {
+            let validBinding = false;
+            try {
+              const payload = CryptoService.verifySessionToken(
+                data.session_token,
+                Buffer.from(device.clientAesKey, "hex")
+              );
+              const user = await User.findOne({ where: { testId: payload.testId } });
+              validBinding = payload.deviceUuid === device_uuid &&
+                device.testId === payload.testId && user?.deviceUuid === device_uuid;
+            } catch {
+              // An expired or old-key token cannot authenticate a bound student.
+            }
+            if (!validBinding) {
+              MessageSocketService.sendForceLogout(socket.id, "Your device binding has been removed by the TA.");
+              return;
+            }
           }
 
           const user = await User.findOne({ where: { deviceUuid: device_uuid } });

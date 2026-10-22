@@ -12,6 +12,8 @@ import { UnblockedDevice } from '../../../../src/models/unblocked-device.model';
 import { SocketService } from '../../../../src/sockets/socket.service';
 import { MessageSocketService } from '../../../../src/sockets/message-socket.service';
 import { buildDeviceKey, buildAesKey } from '../../../fixtures/identity.fixture';
+import { TestClient } from '../../../helpers/test-client';
+import { SystemSettingsService } from '../../../../src/services/system-settings.service';
 
 /**
  * The entry gate is only as good as the decision behind it. A TA who cannot see
@@ -156,20 +158,16 @@ describe('admin entry requests (integration)', () => {
       });
     };
 
-    it('releases both sides in one call when the seat changes hands', async () => {
-      /* Undoing only this machine's binding leaves the new student still held
-       * by their own broken seat — so they fail to log in and the TA runs the
-       * whole approval again. Twice, for one swapped machine. */
+    it('releases only this machine when a new student may use it', async () => {
       const request = await swapSetup();
 
       const res = await adminRequest(app)
         .post(`/admin/connection/requests/${request.id}/approve`)
-        .send({ targetTestId: 'new' });
+        .send({ mode: 'NEW_USER' });
 
       expect(res.status).toBe(200);
-      expect(res.body.unbound).toEqual(expect.arrayContaining(['old', 'new']));
       expect((await User.findOne({ where: { testId: 'old' } }))!.deviceUuid).toBeNull();
-      expect((await User.findOne({ where: { testId: 'new' } }))!.deviceUuid).toBeNull();
+      expect((await User.findOne({ where: { testId: 'new' } }))!.deviceUuid).toBe('dev-broken');
     });
 
     it('leaves the binding alone when the same student comes back', async () => {
@@ -177,10 +175,12 @@ describe('admin entry requests (integration)', () => {
 
       const res = await adminRequest(app)
         .post(`/admin/connection/requests/${request.id}/approve`)
-        .send({ targetTestId: 'old' });
+        .send({ mode: 'SAME_USER' });
 
-      expect(res.body.unbound).toEqual([]);
+      expect(res.status).toBe(200);
       expect((await User.findOne({ where: { testId: 'old' } }))!.deviceUuid).toBe('dev-seat');
+      expect(await UnblockedDevice.findOne({ where: { targetValue: 'dev-seat' } }))
+        .toMatchObject({ approvalMode: 'SAME_USER', expectedTestId: 'old' });
     });
 
     it('marks the request allowed and lets the machine through', async () => {
@@ -188,57 +188,120 @@ describe('admin entry requests (integration)', () => {
 
       await adminRequest(app)
         .post(`/admin/connection/requests/${request.id}/approve`)
-        .send({ targetTestId: 'old' });
+        .send({ mode: 'SAME_USER' });
 
       expect((await LoginRequest.findByPk(request.id))!.status).toBe('ALLOWED');
     });
 
-    it('issues a one-shot pass for the address the request came from', async () => {
-      /* Feature 007 bugfix BUG-04. Approval used to make a swapped seat work by
-       * clearing the student's roster IP, which disarmed the seat check for the
-       * rest of the exam. The pass lets this one entry through instead, and the
-       * login that uses it consumes it. */
+    it('scopes the pass to the machine and its requested address', async () => {
       const request = await swapSetup();
 
       await adminRequest(app)
         .post(`/admin/connection/requests/${request.id}/approve`)
-        .send({ targetTestId: 'new' });
+        .send({ mode: 'NEW_USER' });
 
       const pass = await UnblockedDevice.findOne({
-        where: { targetType: 'IP', targetValue: '10.0.0.5' }
+        where: { targetType: 'UUID', targetValue: 'dev-seat' }
       });
-      expect(pass).not.toBeNull();
+      expect(pass).toMatchObject({ approvalMode: 'NEW_USER', approvedIpAddress: '10.0.0.5' });
+      expect(await UnblockedDevice.count({ where: { targetType: 'IP' } })).toBe(0);
     });
 
-    it('does not stack duplicate address passes when approved twice', async () => {
+    it('cannot approve the same request twice', async () => {
       const request = await swapSetup();
 
       await adminRequest(app)
         .post(`/admin/connection/requests/${request.id}/approve`)
-        .send({ targetTestId: 'new' });
-      await adminRequest(app)
+        .send({ mode: 'NEW_USER' });
+      const second = await adminRequest(app)
         .post(`/admin/connection/requests/${request.id}/approve`)
-        .send({ targetTestId: 'new' });
+        .send({ mode: 'NEW_USER' });
 
-      expect(
-        await UnblockedDevice.count({ where: { targetType: 'IP', targetValue: '10.0.0.5' } })
-      ).toBe(1);
+      expect(second.status).toBe(409);
+      expect(await UnblockedDevice.count({ where: { targetType: 'UUID', targetValue: 'dev-seat' } })).toBe(1);
     });
 
-    it('records who the seat was handed to', async () => {
+    it('does not preassign a student in new-user mode', async () => {
       const request = await swapSetup();
 
       await adminRequest(app)
         .post(`/admin/connection/requests/${request.id}/approve`)
-        .send({ targetTestId: 'new' });
+        .send({ mode: 'NEW_USER' });
 
-      expect((await LoginRequest.findByPk(request.id))!.testId).toBe('new');
+      expect((await LoginRequest.findByPk(request.id))!.testId).toBeNull();
     });
 
     it('returns 404 for a request that does not exist', async () => {
-      const res = await adminRequest(app).post('/admin/connection/requests/9999/approve').send({});
+      const res = await adminRequest(app).post('/admin/connection/requests/9999/approve').send({ mode: 'NEW_USER' });
 
       expect(res.status).toBe(404);
+    });
+
+    it('rejects same-user mode for an unbound machine', async () => {
+      const request = await LoginRequest.create({
+        deviceUuid: 'dev-new', ipAddress: '10.0.0.5', testId: null,
+        type: 'NEW_DEVICE', status: 'PENDING'
+      });
+      const res = await adminRequest(app)
+        .post(`/admin/connection/requests/${request.id}/approve`)
+        .send({ mode: 'SAME_USER' });
+      expect(res.status).toBe(409);
+      expect(await UnblockedDevice.count()).toBe(0);
+    });
+
+    it('rejects an offline binding elsewhere until the TA unbinds it, then revokes the old session', async () => {
+      await SystemSettingsService.setAllowDeviceRegistration(true);
+      const oldMachine = new TestClient(app);
+      const newMachine = new TestClient(app);
+      await oldMachine.registerDevice('old-machine');
+      await newMachine.registerDevice('new-machine');
+      await User.create({ testId: 'student-1', name: 'Student', ipAddress: null });
+      expect((await oldMachine.login('student-1')).response.status).toBe(200);
+      await DeviceKeyMap.update({ isOnline: false, socketId: null }, { where: { deviceUuid: 'old-machine' } });
+      await SystemSettingsService.setAllowDeviceRegistration(false);
+
+      const registered = await DeviceKeyMap.findByPk('new-machine');
+      const entry = await LoginRequest.create({
+        deviceUuid: 'new-machine', ipAddress: registered!.ipAddress,
+        testId: null, type: 'UNBOUND_DEVICE', status: 'PENDING'
+      });
+      const approval = await adminRequest(app)
+        .post(`/admin/connection/requests/${entry.id}/approve`)
+        .send({ mode: 'NEW_USER' });
+      expect(approval.status).toBe(200);
+      expect((await newMachine.attemptLogin('student-1')).status).toBe(403);
+      expect(await UnblockedDevice.count()).toBe(1);
+
+      await adminRequest(app).post('/admin/connection/devices/old-machine/unbind');
+      expect((await newMachine.login('student-1')).response.status).toBe(200);
+      expect(await UnblockedDevice.count()).toBe(0);
+      const staleSession = await oldMachine.post('/user/exam/messages');
+      expect(staleSession.status).toBe(401);
+      expect(staleSession.body.code).toBe('SESSION_REVOKED');
+    });
+
+    it('lets the same student re-register and log in once, then consumes the approval', async () => {
+      await SystemSettingsService.setAllowDeviceRegistration(true);
+      const firstSession = new TestClient(app);
+      await firstSession.registerDevice('same-machine');
+      await User.create({ testId: 'student-1', name: 'Student', ipAddress: null });
+      expect((await firstSession.login('student-1')).response.status).toBe(200);
+      await SystemSettingsService.setAllowDeviceRegistration(false);
+
+      const returning = new TestClient(app);
+      await expect(returning.registerDevice('same-machine')).rejects.toThrow('entry_pending');
+      const pending = await LoginRequest.findOne({ where: {
+        deviceUuid: 'same-machine', status: 'PENDING'
+      } });
+      expect(pending?.previousTestId).toBe('student-1');
+      expect((await adminRequest(app)
+        .post(`/admin/connection/requests/${pending!.id}/approve`)
+        .send({ mode: 'SAME_USER' })).status).toBe(200);
+
+      await returning.registerDevice('same-machine');
+      expect((await returning.login('student-1')).response.status).toBe(200);
+      expect(await UnblockedDevice.count()).toBe(0);
+      expect((await User.findOne({ where: { testId: 'student-1' } }))!.deviceUuid).toBe('same-machine');
     });
   });
 

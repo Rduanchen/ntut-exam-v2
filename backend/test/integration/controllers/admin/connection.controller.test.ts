@@ -128,14 +128,14 @@ describe('ConnectionController (integration)', () => {
         ipAddress: '10.0.0.1', deviceUuid: 'dev-1', testId: null, type: 'FIRST_TIME', status: 'PENDING',
       });
 
-      const res = await adminRequest(app).post(`/admin/connection/requests/${req.id}/approve`).send({});
+      const res = await adminRequest(app).post(`/admin/connection/requests/${req.id}/approve`).send({ mode: 'NEW_USER' });
 
       expect(res.status).toBe(200);
       expect((await LoginRequest.findByPk(req.id))!.status).toBe('ALLOWED');
       expect(await UnblockedDevice.findOne({ where: { targetValue: 'dev-1' } })).not.toBeNull();
     });
 
-    it('unbinds the previous student when action is UNBIND_USER', async () => {
+    it('unbinds this device when approving a new unpaired student', async () => {
       await seedDevice({ deviceUuid: 'dev-1', testId: 's-1' });
       await User.create({ ...buildUser({ testId: 's-1', deviceUuid: 'dev-1', ipAddress: '10.0.0.1' }) });
       const req = await LoginRequest.create({
@@ -144,7 +144,7 @@ describe('ConnectionController (integration)', () => {
 
       const res = await adminRequest(app)
         .post(`/admin/connection/requests/${req.id}/approve`)
-        .send({ action: 'UNBIND_USER' });
+        .send({ mode: 'NEW_USER' });
 
       expect(res.status).toBe(200);
       const user = await User.findOne({ where: { testId: 's-1' } });
@@ -153,7 +153,7 @@ describe('ConnectionController (integration)', () => {
     });
 
     it('returns 404 for a request that does not exist', async () => {
-      const res = await adminRequest(app).post('/admin/connection/requests/99999/approve').send({});
+      const res = await adminRequest(app).post('/admin/connection/requests/99999/approve').send({ mode: 'NEW_USER' });
 
       expect(res.status).toBe(404);
     });
@@ -180,42 +180,12 @@ describe('ConnectionController (integration)', () => {
     });
   });
 
-  describe('POST /admin/connection/unblock', () => {
-    it('adds a UUID to the unblocked list', async () => {
-      const res = await adminRequest(app)
-        .post('/admin/connection/unblock')
-        .send({ targetType: 'UUID', targetValue: 'dev-1' });
-
-      expect(res.status).toBe(200);
-      expect(await UnblockedDevice.findOne({ where: { targetValue: 'dev-1' } })).not.toBeNull();
-    });
-
-    it('unbinds the student behind an IP when action is UNBIND_USER', async () => {
-      await seedDevice({ deviceUuid: 'dev-1', testId: 's-1' });
-      await User.create({ ...buildUser({ testId: 's-1', deviceUuid: 'dev-1', ipAddress: '10.0.0.1' }) });
-
-      const res = await adminRequest(app)
-        .post('/admin/connection/unblock')
-        .send({ targetType: 'IP', targetValue: '10.0.0.1', action: 'UNBIND_USER' });
-
-      expect(res.status).toBe(200);
-      const user = await User.findOne({ where: { testId: 's-1' } });
-      expect(user!.deviceUuid).toBeNull();
-    });
-
-    it('returns 400 for an unsupported targetType', async () => {
-      const res = await adminRequest(app)
-        .post('/admin/connection/unblock')
-        .send({ targetType: 'EMAIL', targetValue: 'a@b.c' });
-
-      expect(res.status).toBe(400);
-      expect(res.body.error).toContain('Invalid targetType');
-    });
-
-    it('returns 400 when targetValue is missing', async () => {
-      const res = await adminRequest(app).post('/admin/connection/unblock').send({ targetType: 'UUID' });
-
-      expect(res.status).toBe(400);
+  describe('removed manual unblock route', () => {
+    it('cannot grant a pass by arbitrary UUID or IP', async () => {
+      const res = await adminRequest(app).post('/admin/connection/unblock')
+        .send({ targetType: 'IP', targetValue: '10.0.0.1' });
+      expect(res.status).toBe(404);
+      expect(await UnblockedDevice.count()).toBe(0);
     });
   });
 });

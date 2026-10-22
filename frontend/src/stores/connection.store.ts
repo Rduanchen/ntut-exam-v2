@@ -65,26 +65,19 @@ export const useConnectionStore = defineStore('connection', () => {
     }
   }
 
-  /**
-   * Let a machine in, optionally handing the seat to a different student.
-   *
-   * `targetTestId` releases both bindings in one call: this machine's old one
-   * and the incoming student's hold on whatever machine they were using.
-   * Without it a swapped seat took two approvals — the student would fail to
-   * log in, still held by their own broken machine, and the TA would have to
-   * start over.
-   */
-  async function approveRequest(id: number, action: string, targetTestId?: string) {
+  async function approveRequest(id: number, mode: 'SAME_USER' | 'NEW_USER'): Promise<boolean> {
     try {
       await axios.post(
         `${BACKEND_URL}/admin/connection/requests/${id}/approve`,
-        { action, targetTestId },
+        { mode },
         { headers: getHeaders() }
       );
       await fetchLoginRequests();
       await fetchDevices();
+      return true;
     } catch (err: any) {
       error.value = err.response?.data?.error || err.message || '無法核准連線請求';
+      return false;
     }
   }
 
@@ -116,15 +109,6 @@ export const useConnectionStore = defineStore('connection', () => {
     }
   }
 
-  async function manualUnblock(targetType: string, targetValue: string, action: string) {
-    try {
-      await axios.post(`${BACKEND_URL}/admin/connection/unblock`, { targetType, targetValue, action }, { headers: getHeaders() });
-    } catch (err: any) {
-      error.value = err.response?.data?.error || err.message || '無法手動解鎖';
-      throw err;
-    }
-  }
-
   return {
     devices,
     loginRequests,
@@ -138,7 +122,6 @@ export const useConnectionStore = defineStore('connection', () => {
     approveRequest,
     rejectRequest,
     unbindDevice,
-    unregisterDevice,
-    manualUnblock
+    unregisterDevice
   };
 });

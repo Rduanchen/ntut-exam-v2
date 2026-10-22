@@ -166,10 +166,13 @@ describe('DeviceService', () => {
       });
     });
 
-    it('consumes a TA approval to allow a secondary binding', async () => {
+    it('keeps a scoped TA approval until the approved student logs in', async () => {
       const { hex } = buildAesKey();
       await DeviceKeyMap.create({ ...buildDeviceKey({ deviceUuid: 'dev-ok', clientAesKey: hex }) });
-      await UnblockedDevice.create({ targetType: 'UUID', targetValue: 'dev-ok' });
+      await UnblockedDevice.create({
+        targetType: 'UUID', targetValue: 'dev-ok', approvalMode: 'NEW_USER',
+        approvedIpAddress: '10.0.0.9'
+      });
 
       const newKey = crypto.randomBytes(32);
       await DeviceService.registerKey('dev-ok', wrapKey(newKey), '10.0.0.9');
@@ -177,8 +180,20 @@ describe('DeviceService', () => {
       const record = await DeviceKeyMap.findOne({ where: { deviceUuid: 'dev-ok' } });
       expect(record!.clientAesKey).toBe(newKey.toString('hex'));
 
-      // The approval is single-use.
-      expect(await UnblockedDevice.findOne({ where: { targetValue: 'dev-ok' } })).toBeNull();
+      expect(await UnblockedDevice.findOne({ where: { targetValue: 'dev-ok' } })).not.toBeNull();
+    });
+
+    it('does not accept a machine approval from a different address', async () => {
+      const { hex } = buildAesKey();
+      await DeviceKeyMap.create({ ...buildDeviceKey({ deviceUuid: 'dev-ok', clientAesKey: hex }) });
+      await UnblockedDevice.create({
+        targetType: 'UUID', targetValue: 'dev-ok', approvalMode: 'NEW_USER',
+        approvedIpAddress: '10.0.0.9'
+      });
+
+      await expect(DeviceService.registerKey('dev-ok', wrapKey(crypto.randomBytes(32)), '10.0.0.10'))
+        .rejects.toMatchObject({ statusCode: 403, code: 'entry_pending' });
+      expect((await DeviceKeyMap.findByPk('dev-ok'))!.clientAesKey).toBe(hex);
     });
   });
 

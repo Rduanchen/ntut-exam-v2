@@ -53,52 +53,36 @@ export class AuthService {
       throw new HttpError(403, "Device is not registered. Please ensure key exchange is complete.", "REGISTRATION_FAILED");
     }
 
-    // Check if device is bound to ANOTHER user
+    const approval = await UnblockedDevice.findOne({
+      where: { targetType: "UUID", targetValue: deviceUuid }
+    });
+    const validApproval = !!approval &&
+      (approval.approvalMode === "SAME_USER"
+        ? device?.testId === testId && approval.expectedTestId === testId
+        : approval.approvalMode === "NEW_USER" && !device?.testId) &&
+      (!approval.approvedIpAddress || approval.approvedIpAddress === clientIp);
+
+    // A device cannot use an approval to evict its current student.
     if (device && device.testId && device.testId !== testId) {
-      // Check if TA has approved re-binding for this device
-      const unblockedUuidRecord = await UnblockedDevice.findOne({
-        where: { targetType: "UUID", targetValue: deviceUuid }
-      });
-      if (unblockedUuidRecord) {
-        // TA approved: unbind old user and consume the pass
-        await BindingService.unbindDevice(deviceUuid);
-        await unblockedUuidRecord.destroy();
-        // Re-fetch device since unbindDevice modifies it
-        const refreshedDevice = await DeviceKeyMap.findOne({ where: { deviceUuid } });
-        if (refreshedDevice) {
-          // device variable is used later, but since we can't reassign the const,
-          // we update the fields directly on the original reference
-          device.testId = refreshedDevice.testId;
-          device.status = refreshedDevice.status;
-        }
-      } else {
-        throw new HttpError(403, "This device is already bound to another student. Please ask TA to unbind it first.", "BINDING_LOCKED");
-      }
+      throw new HttpError(403, "This device is already bound to another student. Please ask TA to unbind it first.", "BINDING_LOCKED");
+    }
+    if (approval?.approvalMode === "SAME_USER" && !validApproval) {
+      throw new HttpError(403, "This approval only permits the machine's original student.", "BINDING_LOCKED");
+    }
+    if (approval?.approvalMode === "NEW_USER" && !validApproval) {
+      throw new HttpError(403, "This approval is no longer valid for this machine or address.", "BINDING_LOCKED");
     }
 
-    // Checking secondary login for User
+    // Another machine's binding is never released by an entry approval.
     if (user.deviceUuid && user.deviceUuid !== deviceUuid) {
       const oldDevice = await DeviceKeyMap.findOne({ where: { deviceUuid: user.deviceUuid } });
-      if (oldDevice) {
-        if (oldDevice.isOnline) {
-          throw new HttpError(403, "This student ID is currently logged in on another active device.", "ALREADY_LOGGED_IN");
-        } else {
-          // It's bound but offline. According to new requirements, they must be unbound by TA.
-          throw new HttpError(403, "This student ID is bound to an offline device. Please ask TA to unbind it first.", "BINDING_LOCKED");
-        }
+      if (oldDevice?.isOnline) {
+        throw new HttpError(403, "This student ID is currently logged in on another active device.", "ALREADY_LOGGED_IN");
       }
+      throw new HttpError(403, "This student ID is bound to another device. Please ask TA to unbind it first.", "BINDING_LOCKED");
     }
 
-    const unblockedIpRecord = await UnblockedDevice.findOne({
-      where: {
-        targetType: "IP",
-        targetValue: cleanClientIp
-      }
-    });
-
-    if (unblockedIpRecord) {
-      await unblockedIpRecord.destroy();
-    } else {
+    if (!validApproval) {
       if (user.ipAddress) {
         const deviceIp = device?.ipAddress || "";
         if (cleanClientIp !== user.ipAddress && deviceIp !== user.ipAddress) {
@@ -110,6 +94,8 @@ export class AuthService {
     if (process.env.LOAD_TEST_MODE !== 'pure') {
       await BindingService.bindDeviceToUser(deviceUuid, testId, cleanClientIp);
     }
+
+    if (validApproval) await approval.destroy();
 
     if (process.env.LOAD_TEST_MODE === 'pure') {
       const device = await DeviceKeyMap.findOne({ where: { deviceUuid } });

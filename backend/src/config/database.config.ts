@@ -67,6 +67,18 @@ export async function initDatabase() {
         type: DataTypes.INTEGER, allowNull: false, defaultValue: 0
       });
     }
+    const approvalColumns = await query.describeTable('unblocked_devices');
+    if (!approvalColumns.approval_mode) {
+      await query.addColumn('unblocked_devices', 'approval_mode', { type: DataTypes.STRING, allowNull: true });
+    }
+    if (!approvalColumns.expected_test_id) {
+      await query.addColumn('unblocked_devices', 'expected_test_id', { type: DataTypes.STRING, allowNull: true });
+    }
+    if (!approvalColumns.approved_ip_address) {
+      await query.addColumn('unblocked_devices', 'approved_ip_address', { type: DataTypes.STRING, allowNull: true });
+    }
+    // Old UUID/IP passes had no user or machine scope and must not survive deployment.
+    await UnblockedDevice.destroy({ where: { approvalMode: null } });
     console.log("Database tables synchronized.");
 
     // Insert default exam config if not exists

@@ -26,10 +26,16 @@ export class DeviceService {
 
     const existing = await DeviceKeyMap.findOne({ where: { deviceUuid }, include: [User] });
 
-    // Check if this device has been let through by a TA
-    const unblocked = await UnblockedDevice.findOne({
+    // An approval is tied to the requested UUID, mode, and source address.
+    const approval = await UnblockedDevice.findOne({
       where: { targetType: "UUID", targetValue: deviceUuid }
     });
+    const approved = !!approval &&
+      (approval.approvalMode === "SAME_USER"
+        ? !!existing?.testId && existing.testId === approval.expectedTestId &&
+          existing.user?.testId === approval.expectedTestId
+        : approval.approvalMode === "NEW_USER" && !existing?.testId) &&
+      (!approval.approvedIpAddress || approval.approvedIpAddress === ipAddress);
 
     const isSimulationMode = process.env.LOAD_TEST_MODE === 'simulation';
     const allowRegistration = await SystemSettingsService.getAllowDeviceRegistration();
@@ -41,7 +47,7 @@ export class DeviceService {
      * lives in memory only, so a restart genuinely arrives as an unregistered
      * machine with a new key; refusing it on that basis alone is what used to
      * turn every crash into a dead end that no path could recover from. */
-    if (!allowRegistration && !unblocked && !isSimulationMode) {
+    if (!allowRegistration && !approved && !isSimulationMode) {
       await this.requestEntry(deviceUuid, ipAddress, existing);
       throw new HttpError(
         403,
@@ -49,8 +55,6 @@ export class DeviceService {
         "entry_pending"
       );
     }
-
-    if (unblocked) await unblocked.destroy();
 
     if (existing) {
       existing.clientAesKey = clientAesKeyBuffer.toString("hex");
