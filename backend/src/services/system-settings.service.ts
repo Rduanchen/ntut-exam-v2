@@ -1,3 +1,4 @@
+import { examConfigPayloadSchema, type ExamConfigPayload } from "../schemas/config.schema";
 import { SystemSettings } from "../models/system-settings.model";
 import { HttpError } from "../utils/http-error";
 import logger from "../utils/logger.util";
@@ -15,6 +16,26 @@ export const PROTECTED_SETTINGS_KEYS: SystemSettingKey[] = [
 ];
 
 export class SystemSettingsService {
+  /** A single SQL statement makes the two halves visible together. */
+  static async savePreparedPaper(input: unknown): Promise<void> {
+    const paper = examConfigPayloadSchema.parse(input);
+    await SystemSettings.bulkCreate([
+      { name: 'exam_config_meta', value: JSON.stringify(paper.meta) },
+      { name: 'exam_config_cipher', value: JSON.stringify(paper.cipher) }
+    ], { updateOnDuplicate: ['value'] });
+  }
+
+  static async getPreparedPaper(): Promise<ExamConfigPayload | null> {
+    const rows = await SystemSettings.findAll({ where: { name: ['exam_config_meta', 'exam_config_cipher'] } });
+    const meta = rows.find(row => row.name === 'exam_config_meta');
+    const cipher = rows.find(row => row.name === 'exam_config_cipher');
+    if (!meta || !cipher) return null;
+    const raw: unknown = { meta: JSON.parse(meta.value), cipher: JSON.parse(cipher.value) };
+    const result = examConfigPayloadSchema.safeParse(raw);
+    if (!result.success) throw new HttpError(500, 'Invalid prepared exam paper');
+    return result.data;
+  }
+
   static async createSetting(key: SystemSettingKey, value: any): Promise<void> {
     const existing = await SystemSettings.findOne({ where: { name: key } });
     if (existing) {

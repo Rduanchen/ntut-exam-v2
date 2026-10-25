@@ -93,30 +93,26 @@ export class ExamService {
    * metadata a machine needs to probe its own toolchain. Without the exam key
    * — which this endpoint never returns — there is no paper to read.
    */
-  static async getSecureConfig(payload: AesEncryptedPayload, decryptedBody?: any): Promise<AesEncryptedPayload> {
+  static async getSecureConfig(payload: AesEncryptedPayload, _decryptedBody?: unknown): Promise<AesEncryptedPayload> {
     const { device_uuid: deviceUuid } = payload;
 
-    let aesKey: any = null;
-    if (process.env.LOAD_TEST_MODE !== 'pure') {
-      aesKey = await DeviceService.getAesKey(deviceUuid);
+    // Never trust an optional pre-decrypted body to bypass device authentication.
+    const authentication = process.env.LOAD_TEST_MODE === 'pure'
+      ? null : await this.authenticateRegisteredDevice(payload);
+    const paper = await SystemSettingsService.getPreparedPaper();
+    if (!paper) throw new HttpError(409, 'Exam paper has not been prepared yet');
+    const phase = await ExamStateService.getCurrentState();
+    if (![ExamState.INITIALIZED, ExamState.SETUP_FINISHED, ExamState.IN_PROGRESS].includes(phase)) {
+      throw new HttpError(409, 'Exam paper unavailable', 'exam_paper_unavailable');
     }
-
-    if (!decryptedBody && process.env.LOAD_TEST_MODE !== 'pure') {
-      await this.decryptDevicePayload(payload);
+    if (authentication) {
+      const current = await DeviceKeyMap.findByPk(deviceUuid);
+      if (current?.clientAesKey !== authentication.device.clientAesKey) {
+        throw new HttpError(409, 'Registration changed', 'exam_paper_unavailable');
+      }
     }
-
-    const meta = await SystemSettingsService.getSetting<any>("exam_config_meta");
-    const cipher = await SystemSettingsService.getSetting<any>("exam_config_cipher");
-
-    if (!meta || !cipher) {
-      throw new HttpError(409, "Exam paper has not been prepared yet");
-    }
-
-    const encryptedResult = CryptoService.encryptAESGCM(JSON.stringify({ meta, cipher }), aesKey);
-    return {
-      ...encryptedResult,
-      device_uuid: deviceUuid
-    };
+    const key = authentication?.key ?? await DeviceService.getAesKey(deviceUuid);
+    return { ...CryptoService.encryptAESGCM(JSON.stringify(paper), key), device_uuid: deviceUuid };
   }
 
   /**

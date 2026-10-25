@@ -91,8 +91,7 @@ export class InitService {
      * read. */
     const prepared = ExamConfigCryptoService.prepare(config);
     await SystemSettingsService.upsertSetting(EXAM_KEY_SETTING, prepared.examKey);
-    await SystemSettingsService.upsertSetting(EXAM_CONFIG_META_SETTING, prepared.meta);
-    await SystemSettingsService.upsertSetting(EXAM_CONFIG_CIPHER_SETTING, prepared.cipher);
+    await SystemSettingsService.savePreparedPaper(prepared);
 
     await ExamStateService.changeState(ExamState.INITIALIZED);
 

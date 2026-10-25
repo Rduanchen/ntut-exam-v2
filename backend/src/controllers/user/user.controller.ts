@@ -55,14 +55,14 @@ export class UserController {
    * Register device UUID with encrypted AES key.
    */
   static async registerDevice(req: Request, res: Response, next: NextFunction) {
-    const { device_uuid, encrypted_aes_key } = req.body;
+    const { device_uuid, encrypted_aes_key, resubmit } = req.body;
     if (!device_uuid || !encrypted_aes_key) {
       return next(new HttpError(400, "Bad Request: Missing device_uuid or encrypted_aes_key"));
     }
 
     try {
       const ipAddress = normalizeIp(req.ip || req.socket.remoteAddress || "");
-      await DeviceService.registerKey(device_uuid, encrypted_aes_key, ipAddress);
+      await DeviceService.registerKey(device_uuid, encrypted_aes_key, ipAddress, resubmit === true);
       res.status(200).json({ message: "Device registered successfully" });
     } catch (error) {
       next(error);

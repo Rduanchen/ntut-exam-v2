@@ -1,4 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { seedExamPhase } from '../../helpers/exam-phase';
+import { ExamState } from '../../../src/services/exam-state.service';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import crypto from 'crypto';
 
 import { ExamService } from '../../../src/services/exam.service';
@@ -49,6 +51,7 @@ const seedPreparedPaper = async (overrides = {}) => {
 };
 
 describe('ExamService.getSecureConfig', () => {
+  beforeEach(() => seedExamPhase(ExamState.SETUP_FINISHED));
   it('hands back the split paper, not the paper', async () => {
     const aesKey = await seedDevice();
     await seedPreparedPaper();
@@ -119,8 +122,13 @@ describe('ExamService.getSecureConfig', () => {
       expect.unreachable('expected a 400');
     } catch (err: any) {
       expect(err.statusCode).toBe(400);
-      expect(err.message).toContain('Missing timestamp or nonce');
+      expect(err.message).toContain('Invalid encrypted request');
     }
+  });
+
+  it('rejects an expired request before delivering a paper', async () => {
+    const key = await seedDevice(); await seedPreparedPaper();
+    await expect(ExamService.getSecureConfig(envelope(key, { ...baseBody(), timestamp: Date.now() - 3600000 }))).rejects.toMatchObject({ statusCode: 401 });
   });
 
   it('rejects a replayed nonce on the second call', async () => {
@@ -150,13 +158,31 @@ describe('ExamService.getSecureConfig', () => {
     }
   });
 
-  it('skips decryption when a pre-decrypted body is supplied by the middleware', async () => {
+  it('does not accept a pre-decrypted body as a substitute for device authentication', async () => {
     const aesKey = await seedDevice();
     await seedPreparedPaper();
 
-    const result = await ExamService.getSecureConfig({ device_uuid: DEVICE } as any, baseBody());
+    await expect(ExamService.getSecureConfig({ device_uuid: DEVICE } as any, baseBody())).rejects.toThrow('Invalid encrypted request');
+  });
+});
 
-    expect(JSON.parse(CryptoService.decryptAESGCM(result, aesKey)).meta).toBeDefined();
+describe('ExamService delivery race protection', () => {
+  it.each([ExamState.UNINITIALIZED, ExamState.FINISHED])('refuses delivery in %s', async phase => {
+    const key = await seedDevice(); await seedPreparedPaper(); await seedExamPhase(phase);
+    await expect(ExamService.getSecureConfig(envelope(key, baseBody()))).rejects.toMatchObject({ statusCode: 409 });
+  });
+  it.each(['remove', 'key', 'reset'])('rejects %s while preparing a response', async action => {
+    const key = await seedDevice(); await seedPreparedPaper(); await seedExamPhase(ExamState.SETUP_FINISHED);
+    const original = SystemSettingsService.getPreparedPaper.bind(SystemSettingsService);
+    const spy = vi.spyOn(SystemSettingsService, 'getPreparedPaper').mockImplementationOnce(async () => {
+      const paper = await original();
+      if (action === 'remove') await DeviceKeyMap.destroy({ where: { deviceUuid: DEVICE } });
+      if (action === 'key') await DeviceKeyMap.update({ clientAesKey: crypto.randomBytes(32).toString('hex') }, { where: { deviceUuid: DEVICE } });
+      if (action === 'reset') await seedExamPhase(ExamState.UNINITIALIZED);
+      return paper;
+    });
+    await expect(ExamService.getSecureConfig(envelope(key, baseBody()))).rejects.toMatchObject({ statusCode: 409 });
+    spy.mockRestore();
   });
 });
 

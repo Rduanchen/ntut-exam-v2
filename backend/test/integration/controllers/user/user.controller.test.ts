@@ -5,10 +5,12 @@ import type express from "express";
 
 import { createApp } from "../../../../src/app";
 import { TestClient } from "../../../helpers/test-client";
+import { adminRequest } from "../../../helpers/admin-request";
 import { buildExamConfig } from "../../../fixtures/exam-config.fixture";
 
 import { User } from "../../../../src/models/user.model";
 import { DeviceKeyMap } from "../../../../src/models/device-key-map.model";
+import { LoginRequest } from "../../../../src/models/login-request.model";
 import { SystemSettings } from "../../../../src/models/system-settings.model";
 import { CryptoService } from "../../../../src/services/crypto.service";
 import { DeviceService } from "../../../../src/services/device.service";
@@ -104,6 +106,35 @@ describe("UserController (integration)", () => {
 
       expect(refused.status).toBe(403);
       expect(refused.body.code).toBe("entry_pending");
+    });
+
+    it("shows rejection until the student explicitly sends a new request", async () => {
+      await SystemSettingsService.setAllowDeviceRegistration(false);
+      const deviceUuid = "device-rejected";
+      const keyRes = await request(app).get("/user/auth/rsa-public-key");
+      const encrypted = crypto.publicEncrypt({
+        key: keyRes.body.publicKey,
+        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+        oaepHash: "sha256",
+      }, crypto.randomBytes(32)).toString("base64");
+      const payload = { device_uuid: deviceUuid, encrypted_aes_key: encrypted };
+
+      expect((await request(app).post("/user/auth/register-device").send(payload)).body.code)
+        .toBe("entry_pending");
+      const first = await LoginRequest.findOne({ where: { deviceUuid } });
+      expect((await adminRequest(app).post(`/admin/connection/requests/${first!.id}/reject`)).status)
+        .toBe(200);
+
+      const rejected = await request(app).post("/user/auth/register-device").send(payload);
+      expect(rejected.status).toBe(403);
+      expect(rejected.body.code).toBe("entry_rejected");
+      expect(await LoginRequest.count({ where: { deviceUuid } })).toBe(1);
+
+      const resubmitted = await request(app).post("/user/auth/register-device")
+        .send({ ...payload, resubmit: true });
+      expect(resubmitted.body.code).toBe("entry_pending");
+      expect(await LoginRequest.count({ where: { deviceUuid, status: "PENDING" } })).toBe(1);
+      expect(await LoginRequest.count({ where: { deviceUuid, status: "REJECTED" } })).toBe(1);
     });
   });
 

@@ -152,6 +152,30 @@ describe('DeviceService', () => {
         expect(await LoginRequest.count({ where: { deviceUuid: 'dev-dup', status: 'PENDING' } })).toBe(1);
       });
 
+      it('reports a TA rejection without creating another request until explicit resubmission', async () => {
+        const deviceUuid = 'dev-rejected';
+        const key = wrapKey(crypto.randomBytes(32));
+        await expect(DeviceService.registerKey(deviceUuid, key, '10.0.0.9'))
+          .rejects.toMatchObject({ code: 'entry_pending' });
+        const rejected = await LoginRequest.findOne({ where: { deviceUuid } });
+        rejected!.status = 'REJECTED';
+        await rejected!.save();
+
+        await expect(DeviceService.registerKey(deviceUuid, key, '10.0.0.9'))
+          .rejects.toMatchObject({ statusCode: 403, code: 'entry_rejected' });
+        expect(await LoginRequest.count({ where: { deviceUuid } })).toBe(1);
+
+        await expect(DeviceService.registerKey(deviceUuid, key, '10.0.0.9', true))
+          .rejects.toMatchObject({ code: 'entry_pending' });
+        expect(await LoginRequest.count({ where: { deviceUuid, status: 'PENDING' } })).toBe(1);
+        expect(await LoginRequest.count({ where: { deviceUuid, status: 'REJECTED' } })).toBe(1);
+
+        await expect(DeviceService.registerKey(deviceUuid, key, '10.0.0.9', true))
+          .rejects.toMatchObject({ code: 'entry_pending' });
+        expect(await LoginRequest.count({ where: { deviceUuid } })).toBe(2);
+        expect(await DeviceKeyMap.findOne({ where: { deviceUuid } })).toBeNull();
+      });
+
       it('carries a code the client can route on', async () => {
         const { hex } = buildAesKey();
         await DeviceKeyMap.create({ ...buildDeviceKey({ deviceUuid: 'dev-code', clientAesKey: hex }) });

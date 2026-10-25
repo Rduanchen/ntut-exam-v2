@@ -19,8 +19,7 @@ async function reissuePreparedPaper(config: ExamConfig): Promise<void> {
   if (!examKey || !meta?.wrappedExamKey) return;
 
   const reissued = ExamConfigCryptoService.reissue(config, examKey, meta.wrappedExamKey);
-  await SystemSettingsService.upsertSetting("exam_config_meta", reissued.meta);
-  await SystemSettingsService.upsertSetting("exam_config_cipher", reissued.cipher);
+  await SystemSettingsService.savePreparedPaper(reissued);
 }
 
 export class ExamConfigService {

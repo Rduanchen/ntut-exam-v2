@@ -13,7 +13,7 @@ export class DeviceService {
   /**
    * Register a hardware device and its client AES Key (decrypted from RSA wrapper).
    */
-  static async registerKey(deviceUuid: string, encryptedAesKey: string, ipAddress: string = ""): Promise<void> {
+  static async registerKey(deviceUuid: string, encryptedAesKey: string, ipAddress: string = "", resubmit = false): Promise<void> {
     let clientAesKeyBuffer: Buffer;
     try {
       clientAesKeyBuffer = CryptoService.decryptRSA(encryptedAesKey);
@@ -48,7 +48,14 @@ export class DeviceService {
      * machine with a new key; refusing it on that basis alone is what used to
      * turn every crash into a dead end that no path could recover from. */
     if (!allowRegistration && !approved && !isSimulationMode) {
-      await this.requestEntry(deviceUuid, ipAddress, existing);
+      const requestStatus = await this.requestEntry(deviceUuid, ipAddress, existing, resubmit);
+      if (requestStatus === "REJECTED") {
+        throw new HttpError(
+          403,
+          "This entry request was rejected by the TA. Submit a new request to try again.",
+          "entry_rejected"
+        );
+      }
       throw new HttpError(
         403,
         "Registration is closed. A request has been sent to the TA.",
@@ -88,17 +95,21 @@ export class DeviceService {
    * refused request could alter a device, a student mid-exam could be shown as
    * disconnected on the TA's console by someone else's request.
    *
-   * One pending request per machine. Retries are normal — a restarted client
-   * asks again on a timer — and each one becoming a row would bury the TA at
-   * exactly the moment their attention matters.
+   * One pending request per machine. A rejected request stays rejected during
+   * automatic retries; only an explicit resubmission creates a new request.
    */
   private static async requestEntry(
     deviceUuid: string,
     ipAddress: string,
-    existing: DeviceKeyMap | null
-  ): Promise<void> {
-    const pending = await LoginRequest.findOne({ where: { deviceUuid, status: "PENDING" } });
-    if (pending) return;
+    existing: DeviceKeyMap | null,
+    resubmit: boolean
+  ): Promise<"PENDING" | "REJECTED"> {
+    const latest = await LoginRequest.findOne({
+      where: { deviceUuid },
+      order: [["id", "DESC"]]
+    });
+    if (latest?.status === "PENDING") return "PENDING";
+    if (latest?.status === "REJECTED" && !resubmit) return "REJECTED";
 
     /* Classified by what the machine is, not by what happened to it. The
      * backend cannot tell a restart from a swapped seat — both send exactly
@@ -131,6 +142,7 @@ export class DeviceService {
     });
 
     SocketService.triggerDataUpdateEvent('connection');
+    return "PENDING";
   }
 
   /**

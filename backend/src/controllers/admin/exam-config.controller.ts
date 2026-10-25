@@ -114,14 +114,13 @@ export class ExamConfigController {
    */
   static async exportOfflineBundle(req: Request, res: Response, next: NextFunction) {
     try {
-      const meta = await SystemSettingsService.getSetting<any>("exam_config_meta");
-      const cipher = await SystemSettingsService.getSetting<any>("exam_config_cipher");
+      const paper = await SystemSettingsService.getPreparedPaper();
 
-      if (!meta || !cipher) {
+      if (!paper) {
         throw new HttpError(409, "Conflict: The exam paper has not been prepared yet");
       }
 
-      res.status(200).json({ meta, cipher });
+      res.status(200).json(paper);
     } catch (error) {
       next(error);
     }
